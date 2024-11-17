@@ -3,7 +3,7 @@ const OpenAI = require("openai");
 const openai = new OpenAI({ apiKey: process.env.APIKEY });
 const express = require("express");
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT;
 const {
   dbConnect,
   addUser,
@@ -23,11 +23,12 @@ const options = {
 
 app.post("/roastMe", async (req, res) => {
   const name = req.body.name;
-  const url = process.env.URL + name;
-  //get the Instagram Profile Details
-  //we'll store that details to our Database
+  const baseURL = process.env.URL;
 
   try {
+    const url = new URL(`${baseURL}` + "/v1/info");
+    url.searchParams.append("username_or_id_or_url", name);
+
     const response = await fetch(url, options);
     const data = await response.json();
     const result = data.data;
@@ -43,8 +44,9 @@ app.post("/roastMe", async (req, res) => {
     };
     const profileUrl = result.profile_pic_url;
 
+    
     //we need to check if user data exist or not
-    if ((await checkUserExists(roastData.userName)) == false) {
+    if (!(await checkUserExists(roastData.userName))) {
       //adding the profile info to database
       await addUser(
         profileUrl,
@@ -57,8 +59,8 @@ app.post("/roastMe", async (req, res) => {
       );
       console.log("Data Added successfully");
 
-      const roast = await test(roastData, result.profile_pic_url);
-      await addAIResponse(roastData.userName, roast);
+      const roast = await generateAIRoast(roastData, result.profile_pic_url);
+      addAIResponse(roastData.userName, roast);
       return res.status(200).json({
         data: roast,
       });
@@ -81,9 +83,9 @@ app.listen(PORT, () => {
   dbConnect();
   console.log("App is listening on the Port " + PORT);
 });
-async function test(userData, profileUrl) {
+async function generateAIRoast(userData, profileUrl) {
   const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: process.env.MODEL_NAME,
     messages: [
       {
         role: "user",
@@ -91,7 +93,7 @@ async function test(userData, profileUrl) {
           {
             type: "text",
             text:
-              "You're a pro comedian—roast the person below based on their profile picture and details given." +
+              "Ap ak dark-comedian hai. Is admi ka profile picture aur iska details se iska roast kijiye." +
               JSON.stringify(userData),
           },
           {
@@ -106,4 +108,3 @@ async function test(userData, profileUrl) {
   });
   return JSON.stringify(completion.choices[0].message.content);
 }
-// test();

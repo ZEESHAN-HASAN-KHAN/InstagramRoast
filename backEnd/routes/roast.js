@@ -73,29 +73,5 @@ roastRouter.post("/roastMe", async (req, res) => {
     console.log("Error is " + e);
   }
 });
-// async function generateAIRoast(userData, profileUrl) {
-//   const completion = await openai.chat.completions.create({
-//     model: process.env.MODEL_NAME,
-//     messages: [
-//       {
-//         role: "user",
-//         content: [
-//           {
-//             type: "text",
-//             text:
-//               "Ap ak dark-comedian hai. Is admi ka profile picture aur iska details se iska roast kijiye." +
-//               JSON.stringify(userData),
-//           },
-//           {
-//             type: "image_url",
-//             image_url: {
-//               url: profileUrl,
-//             },
-//           },
-//         ],
-//       },
-//     ],
-//   });
-//   return JSON.stringify(completion.choices[0].message.content);
-// }
+
 module.exports = roastRouter;

@@ -27,7 +27,7 @@ roastRouter.post("/roastMe", async (req, res) => {
     const response = await fetch(url, options);
     const data = await response.json();
     const result = data.data;
-    //media count is missing
+
     const roastData = {
       name: result.full_name,
       userName: result.username,
@@ -61,12 +61,12 @@ roastRouter.post("/roastMe", async (req, res) => {
       });
     } else {
       //Data is already there
-      console.log("Data is already there");
+      console.log("Data is already in Database");
       // we need to fetch the ai response from the table
       // and return that response
       const aiResponse = await getAIResponse(roastData.userName);
       return res.status(200).json({
-        data: aiResponse,
+        data: aiResponse.response_text,
       });
     }
   } catch (e) {

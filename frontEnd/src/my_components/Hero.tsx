@@ -4,14 +4,29 @@ import search from "../assets/search.png";
 import chatgpt from "../assets/chatgpt.png";
 import searchw from "../assets/searchw.png";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+// import { Button } from "@/components/ui/button";
 // import { AnimatedListDemo } from "./AnimatedListDemo";
 import { AnimatedBeamDemo } from "./AnimatedBeamDemo";
 import { useTheme } from "@/components/ui/theme-provider";
 import { RainbowButton } from "@/components/ui/rainbow-button";
+import { useNavigate } from "react-router-dom";
 // import { NeonGradientCard } from "@/components/ui/neon-gradient-card";
 export function Hero() {
   const { theme } = useTheme();
+  const [uname, setUname] = useState("");
+  const navigate = useNavigate();
+  async function discover() {
+    alert(uname);
+    // send this data to backend
+    // if we get the data we'll redirect it to
+    // other page
+    //if username doesnot't exist or failed to fetch
+    // we'll show the toast notification
+
+    navigate("/" + uname);
+    setUname("");
+  }
 
   return (
     <div className="flex flex-col lg:flex-row  ">
@@ -40,11 +55,16 @@ export function Hero() {
         {/* Input Sectton */}
         <div className="flex gap-1">
           <Input
-            className="z-20 inline w-[55%] lg:w-[40%] "
+            className="z-20  inline w-[55%] lg:w-[40%] "
             placeholder="@username"
+            onChange={(e) => {
+              console.log(uname);
+              setUname(e.target.value);
+            }}
+            value={uname}
           />
 
-          <RainbowButton className="mb-2 z-10 h-9 w-auto ">
+          <RainbowButton onClick={discover} className="mb-2 z-10 h-9 w-auto ">
             Discover{"   "}
             <img
               className="w-5 ml-1 "
@@ -63,12 +83,9 @@ export function Hero() {
         </span>
       </div>
       {/* Right Section */}
-      <div className="lg:w-1/2  mt-10 lg:mt-[5%] p-4 lg:justify-center">
-        {/* <NeonGradientCard className="">
-          <div className=""> */}
+      <div className="lg:w-1/2  mt-10 lg:mt-[5%] p-4 lg:justify-center ">
         <AnimatedBeamDemo></AnimatedBeamDemo>
-        {/* </div>
-        </NeonGradientCard> */}
+
         <div
           style={{
             fontFamily: "Sansita",

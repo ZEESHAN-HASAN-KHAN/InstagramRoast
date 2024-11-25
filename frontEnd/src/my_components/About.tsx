@@ -5,7 +5,7 @@ export function About() {
     <div className="mt-10">
       <span
         style={{ fontFamily: "Sansita" }}
-        className="flex text-3xl p-2 lg:text-4xl justify-center"
+        className="flex text-3xl lg:text-5xl p-4 lg:p-5  justify-center"
       >
         Popular & Trending Roasts
       </span>

@@ -30,13 +30,13 @@ const reviews = [
     name: "Dwayne Johnson",
     username: "@therock",
     body: "I'm at a loss for words. This is amazing. I love it.",
-    img: vk,
+    img: dj,
   },
   {
     name: "Virat Kohli",
     username: "@virat.kohli",
     body: "I'm at a loss for words. This is amazing. I love it.",
-    img: dj,
+    img: vk,
   },
   {
     name: "David Beckham",

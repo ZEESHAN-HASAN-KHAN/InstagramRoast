@@ -20,6 +20,7 @@ import threads from "../assets/threads.png";
 export function Roast() {
   const { userName } = useParams();
   const [userData, setUserdata] = useState({});
+  const [roastData, setRoastdata] = useState("");
   const [recieve, setRecieve] = useState(false);
   async function getData() {
     try {
@@ -37,8 +38,18 @@ export function Roast() {
       }
 
       const data = await result.json();
-      setUserdata(data);
+      // We need to parse the text
+      const text = data.data;
+      let parsedText = text
+        .replace(/\\"/g, '"') // Replace escaped double quotes
+        .replace(/\\n/g, "\n") // Replace escaped newlines
+        .replace(/\\'/g, "'");
+      setRoastdata(parsedText);
+      setUserdata(data.insta_data);
+      //   alert("Insta Data" + JSON.stringify(data.insta_data));
       // here we are getting the data
+      // we are waiting extra 2 seconds
+
       setTimeout(() => {}, 2000);
       setRecieve(true);
       console.log(data);
@@ -55,38 +66,39 @@ export function Roast() {
       {recieve == true ? (
         <div>
           <div className="flex justify-center mt-5">
-            <Card className="w-fit ">
+            <Card className="w-[440px] ">
               <CardHeader className="">
-                <div className="flex flex-row justify-between ">
+                <div className="flex flex-row gap-12 ">
                   <Avatar className="size-[90px]">
                     <AvatarImage
-                      src="https://github.com/shadcn.png"
+                      src="https://scontent-fra3-1.cdninstagram.com/v/t51.2885-19/453213006_522310623803084_735419205157180172_n.jpg?stp=dst-jpg_e0_s150x150_tt6&_nc_ht=scontent-fra3-1.cdninstagram.com&_nc_cat=108&_nc_ohc=qQ0CKaN_HsQQ7kNvgFucBpZ&_nc_gid=127bd53b418f43f5a1ab624d7cc60d65&edm=AEF8tYYBAAAA&ccb=7-5&oh=00_AYB_M2gnKStQhYvf2DkKdsG4mulo4pbqCacqzISEsd-J5g&oe=674BE6E6&_nc_sid=1e20d2"
                       alt="@shadcn"
                     />
                     <AvatarFallback>CN</AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col gap-5 ">
-                    <CardTitle>@iam_zhk</CardTitle>
+                    <CardTitle>@{userData.userName}</CardTitle>
                     <CardTitle>
                       {" "}
                       <HyperText
                         className=" dark:text-white"
-                        text="Zeeshan Hasan Khan"
+                        text={userData.name}
                       />
                     </CardTitle>
                   </div>
                 </div>
                 <div className="flex flex-row gap-3 justify-center">
-                  <CardTitle>0 Posts</CardTitle>
+                  <CardTitle>{userData.post} Posts</CardTitle>
                   <CardTitle>
-                    <NumberTicker value={1000} />
+                    <NumberTicker value={userData.follower} />
                     Followers
                   </CardTitle>
-                  <CardTitle>79 Following</CardTitle>
+                  <CardTitle>
+                    <NumberTicker value={userData.following} />
+                    Following
+                  </CardTitle>
                 </div>
-                <CardDescription>
-                  Software Engineer Ready to change the world
-                </CardDescription>
+                <CardDescription>{userData.bio}</CardDescription>
               </CardHeader>
             </Card>
             {/* <Card className="w-fit flex justify-center"> Roast Data</Card> */}
@@ -119,11 +131,13 @@ export function Roast() {
               </li>
             </ul>
           </div>
-          <Card>
-            <CardHeader>
-              <CardDescription>{JSON.stringify(userData)}</CardDescription>
-            </CardHeader>
-          </Card>
+          <div className="flex justify-center mt-10">
+            <Card className="w-[550px]">
+              <CardHeader>
+                <CardDescription>{roastData}</CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
         </div>
       ) : (
         <div className="flex justify-center mt-5">

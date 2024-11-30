@@ -57,6 +57,7 @@ roastRouter.post("/roastMe", async (req, res) => {
       const roast = await generateAIRoast(roastData, result.profile_pic_url);
       addAIResponse(roastData.userName, roast);
       return res.status(200).json({
+        insta_data: { ...roastData, profileUrl },
         data: roast,
       });
     } else {
@@ -66,6 +67,7 @@ roastRouter.post("/roastMe", async (req, res) => {
       // and return that response
       const aiResponse = await getAIResponse(roastData.userName);
       return res.status(200).json({
+        insta_data: { ...roastData, profileUrl },
         data: aiResponse.response_text,
       });
     }

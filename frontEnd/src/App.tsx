@@ -8,6 +8,7 @@ import { Hero } from "./my_components/Hero";
 import { Navbar } from "./my_components/Navbar";
 import { About } from "./my_components/About";
 import { Roast } from "./my_components/Roast";
+import Meteors from "./components/ui/meteors";
 export default function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
@@ -24,6 +25,8 @@ export default function App() {
             "[mask-image:radial-gradient(200px_circle_at_center,white,transparent)]"
           )}
         /> */}
+
+          <Meteors number={10} />
         </div>
       </BrowserRouter>
     </ThemeProvider>

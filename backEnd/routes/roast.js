@@ -55,11 +55,11 @@ roastRouter.post("/roastMe", async (req, res) => {
 
     await addUser(
       fileName,
-      roastData.userName,
-      roastData.name,
+      roastData.username,
+      roastData.full_name,
       roastData.follower,
       roastData.following,
-      roastData.bio,
+      roastData.biography,
       roastData.post
     );
 

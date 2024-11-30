@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, Variants } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -17,7 +17,7 @@ const alphabets = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
 const getRandomInt = (max: number) => Math.floor(Math.random() * max);
 
-export default function HyperText({
+export function HyperText({
   text,
   duration = 800,
   framerProps = {
@@ -28,60 +28,57 @@ export default function HyperText({
   className,
   animateOnLoad = true,
 }: HyperTextProps) {
-  const [displayText, setDisplayText] = useState(() => text.split(""));
+  const [displayText, setDisplayText] = useState(text.split(""));
   const [trigger, setTrigger] = useState(false);
-  const iterations = useRef(0); // Fixed spelling issue
+  const interations = useRef(0);
   const isFirstRender = useRef(true);
 
   const triggerAnimation = () => {
-    iterations.current = 0;
+    interations.current = 0;
     setTrigger(true);
   };
 
   useEffect(() => {
-    if (!animateOnLoad && isFirstRender.current) {
-      isFirstRender.current = false;
-      setDisplayText(text.split(""));
-      return;
-    }
-
     const interval = setInterval(() => {
-      if (iterations.current < text.length) {
-        setDisplayText((currentText) =>
-          currentText.map(
-            (char, index) =>
-              char === " "
-                ? char // Preserve spaces
-                : index <= iterations.current
-                ? text[index] // Correctly set original character
-                : alphabets[getRandomInt(26)] // Randomize remaining characters
+      if (!animateOnLoad && isFirstRender.current) {
+        clearInterval(interval);
+        isFirstRender.current = false;
+        return;
+      }
+      if (interations.current < text.length) {
+        setDisplayText((t) =>
+          t.map((l, i) =>
+            l === " "
+              ? l
+              : i <= interations.current
+              ? text[i]
+              : alphabets[getRandomInt(26)]
           )
         );
-        iterations.current += 1; // Increment by 1 for better alignment with indices
+        interations.current = interations.current + 0.1;
       } else {
-        setDisplayText(text.split("")); // Finalize text
         setTrigger(false);
         clearInterval(interval);
       }
     }, duration / (text.length * 10));
-
-    return () => clearInterval(interval); // Cleanup on unmount
+    // Clean up interval on unmount
+    return () => clearInterval(interval);
   }, [text, duration, trigger, animateOnLoad]);
 
   return (
     <div
-      className="overflow-hidden py-2 flex cursor-default scale-100"
+      className="flex scale-100 cursor-default overflow-hidden py-2"
       onMouseEnter={triggerAnimation}
     >
       <AnimatePresence mode="wait">
         {displayText.map((letter, i) => (
-          <motion.h1
+          <motion.span
             key={i}
             className={cn("font-mono", letter === " " ? "w-3" : "", className)}
             {...framerProps}
           >
             {letter.toUpperCase()}
-          </motion.h1>
+          </motion.span>
         ))}
       </AnimatePresence>
     </div>

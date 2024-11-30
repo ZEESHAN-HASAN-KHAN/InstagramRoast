@@ -17,7 +17,7 @@ export default function App() {
           <Navbar />
           <Routes>
             <Route path="/" element={<Hero />} />
-            <Route path="/:userName" element={<Roast />} />
+            <Route path="/:username" element={<Roast />} />
           </Routes>
           <About />
         </div>

@@ -19,12 +19,12 @@ const getInstagramProfile = async (username) => {
   const result = data.data;
 
   const roastData = {
-    name: result.full_name,
-    userName: result.username,
+    full_name: result.full_name,
+    username: result.username,
     follower: result.follower_count,
     following: result.following_count,
     isPrivate: result.is_private,
-    bio: result.biography,
+    biography: result.biography,
     post: result.media_count,
     profile_pic_url: result.profile_pic_url_hd,
   };

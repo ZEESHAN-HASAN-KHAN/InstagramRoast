@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import HyperText from "@/components/ui/hyper-text";
+import { HyperText } from "@/components/ui/hyper-text";
 import NumberTicker from "@/components/ui/number-ticker";
 
 import twitter from "../assets/twitter.png";
@@ -32,12 +32,12 @@ export function Roast() {
     data: string;
   }
 
-  const { userName } = useParams();
+  const { username } = useParams();
   const [userData, setUserData] = useState<InstagramData | null>(null);
   const [roastData, setRoastData] = useState("");
   const [received, setReceived] = useState(false);
 
-  async function getData() {
+  const getData = async() => {
     try {
       const result = await fetch("http://localhost:3000/api/v1/roastMe", {
         method: "POST",
@@ -45,7 +45,7 @@ export function Roast() {
           Accept: "application/json",
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name: userName }),
+        body: JSON.stringify({ name: username }),
       });
 
       if (!result.ok) {
@@ -57,8 +57,10 @@ export function Roast() {
       const parsedText = data.data
         .replace(/\\"/g, '"') // Replace escaped double quotes
         .replace(/\\n/g, "\n") // Replace escaped newlines
-        .replace(/\\'/g, "'");
-
+        .replace(/\\'/g, "'")
+        .replace(/\\"/g, '"');
+      
+      
       setRoastData(parsedText);
       setUserData(data);
       setReceived(true);
@@ -104,11 +106,11 @@ export function Roast() {
                   </CardTitle>
                   <CardTitle>
                     <NumberTicker value={userData.insta_data.follower} />
-                    Followers
+                    {" "}Followers
                   </CardTitle>
                   <CardTitle>
                     <NumberTicker value={userData.insta_data.following} />
-                    Following
+                    {" "}Following
                   </CardTitle>
                 </div>
                 <CardDescription>

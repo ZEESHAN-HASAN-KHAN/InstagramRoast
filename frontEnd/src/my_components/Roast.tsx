@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
   Card,
-  CardContent,
+  //   CardContent,
   CardDescription,
-  CardFooter,
+  //   CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -17,11 +17,26 @@ import twitter from "../assets/twitter.png";
 import whatsapp from "../assets/whatsapp.png";
 import linkedin from "../assets/linkedin.png";
 import threads from "../assets/threads.png";
+
 export function Roast() {
+  interface InstagramData {
+    insta_data: {
+      profile_pic_url: string;
+      username: string;
+      full_name: string;
+      follower: number;
+      following: number;
+      biography: string;
+      post: number;
+    };
+    data: string;
+  }
+
   const { userName } = useParams();
-  const [userData, setUserdata] = useState({});
-  const [roastData, setRoastdata] = useState("");
-  const [recieve, setRecieve] = useState(false);
+  const [userData, setUserData] = useState<InstagramData | null>(null);
+  const [roastData, setRoastData] = useState("");
+  const [received, setReceived] = useState(false);
+
   async function getData() {
     try {
       const result = await fetch("http://localhost:3000/api/v1/roastMe", {
@@ -37,96 +52,93 @@ export function Roast() {
         throw new Error(`HTTP error! status: ${result.status}`);
       }
 
-      const data = await result.json();
-      // We need to parse the text
-      const text = data.data;
-      let parsedText = text
+      const data: InstagramData = await result.json();
+
+      const parsedText = data.data
         .replace(/\\"/g, '"') // Replace escaped double quotes
         .replace(/\\n/g, "\n") // Replace escaped newlines
         .replace(/\\'/g, "'");
-      setRoastdata(parsedText);
-      setUserdata(data.insta_data);
-      //   alert("Insta Data" + JSON.stringify(data.insta_data));
-      // here we are getting the data
-      // we are waiting extra 2 seconds
 
-      setTimeout(() => {}, 2000);
-      setRecieve(true);
+      setRoastData(parsedText);
+      setUserData(data);
+      setReceived(true);
       console.log(data);
     } catch (error) {
       console.error("Error:", error);
     }
   }
+
   useEffect(() => {
-    // alert(userName);
     getData();
   }, []);
+
   return (
     <div>
-      {recieve == true ? (
+      {received && userData ? (
         <div>
+          {/* User Card */}
           <div className="flex justify-center mt-5">
-            <Card className="w-[440px] ">
-              <CardHeader className="">
-                <div className="flex flex-row gap-12 ">
+            <Card className="w-[440px]">
+              <CardHeader>
+                <div className="flex flex-row gap-12">
                   <Avatar className="size-[90px]">
                     <AvatarImage
-                      src="https://scontent-fra3-1.cdninstagram.com/v/t51.2885-19/453213006_522310623803084_735419205157180172_n.jpg?stp=dst-jpg_e0_s150x150_tt6&_nc_ht=scontent-fra3-1.cdninstagram.com&_nc_cat=108&_nc_ohc=qQ0CKaN_HsQQ7kNvgFucBpZ&_nc_gid=127bd53b418f43f5a1ab624d7cc60d65&edm=AEF8tYYBAAAA&ccb=7-5&oh=00_AYB_M2gnKStQhYvf2DkKdsG4mulo4pbqCacqzISEsd-J5g&oe=674BE6E6&_nc_sid=1e20d2"
-                      alt="@shadcn"
+                      src={userData.insta_data.profile_pic_url}
+                      alt={userData.insta_data.username}
                     />
                     <AvatarFallback>CN</AvatarFallback>
                   </Avatar>
-                  <div className="flex flex-col gap-5 ">
-                    <CardTitle>@{userData.userName}</CardTitle>
+                  <div className="flex flex-col gap-5">
+                    <CardTitle>@{userData.insta_data.username}</CardTitle>
                     <CardTitle>
-                      {" "}
                       <HyperText
-                        className=" dark:text-white"
-                        text={userData.name}
+                        className="dark:text-white"
+                        text={userData.insta_data.full_name}
                       />
                     </CardTitle>
                   </div>
                 </div>
                 <div className="flex flex-row gap-3 justify-center">
-                  <CardTitle>{userData.post} Posts</CardTitle>
                   <CardTitle>
-                    <NumberTicker value={userData.follower} />
+                    <NumberTicker value={userData.insta_data.post} /> Posts
+                  </CardTitle>
+                  <CardTitle>
+                    <NumberTicker value={userData.insta_data.follower} />
                     Followers
                   </CardTitle>
                   <CardTitle>
-                    <NumberTicker value={userData.following} />
+                    <NumberTicker value={userData.insta_data.following} />
                     Following
                   </CardTitle>
                 </div>
-                <CardDescription>{userData.bio}</CardDescription>
+                <CardDescription>
+                  {userData.insta_data.biography}
+                </CardDescription>
               </CardHeader>
             </Card>
-            {/* <Card className="w-fit flex justify-center"> Roast Data</Card> */}
           </div>
-          <p
-            className="flex justify-center text-md mt-5"
-            style={{ fontFamily: "Sansita" }}
-          >
-            {" "}
+
+          {/* Roast Section */}
+          <p className="flex justify-center text-md mt-5 font-sansita">
             Here is the AI Agent Analysis of Your Personality
           </p>
           <div className="flex flex-row gap-1 justify-center mt-4">
-            <span> Share:</span>
+            <span>Share:</span>
             <ul className="flex flex-row gap-2">
               <li className="flex flex-row gap-1 items-center">
-                <img className="size-5" src={twitter} />
+                <img className="size-5" src={twitter} alt="Twitter" />
                 <span>Twitter</span>
               </li>
               <li className="flex flex-row gap-1 items-center">
-                <img className=" size-5" src={whatsapp} />
+                <img className="size-5" src={whatsapp} alt="WhatsApp" />
                 <span>WhatsApp</span>
               </li>
               <li className="flex flex-row gap-1 items-center">
-                <img className=" size-5" src={linkedin} />
+                <img className="size-5" src={linkedin} alt="LinkedIn" />
                 <span>LinkedIn</span>
               </li>
-              <li className="flex  gap-1 items-center">
-                <img className=" size-5" src={threads} />
+              <li className="flex gap-1 items-center">
+                <img className="size-5" src={threads} alt="Threads" />
                 <span>Threads</span>
               </li>
             </ul>
@@ -140,9 +152,10 @@ export function Roast() {
           </div>
         </div>
       ) : (
+        // Skeleton Loading
         <div className="flex justify-center mt-5">
-          <Skeleton className="w-[350px] flex flex-row items-center  ">
-            <Skeleton className="w-12 h-12 rounded-full  m-5"></Skeleton>
+          <Skeleton className="w-[350px] flex flex-row items-center">
+            <Skeleton className="w-12 h-12 rounded-full m-5"></Skeleton>
             <div className="flex flex-col gap-5 ml-10">
               <Skeleton className="w-20 h-5"></Skeleton>
               <Skeleton className="w-20 h-5"></Skeleton>

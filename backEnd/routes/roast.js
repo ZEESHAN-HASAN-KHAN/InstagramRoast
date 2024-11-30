@@ -7,14 +7,16 @@ const {
   addAIResponse,
   getUserData,
 } = require("../database/db");
-const {generateAIRoast, getInstagramProfile} = require("../helpers/apiHelper");
-const {uploadImage} = require("../helpers/storageHelper");
+const {
+  generateAIRoast,
+  getInstagramProfile,
+} = require("../helpers/apiHelper");
+const { uploadImage } = require("../helpers/storageHelper");
 
 roastRouter.post("/roastMe", async (req, res) => {
   const name = req.body.name;
 
   try {
-
     // Get the Instagram profile data from database
     const result = await getUserData(name);
     const bucketName = process.env.BUCKET_NAME;
@@ -42,7 +44,9 @@ roastRouter.post("/roastMe", async (req, res) => {
 
     // Convert the image response to a Buffer
     if (!imageResponse.ok) {
-      throw new Error(`Failed to fetch profile picture: ${imageResponse.statusText}`);
+      throw new Error(
+        `Failed to fetch profile picture: ${imageResponse.statusText}`
+      );
     }
     const arrayBuffer = await imageResponse.arrayBuffer();
     const imageBuffer = Buffer.from(arrayBuffer);
@@ -69,7 +73,6 @@ roastRouter.post("/roastMe", async (req, res) => {
       insta_data: roastData,
       data: roast,
     });
-
   } catch (e) {
     console.error("Error:", e);
     return res.status(500).json({ error: "Something went wrong" });

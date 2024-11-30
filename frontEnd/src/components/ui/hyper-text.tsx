@@ -28,44 +28,44 @@ export default function HyperText({
   className,
   animateOnLoad = true,
 }: HyperTextProps) {
-  const [displayText, setDisplayText] = useState(text.split(""));
+  const [displayText, setDisplayText] = useState(() => text.split(""));
   const [trigger, setTrigger] = useState(false);
-  const interations = useRef(0);
+  const iterations = useRef(0); // Fixed spelling issue
   const isFirstRender = useRef(true);
 
   const triggerAnimation = () => {
-    interations.current = 0;
+    iterations.current = 0;
     setTrigger(true);
   };
 
   useEffect(() => {
-    const interval = setInterval(
-      () => {
-        if (!animateOnLoad && isFirstRender.current) {
-          clearInterval(interval);
-          isFirstRender.current = false;
-          return;
-        }
-        if (interations.current < text.length) {
-          setDisplayText((t) =>
-            t.map((l, i) =>
-              l === " "
-                ? l
-                : i <= interations.current
-                  ? text[i]
-                  : alphabets[getRandomInt(26)],
-            ),
-          );
-          interations.current = interations.current + 0.1;
-        } else {
-          setTrigger(false);
-          clearInterval(interval);
-        }
-      },
-      duration / (text.length * 10),
-    );
-    // Clean up interval on unmount
-    return () => clearInterval(interval);
+    if (!animateOnLoad && isFirstRender.current) {
+      isFirstRender.current = false;
+      setDisplayText(text.split(""));
+      return;
+    }
+
+    const interval = setInterval(() => {
+      if (iterations.current < text.length) {
+        setDisplayText((currentText) =>
+          currentText.map(
+            (char, index) =>
+              char === " "
+                ? char // Preserve spaces
+                : index <= iterations.current
+                ? text[index] // Correctly set original character
+                : alphabets[getRandomInt(26)] // Randomize remaining characters
+          )
+        );
+        iterations.current += 1; // Increment by 1 for better alignment with indices
+      } else {
+        setDisplayText(text.split("")); // Finalize text
+        setTrigger(false);
+        clearInterval(interval);
+      }
+    }, duration / (text.length * 10));
+
+    return () => clearInterval(interval); // Cleanup on unmount
   }, [text, duration, trigger, animateOnLoad]);
 
   return (

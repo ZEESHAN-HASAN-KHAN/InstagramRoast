@@ -17,7 +17,6 @@ export function Hero() {
   const [uname, setUname] = useState("");
   const navigate = useNavigate();
   async function discover() {
-    alert(uname);
     // send this data to backend
     // if we get the data we'll redirect it to
     // other page
@@ -25,7 +24,7 @@ export function Hero() {
     // we'll show the toast notification
 
     navigate("/" + uname);
-    setUname("");
+    // setUname("");
   }
 
   return (

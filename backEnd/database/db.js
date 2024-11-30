@@ -1,15 +1,11 @@
 const { Client } = require("pg");
-const { Pool } = require("pg");
-// const client = new Client({
-//   connectionString: process.env.DB,
-// });
-const pool = new Pool({
+
+const client = new Client({
   connectionString: process.env.DB,
 });
 
 async function getUserData(username) {
   try {
-    const client = await pool.connect();
     const result = await client.query(
       `SELECT 
          profile_pic_url, 
@@ -38,9 +34,9 @@ async function getUserData(username) {
 }
 
 async function dbConnect() {
-  const client = await pool.connect();
-
+  await client.connect();
   console.log("Database is connected");
+
   const result = await client.query(`
                     CREATE TABLE IF NOT EXISTS profiles (
                 id SERIAL PRIMARY KEY,
@@ -69,7 +65,6 @@ async function dbConnect() {
 }
 async function getAIResponse(username) {
   try {
-    const client = await pool.connect();
     const result = await client.query(
       `SELECT ar.response_text
              FROM ai_responses ar
@@ -94,7 +89,6 @@ async function addUser(
   post
 ) {
   try {
-    const client = await pool.connect();
     const result = await client.query(
       `INSERT INTO profiles 
                 (profile_pic_url, username, full_name, follower, following, biography, post) 
@@ -113,7 +107,6 @@ async function addUser(
 }
 async function checkUserExists(username) {
   try {
-    const client = await pool.connect();
     const result = await client.query(
       `SELECT * FROM profiles WHERE username = $1;`,
       [username]
@@ -133,7 +126,6 @@ async function checkUserExists(username) {
 }
 async function addAIResponse(username, responseText) {
   try {
-    const client = await pool.connect();
     // Step 1: Get the profile ID for the given username
     const profileResult = await client.query(
       `SELECT id FROM profiles WHERE username = $1;`,

@@ -6,6 +6,37 @@ const { Pool } = require("pg");
 const pool = new Pool({
   connectionString: process.env.DB,
 });
+
+async function getUserData(username) {
+  try {
+    const client = await pool.connect();
+    const result = await client.query(
+      `SELECT 
+         profile_pic_url, 
+         username, 
+         full_name, 
+         follower, 
+         following, 
+         biography, 
+         post 
+       FROM profiles 
+       WHERE username = $1;`,
+      [username]
+    );
+
+    if (result.rows.length === 0) {
+      console.log("User data not found in the database.");
+      return null; // Return null if the user data does not exist
+    }
+
+    console.log("User data retrieved:", result.rows[0]);
+    return result.rows[0]; // Return the user data
+  } catch (error) {
+    console.error("Error fetching user data:", error);
+    throw error;
+  }
+}
+
 async function dbConnect() {
   const client = await pool.connect();
 
@@ -137,4 +168,5 @@ module.exports = {
   checkUserExists,
   getAIResponse,
   addAIResponse,
+  getUserData,
 };

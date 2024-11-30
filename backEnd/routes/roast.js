@@ -1,78 +1,78 @@
 require("dotenv").config();
-
 const express = require("express");
 const roastRouter = express.Router();
 const {
   addUser,
-  checkUserExists,
   getAIResponse,
   addAIResponse,
+  getUserData,
 } = require("../database/db");
-const options = {
-  method: "GET",
-  headers: {
-    "x-rapidapi-key": process.env.X_RAPIDAPI_KEY,
-    "x-rapidapi-host": process.env.X_RAPIDAPI_HOST,
-  },
-};
-const generateAIRoast = require("../middleware/generateAIRoast");
+const {generateAIRoast, getInstagramProfile} = require("../helpers/apiHelper");
+const {uploadImage} = require("../helpers/storageHelper");
+
 roastRouter.post("/roastMe", async (req, res) => {
   const name = req.body.name;
-  const baseURL = process.env.URL;
 
   try {
-    const url = new URL(`${baseURL}` + "/v1/info");
-    url.searchParams.append("username_or_id_or_url", name);
 
-    const response = await fetch(url, options);
-    const data = await response.json();
-    const result = data.data;
-
-    const roastData = {
-      name: result.full_name,
-      userName: result.username,
-      follower: result.follower_count,
-      following: result.following_count,
-      isPrivate: result.is_private,
-      bio: result.biography,
-      post: result.media_count,
-    };
-
-    const profileUrl = result.profile_pic_url;
-
-    //we need to check if user data exist or not
-    if (!(await checkUserExists(roastData.userName))) {
-      //adding the profile info to database
-      await addUser(
-        profileUrl,
-        roastData.userName,
-        roastData.name,
-        roastData.follower,
-        roastData.following,
-        roastData.bio,
-        roastData.post
-      );
-      console.log("Data Added successfully");
-
-      const roast = await generateAIRoast(roastData, result.profile_pic_url);
-      addAIResponse(roastData.userName, roast);
-      return res.status(200).json({
-        insta_data: { ...roastData, profileUrl },
-        data: roast,
-      });
-    } else {
-      //Data is already there
+    // Get the Instagram profile data from database
+    const result = await getUserData(name);
+    const bucketName = process.env.BUCKET_NAME;
+    // if data is present in database
+    if (result) {
       console.log("Data is already in Database");
-      // we need to fetch the ai response from the table
-      // and return that response
-      const aiResponse = await getAIResponse(roastData.userName);
+      result.profile_pic_url = `https://storage.googleapis.com/${bucketName}/${result.profile_pic_url}`;
+
+      // Fetch the AI response from the table and return it
+      const aiResponse = await getAIResponse(name);
       return res.status(200).json({
-        insta_data: { ...roastData, profileUrl },
+        insta_data: result,
         data: aiResponse.response_text,
       });
     }
+
+    // Fetch the Instagram profile data
+    const roastData = await getInstagramProfile(name);
+    console.log("Roast Data:", roastData);
+
+    // Download the profile picture to memory
+    const profileUrl = roastData.profile_pic_url;
+    console.log("Profile URL:", profileUrl);
+    const imageResponse = await fetch(profileUrl);
+
+    // Convert the image response to a Buffer
+    if (!imageResponse.ok) {
+      throw new Error(`Failed to fetch profile picture: ${imageResponse.statusText}`);
+    }
+    const arrayBuffer = await imageResponse.arrayBuffer();
+    const imageBuffer = Buffer.from(arrayBuffer);
+    const fileName = await uploadImage(imageBuffer);
+    const gcsProfileUrl = `https://storage.googleapis.com/${bucketName}/${fileName}`;
+
+    await addUser(
+      fileName,
+      roastData.userName,
+      roastData.name,
+      roastData.follower,
+      roastData.following,
+      roastData.bio,
+      roastData.post
+    );
+
+    // roast instagram profile data
+    const roast = await generateAIRoast(roastData, roastData.profile_pic_url);
+    // Update roastData with the GCS URL
+    roastData.profile_pic_url = gcsProfileUrl;
+    addAIResponse(name, roast);
+
+    return res.status(200).json({
+      insta_data: roastData,
+      data: roast,
+    });
+
   } catch (e) {
-    console.log("Error is " + e);
+    console.error("Error:", e);
+    return res.status(500).json({ error: "Something went wrong" });
   }
 });
 

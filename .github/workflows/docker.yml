@@ -22,13 +22,13 @@ jobs:
       - name: Build the Docker image
         run: |
           cp ./backEnd/.env.example ./backEnd/.env
-          sed -i "s/X_RAPIDAPI_KEY=.*/X_RAPIDAPI_KEY=${{ secrets.X_RAPIDAPI_KEY }}/g" ./backEnd/.env
-          sed -i "s/X_RAPIDAPI_HOST=.*/X_RAPIDAPI_HOST=${{ secrets.X_RAPIDAPI_HOST }}/g" ./backEnd/.env
-          sed -i "s/URL=.*/URL=${{ secrets.URL }}/g" ./backEnd/.env
-          sed -i "s/DB=.*/DB=${{ secrets.DB }}/g" ./backEnd/.env
-          sed -i "s/APIKEY=.*/APIKEY=${{ secrets.APIKEY }}/g" ./backEnd/.env
-          sed -i "s/MODEL_NAME=.*/MODEL_NAME=${{ secrets.MODEL_NAME }}/g" ./backEnd/.env
-          sed -i "s/BUCKET_NAME=.*/BUCKET_NAME=${{ secrets.BUCKET_NAME }}/g" ./backEnd/.env
+          echo "X_RAPIDAPI_KEY=${{ secrets.X_RAPIDAPI_KEY }}" >> ./backEnd/.env
+          echo "X_RAPIDAPI_HOST=${{ secrets.X_RAPIDAPI_HOST }}" >> ./backEnd/.env
+          echo "URL=${{ secrets.URL }}" >> ./backEnd/.env
+          echo "DB=${{ secrets.DB }}" >> ./backEnd/.env
+          echo "APIKEY=${{ secrets.APIKEY }}" >> ./backEnd/.env
+          echo "MODEL_NAME=${{ secrets.MODEL_NAME }}" >> ./backEnd/.env
+          echo "BUCKET_NAME=${{ secrets.BUCKET_NAME }}" >> ./backEnd/.env
           docker build -t instagram-roast-backend:latest ./backEnd \
             --build-arg X_RAPIDAPI_KEY=${{ secrets.X_RAPIDAPI_KEY }} \
             --build-arg X_RAPIDAPI_HOST=${{ secrets.X_RAPIDAPI_HOST }} \

@@ -2,7 +2,11 @@ const { Client } = require("pg");
 
 const client = new Client({
   connectionString: process.env.DB,
+  ssl: {
+    rejectUnauthorized: false, // For self-signed certificates
+  },
 });
+
 
 async function getUserData(username) {
   try {
@@ -34,36 +38,44 @@ async function getUserData(username) {
 }
 
 async function dbConnect() {
-  console.log("Database URL:", process.env.DB);
-  await client.connect();
-  console.log("Database is connected");
-
-  const result = await client.query(`
-                    CREATE TABLE IF NOT EXISTS profiles (
-                id SERIAL PRIMARY KEY,
-                profile_pic_url TEXT,
-                username VARCHAR(50) UNIQUE NOT NULL,
-                full_name VARCHAR(255),
-                follower INTEGER,
-                following INTEGER,
-                biography TEXT,
-                post INTEGER,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-
-        `);
-  const result2 = await client.query(`
-            CREATE TABLE IF NOT EXISTS ai_responses (
-                id SERIAL PRIMARY KEY,
-                profile_id INTEGER NOT NULL,
-                response_text TEXT NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (profile_id) REFERENCES profiles (id) ON DELETE CASCADE
-            );
-        `);
+  console.log("Attempting to connect to the database...");
+  try {
+    console.log("Database URL:", process.env.DB);
+    await client.connect();
+    console.log("Database is connected");
+  
+    const result = await client.query(`
+                      CREATE TABLE IF NOT EXISTS profiles (
+                  id SERIAL PRIMARY KEY,
+                  profile_pic_url TEXT,
+                  username VARCHAR(50) UNIQUE NOT NULL,
+                  full_name VARCHAR(255),
+                  follower INTEGER,
+                  following INTEGER,
+                  biography TEXT,
+                  post INTEGER,
+                  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+              );
+  
+          `);
+    const result2 = await client.query(`
+              CREATE TABLE IF NOT EXISTS ai_responses (
+                  id SERIAL PRIMARY KEY,
+                  profile_id INTEGER NOT NULL,
+                  response_text TEXT NOT NULL,
+                  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                  FOREIGN KEY (profile_id) REFERENCES profiles (id) ON DELETE CASCADE
+              );
+          `);
+  
+  } catch (err) {
+    console.error("Failed to connect to the database:", err.message);
+  }
 }
+
+
 async function getAIResponse(username) {
   try {
     const result = await client.query(

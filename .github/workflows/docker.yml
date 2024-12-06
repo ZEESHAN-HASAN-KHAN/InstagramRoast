@@ -7,7 +7,7 @@ on:
   pull_request:
     branches:
       - main
-      
+
 jobs:
   build-backend:
     runs-on: ubuntu-latest
@@ -22,13 +22,13 @@ jobs:
       - name: Build the Docker image
         run: |
           cp ./backEnd/.env.example ./backEnd/.env
-          sed -i "s/X_RAPIDAPI_KEY=.*/X_RAPIDAPI_KEY=${{ secrets.X_RAPIDAPI_KEY }}/g" .env
-          sed -i "s/X_RAPIDAPI_HOST=.*/X_RAPIDAPI_HOST=${{ secrets.X_RAPIDAPI_HOST }}/g" .env
-          sed -i "s/URL=.*/URL=${{ secrets.URL }}/g" .env
-          sed -i "s/DB=.*/DB=${{ secrets.DB }}/g" .env
-          sed -i "s/APIKEY=.*/APIKEY=${{ secrets.APIKEY }}/g" .env
-          sed -i "s/MODEL_NAME=.*/MODEL_NAME=${{ secrets.MODEL_NAME }}/g" .env
-          sed -i "s/BUCKET_NAME=.*/BUCKET_NAME=${{ secrets.BUCKET_NAME }}/g" .env
+          sed -i "s/X_RAPIDAPI_KEY=.*/X_RAPIDAPI_KEY=${{ secrets.X_RAPIDAPI_KEY }}/g" ./backEnd/.env
+          sed -i "s/X_RAPIDAPI_HOST=.*/X_RAPIDAPI_HOST=${{ secrets.X_RAPIDAPI_HOST }}/g" ./backEnd/.env
+          sed -i "s/URL=.*/URL=${{ secrets.URL }}/g" ./backEnd/.env
+          sed -i "s/DB=.*/DB=${{ secrets.DB }}/g" ./backEnd/.env
+          sed -i "s/APIKEY=.*/APIKEY=${{ secrets.APIKEY }}/g" ./backEnd/.env
+          sed -i "s/MODEL_NAME=.*/MODEL_NAME=${{ secrets.MODEL_NAME }}/g" ./backEnd/.env
+          sed -i "s/BUCKET_NAME=.*/BUCKET_NAME=${{ secrets.BUCKET_NAME }}/g" ./backEnd/.env
           docker build -t instagram-roast-backend:latest ./backEnd \
             --build-arg X_RAPIDAPI_KEY=${{ secrets.X_RAPIDAPI_KEY }} \
             --build-arg X_RAPIDAPI_HOST=${{ secrets.X_RAPIDAPI_HOST }} \
@@ -39,7 +39,6 @@ jobs:
             --build-arg BUCKET_NAME=${{ secrets.BUCKET_NAME }}
           
       - name: Configure GCP Credentials
-        if: github.ref == 'refs/heads/main'
         uses: google-github-actions/setup-gcloud@v0
         with:
           service_account_key: ${{ secrets.SERVICE_ACCOUNT_JSON }}
@@ -47,18 +46,15 @@ jobs:
           export_default_credentials: true
       
       - name: Configure Docker Client
-        if: github.ref == 'refs/heads/main'
-        run: |-
-          gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
 
       - name: Push the Docker image
-        if: github.ref == 'refs/heads/main'
         env: 
           ARTIFACT_REGISTRY_URL: asia-south1-docker.pkg.dev/roast-123/instagram-roast-backend
         run: |
           docker tag instagram-roast-backend:latest $ARTIFACT_REGISTRY_URL/instagram-roast-backend:latest
           docker push $ARTIFACT_REGISTRY_URL/instagram-roast-backend:latest      
-  
+
   build-frontend:
     runs-on: ubuntu-latest
 
@@ -75,7 +71,6 @@ jobs:
             --build-arg VITE_APP_BASE_URL=${{ secrets.VITE_APP_BASE_URL }}
           
       - name: Configure GCP Credentials
-        if: github.ref == 'refs/heads/main'
         uses: google-github-actions/setup-gcloud@v0
         with:
           service_account_key: ${{ secrets.SERVICE_ACCOUNT_JSON }}
@@ -83,12 +78,9 @@ jobs:
           export_default_credentials: true
       
       - name: Configure Docker Client
-        if: github.ref == 'refs/heads/main'
-        run: |-
-          gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
 
       - name: Push the Docker image
-        if: github.ref == 'refs/heads/main'
         env: 
           ARTIFACT_REGISTRY_URL: asia-south1-docker.pkg.dev/roast-123/instagram-roast-frontend
         run: |
@@ -99,7 +91,7 @@ jobs:
   deploy-backend:
     needs: build-backend
     runs-on: ubuntu-latest
-    if: (github.event_name == 'push' || github.event_name == 'pull_request') && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
     steps:
       - name: Configure GCP Credentials
         uses: google-github-actions/setup-gcloud@v0
@@ -108,22 +100,20 @@ jobs:
           project_id: roast-123
           export_default_credentials: true
           
-      # deploy to cloud run
       - name: Deploy to Cloud Run
         uses: google-github-actions/deploy-cloudrun@main
         with:
-          service_name: "instagram-roast-backend"  # Replace with the name of your existing Cloud Run service
+          service_name: "instagram-roast-backend"
           image: "asia-south1-docker.pkg.dev/roast-123/instagram-roast-backend/instagram-roast-backend:latest"
           platform: "managed"
-          region: "asia-east1"
-          service: "instagram-roast-backend"
+          region: "asia-south1"
           port: 8080
 
 
   deploy-frontend:
     needs: build-frontend
     runs-on: ubuntu-latest
-    if: (github.event_name == 'push' || github.event_name == 'pull_request') && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
     steps:
       - name: Configure GCP Credentials
         uses: google-github-actions/setup-gcloud@v0
@@ -132,13 +122,11 @@ jobs:
           project_id: roast-123
           export_default_credentials: true
           
-      # deploy to cloud run
       - name: Deploy to Cloud Run
         uses: google-github-actions/deploy-cloudrun@main
         with:
-          service_name: "instagram-roast-frontend"  # Replace with the name of your existing Cloud Run service
+          service_name: "instagram-roast-frontend"
           image: "asia-south1-docker.pkg.dev/roast-123/instagram-roast-frontend/instagram-roast-frontend:latest"
           platform: "managed"
-          region: "asia-east1"
-          service: "instagram-roast-frontend"
+          region: "asia-south1"
           port: 5173

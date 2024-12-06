@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HyperText } from "@/components/ui/hyper-text";
 import NumberTicker from "@/components/ui/number-ticker";
-
+// import "dotenv/config";
 import twitter from "../assets/twitter.png";
 import whatsapp from "../assets/whatsapp.png";
 import linkedin from "../assets/linkedin.png";
@@ -21,6 +21,7 @@ import threads_w from "../assets/threads_w.png";
 
 import { useTheme } from "@/components/ui/theme-provider";
 import { NeonGradientCard } from "@/components/ui/neon-gradient-card";
+import { Underline } from "lucide-react";
 
 export function Roast() {
   const { theme } = useTheme();
@@ -58,7 +59,9 @@ export function Roast() {
 
   const getData = async () => {
     try {
-      const result = await fetch("http://localhost:3000/api/v1/roastMe", {
+      const url = import.meta.env.VITE_APP_BASE_URL;
+
+      const result = await fetch(url, {
         method: "POST",
         headers: {
           Accept: "application/json",

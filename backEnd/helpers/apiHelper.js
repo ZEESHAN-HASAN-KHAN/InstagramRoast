@@ -4,7 +4,8 @@ const OpenAI = require("openai");
 const getInstagramProfile = async (username) => {
   const url = new URL(`${process.env.URL}` + "/v1/info");
   url.searchParams.append("username_or_id_or_url", username);
-
+  console.log("PROCESS ENV", process.env.X_RAPIDAPI_KEY);
+  console.log("PROCESS ENV", process.env.X_RAPIDAPI_HOST);
   const options = {
     method: "GET",
     headers: {

@@ -29,14 +29,7 @@ jobs:
           echo "APIKEY=${{ secrets.APIKEY }}" >> ./backEnd/.env
           echo "MODEL_NAME=${{ secrets.MODEL_NAME }}" >> ./backEnd/.env
           echo "BUCKET_NAME=${{ secrets.BUCKET_NAME }}" >> ./backEnd/.env
-          docker build -t instagram-roast-backend:latest ./backEnd \
-            --build-arg X_RAPIDAPI_KEY=${{ secrets.X_RAPIDAPI_KEY }} \
-            --build-arg X_RAPIDAPI_HOST=${{ secrets.X_RAPIDAPI_HOST }} \
-            --build-arg URL=${{ secrets.URL }} \
-            --build-arg DB=${{ secrets.DB }} \
-            --build-arg APIKEY=${{ secrets.APIKEY }} \
-            --build-arg MODEL_NAME=${{ secrets.MODEL_NAME }} \
-            --build-arg BUCKET_NAME=${{ secrets.BUCKET_NAME }}
+          docker build -t instagram-roast-backend:latest ./backEnd
           
       - name: Configure GCP Credentials
         uses: google-github-actions/setup-gcloud@v0

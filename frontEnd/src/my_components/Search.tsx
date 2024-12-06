@@ -4,10 +4,10 @@ import * as React from "react";
 import {
   Calculator,
   Calendar,
-  CreditCard,
-  Settings,
+  // CreditCard,
+  // Settings,
   Smile,
-  User,
+  // User,
 } from "lucide-react";
 
 import {
@@ -18,7 +18,7 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-  CommandShortcut,
+  // CommandShortcut,
 } from "@/components/ui/command";
 
 export function Search() {

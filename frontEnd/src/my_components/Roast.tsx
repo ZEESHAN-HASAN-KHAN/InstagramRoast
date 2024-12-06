@@ -20,8 +20,8 @@ import threads from "../assets/threads.png";
 import threads_w from "../assets/threads_w.png";
 
 import { useTheme } from "@/components/ui/theme-provider";
-import { NeonGradientCard } from "@/components/ui/neon-gradient-card";
-import { Underline } from "lucide-react";
+// import { NeonGradientCard } from "@/components/ui/neon-gradient-card";
+// import { Underline } from "lucide-react";
 
 export function Roast() {
   const { theme } = useTheme();
@@ -61,7 +61,7 @@ export function Roast() {
     try {
       const url = import.meta.env.VITE_APP_BASE_URL;
 
-      const result = await fetch(url, {
+      const result = await fetch(url + "/api/v1/roastMe", {
         method: "POST",
         headers: {
           Accept: "application/json",

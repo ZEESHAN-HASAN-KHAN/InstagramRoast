@@ -21,7 +21,6 @@ jobs:
 
       - name: Build the Docker image
         run: |
-          cp ./backEnd/.env.example ./backEnd/.env
           echo "X_RAPIDAPI_KEY=${{ secrets.X_RAPIDAPI_KEY }}" >> ./backEnd/.env
           echo "X_RAPIDAPI_HOST=${{ secrets.X_RAPIDAPI_HOST }}" >> ./backEnd/.env
           echo "URL=${{ secrets.URL }}" >> ./backEnd/.env

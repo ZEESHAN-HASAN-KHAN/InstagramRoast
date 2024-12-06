@@ -84,7 +84,7 @@ jobs:
   deploy-backend:
     needs: build-backend
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    if: (github.event_name == 'push' || github.event_name == 'pull_request') && github.ref == 'refs/heads/main'
     steps:
       - name: Configure GCP Credentials
         uses: google-github-actions/setup-gcloud@v0
@@ -93,20 +93,22 @@ jobs:
           project_id: roast-123
           export_default_credentials: true
           
+      # deploy to cloud run
       - name: Deploy to Cloud Run
         uses: google-github-actions/deploy-cloudrun@main
         with:
-          service_name: "instagram-roast-backend"
+          service_name: "instagram-roast-backend"  # Replace with the name of your existing Cloud Run service
           image: "asia-south1-docker.pkg.dev/roast-123/instagram-roast-backend/instagram-roast-backend:latest"
           platform: "managed"
-          region: "asia-south1"
+          region: "asia-east1"
+          service: "instagram-roast-backend"
           port: 8080
 
 
   deploy-frontend:
     needs: build-frontend
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    if: (github.event_name == 'push' || github.event_name == 'pull_request') && github.ref == 'refs/heads/main'
     steps:
       - name: Configure GCP Credentials
         uses: google-github-actions/setup-gcloud@v0
@@ -115,11 +117,13 @@ jobs:
           project_id: roast-123
           export_default_credentials: true
           
+      # deploy to cloud run
       - name: Deploy to Cloud Run
         uses: google-github-actions/deploy-cloudrun@main
         with:
-          service_name: "instagram-roast-frontend"
+          service_name: "instagram-roast-frontend"  # Replace with the name of your existing Cloud Run service
           image: "asia-south1-docker.pkg.dev/roast-123/instagram-roast-frontend/instagram-roast-frontend:latest"
           platform: "managed"
-          region: "asia-south1"
+          region: "asia-east1"
+          service: "instagram-roast-frontend"
           port: 5173

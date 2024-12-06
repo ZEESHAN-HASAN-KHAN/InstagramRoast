@@ -35,6 +35,7 @@ async function getUserData(username) {
 
 async function dbConnect() {
   await client.connect();
+  console.log("Database URL:", process.env.DB);
   console.log("Database is connected");
 
   const result = await client.query(`

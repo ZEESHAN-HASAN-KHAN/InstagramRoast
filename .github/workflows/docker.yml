@@ -41,6 +41,13 @@ jobs:
         env: 
           ARTIFACT_REGISTRY_URL: asia-south1-docker.pkg.dev/roast-123/instagram-roast-backend
         run: |
+          echo "X_RAPIDAPI_KEY=${{ secrets.X_RAPIDAPI_KEY }}" > .env
+          echo "X_RAPIDAPI_HOST=${{ secrets.X_RAPIDAPI_HOST }}" >> .env
+          echo "URL=${{ secrets.URL }}" >> .env
+          echo "DB=${{ secrets.DB }}" >> .env
+          echo "APIKEY=${{ secrets.APIKEY }}" >> .env
+          echo "MODEL_NAME=${{ secrets.MODEL_NAME }}" >> .env
+          echo "BUCKET_NAME=${{ secrets.BUCKET_NAME }}" >> .env
           docker tag instagram-roast-backend:latest $ARTIFACT_REGISTRY_URL/instagram-roast-backend:latest
           docker push $ARTIFACT_REGISTRY_URL/instagram-roast-backend:latest      
   

@@ -1,24 +1,34 @@
 import { useState } from "react";
 import { ModeToggle } from "@/components/ui/ModeToggle";
 import { Search } from "./Search";
-
+import { Link } from "react-router-dom";
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const scrollToSection = (id: string) => {
+    const section = document.getElementById(id);
+    if (section) {
+      section.scrollIntoView({ behavior: "smooth" });
+    } else {
+      console.warn(`Section with id "${id}" not found`);
+    }
+  };
 
   return (
     <nav className="p-5  bg-white dark:bg-black">
       <div className="container mx-auto flex items-center justify-between">
         {/* Brand */}
-        <div
-          style={{
-            fontFamily: "Sansita",
-            fontWeight: "600",
-            fontStyle: "",
-          }}
-          className="text-xl  text-gray-800 dark:text-white flex items-center gap-2"
-        >
-          Instagram Roast 🔥
-        </div>
+        <Link to="/">
+          <div
+            style={{
+              fontFamily: "Sansita",
+              fontWeight: "600",
+              fontStyle: "",
+            }}
+            className="text-xl  text-gray-800 dark:text-white flex items-center gap-2"
+          >
+            Instagram Roast 🔥
+          </div>
+        </Link>
 
         {/* Mobile Menu Toggle */}
         <button
@@ -45,24 +55,26 @@ export function Navbar() {
           >
             <li>
               <a
-                href="#features"
-                className="hover:text-gray-900 dark:hover:text-white"
+                onClick={() => {
+                  scrollToSection("about");
+                }}
+                className="hover:text-gray-900 dark:hover:text-white hover:cursor-pointer"
               >
                 Features
               </a>
             </li>
             <li>
               <a
-                href="#about"
-                className="hover:text-gray-900 dark:hover:text-white"
+                onClick={() => scrollToSection("about")}
+                className="hover:text-gray-900 dark:hover:text-white hover:cursor-pointer"
               >
                 About
               </a>
             </li>
             <li>
               <a
-                href="#faq"
-                className="hover:text-gray-900 dark:hover:text-white"
+                onClick={() => scrollToSection("faq")}
+                className="hover:text-gray-900 dark:hover:text-white hover:cursor-pointer"
               >
                 FAQ
               </a>

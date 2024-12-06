@@ -17,8 +17,13 @@ import twitter from "../assets/twitter.png";
 import whatsapp from "../assets/whatsapp.png";
 import linkedin from "../assets/linkedin.png";
 import threads from "../assets/threads.png";
+import threads_w from "../assets/threads_w.png";
+
+import { useTheme } from "@/components/ui/theme-provider";
+import { NeonGradientCard } from "@/components/ui/neon-gradient-card";
 
 export function Roast() {
+  const { theme } = useTheme();
   interface InstagramData {
     insta_data: {
       profile_pic_url: string;
@@ -36,8 +41,22 @@ export function Roast() {
   const [userData, setUserData] = useState<InstagramData | null>(null);
   const [roastData, setRoastData] = useState("");
   const [received, setReceived] = useState(false);
+  const shareLinks = {
+    whatsapp:
+      "https://api.whatsapp.com/send?text=Hey%20X!%20Check%20out%20this%20AI%20roast%20I%20got%20from%20%40aioroast.%20https%3A%2F%2Finstaroast.com%2F" +
+      username,
+    linkedin:
+      "https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Finstaroast.com%2F" +
+      username,
+    threads:
+      "https://threads.net/intent/post?text=Hey%20Threads!%20Check%20out%20this%20AI%20roast%20I%20got%20from%20%40aioroast.%20https%3A%2F%2Finstaroast.com%2F" +
+      username,
+    twitter:
+      "https://x.com/intent/post?text=Hey+X%21+Check+out+this+AI+roast+I+got+from+%40aioroast.+https%3A%2F%2Finstaroast.com%2F" +
+      username,
+  };
 
-  const getData = async() => {
+  const getData = async () => {
     try {
       const result = await fetch("http://localhost:3000/api/v1/roastMe", {
         method: "POST",
@@ -59,8 +78,7 @@ export function Roast() {
         .replace(/\\n/g, "\n") // Replace escaped newlines
         .replace(/\\'/g, "'")
         .replace(/\\"/g, '"');
-      
-      
+
       setRoastData(parsedText);
       setUserData(data);
       setReceived(true);
@@ -68,11 +86,13 @@ export function Roast() {
     } catch (error) {
       console.error("Error:", error);
     }
-  }
+  };
 
   useEffect(() => {
+    setUserData(null);
+    setRoastData("");
     getData();
-  }, []);
+  }, [username]);
 
   return (
     <div>
@@ -105,12 +125,12 @@ export function Roast() {
                     <NumberTicker value={userData.insta_data.post} /> Posts
                   </CardTitle>
                   <CardTitle>
-                    <NumberTicker value={userData.insta_data.follower} />
-                    {" "}Followers
+                    <NumberTicker value={userData.insta_data.follower} />{" "}
+                    Followers
                   </CardTitle>
                   <CardTitle>
-                    <NumberTicker value={userData.insta_data.following} />
-                    {" "}Following
+                    <NumberTicker value={userData.insta_data.following} />{" "}
+                    Following
                   </CardTitle>
                 </div>
                 <CardDescription>
@@ -127,22 +147,50 @@ export function Roast() {
           <div className="flex flex-row gap-1 justify-center mt-4">
             <span>Share:</span>
             <ul className="flex flex-row gap-2">
-              <li className="flex flex-row gap-1 items-center">
-                <img className="size-5" src={twitter} alt="Twitter" />
-                <span>Twitter</span>
-              </li>
-              <li className="flex flex-row gap-1 items-center">
-                <img className="size-5" src={whatsapp} alt="WhatsApp" />
-                <span>WhatsApp</span>
-              </li>
-              <li className="flex flex-row gap-1 items-center">
-                <img className="size-5" src={linkedin} alt="LinkedIn" />
-                <span>LinkedIn</span>
-              </li>
-              <li className="flex gap-1 items-center">
-                <img className="size-5" src={threads} alt="Threads" />
-                <span>Threads</span>
-              </li>
+              <a
+                href={shareLinks.twitter}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <li className="flex flex-row gap-1 items-center">
+                  <img className="size-5" src={twitter} alt="Twitter" />
+                  <span>Twitter</span>
+                </li>
+              </a>
+              <a
+                href={shareLinks.whatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <li className="flex flex-row gap-1 items-center">
+                  <img className="size-5" src={whatsapp} alt="WhatsApp" />
+                  <span>WhatsApp</span>
+                </li>
+              </a>
+              <a
+                href={shareLinks.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <li className="flex flex-row gap-1 items-center">
+                  <img className="size-5" src={linkedin} alt="LinkedIn" />
+                  <span>LinkedIn</span>
+                </li>
+              </a>
+              <a
+                href={shareLinks.threads}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <li className="flex gap-1 items-center">
+                  <img
+                    className="size-5"
+                    src={theme == "dark" ? threads_w : threads}
+                    alt="Threads"
+                  />
+                  <span>Threads</span>
+                </li>
+              </a>
             </ul>
           </div>
           <div className="flex justify-center mt-10">

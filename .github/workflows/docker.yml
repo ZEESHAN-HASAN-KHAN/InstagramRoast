@@ -21,7 +21,22 @@ jobs:
 
       - name: Build the Docker image
         run: |
-          docker build -t instagram-roast-backend:latest ./backEnd
+          cp .env.example .env
+          sed -i "s/X_RAPIDAPI_KEY=.*/X_RAPIDAPI_KEY=${{ secrets.X_RAPIDAPI_KEY }}/g" .env
+          sed -i "s/X_RAPIDAPI_HOST=.*/X_RAPIDAPI_HOST=${{ secrets.X_RAPIDAPI_HOST }}/g" .env
+          sed -i "s/URL=.*/URL=${{ secrets.URL }}/g" .env
+          sed -i "s/DB=.*/DB=${{ secrets.DB }}/g" .env
+          sed -i "s/APIKEY=.*/APIKEY=${{ secrets.APIKEY }}/g" .env
+          sed -i "s/MODEL_NAME=.*/MODEL_NAME=${{ secrets.MODEL_NAME }}/g" .env
+          sed -i "s/BUCKET_NAME=.*/BUCKET_NAME=${{ secrets.BUCKET_NAME }}/g" .env
+          docker build -t instagram-roast-backend:latest ./backEnd \
+            --build-arg X_RAPIDAPI_KEY=${{ secrets.X_RAPIDAPI_KEY }} \
+            --build-arg X_RAPIDAPI_HOST=${{ secrets.X_RAPIDAPI_HOST }} \
+            --build-arg URL=${{ secrets.URL }} \
+            --build-arg DB=${{ secrets.DB }} \
+            --build-arg APIKEY=${{ secrets.APIKEY }} \
+            --build-arg MODEL_NAME=${{ secrets.MODEL_NAME }} \
+            --build-arg BUCKET_NAME=${{ secrets.BUCKET_NAME }}
           
       - name: Configure GCP Credentials
         if: github.ref == 'refs/heads/main'
@@ -41,13 +56,6 @@ jobs:
         env: 
           ARTIFACT_REGISTRY_URL: asia-south1-docker.pkg.dev/roast-123/instagram-roast-backend
         run: |
-          echo "X_RAPIDAPI_KEY=${{ secrets.X_RAPIDAPI_KEY }}" > .env
-          echo "X_RAPIDAPI_HOST=${{ secrets.X_RAPIDAPI_HOST }}" >> .env
-          echo "URL=${{ secrets.URL }}" >> .env
-          echo "DB=${{ secrets.DB }}" >> .env
-          echo "APIKEY=${{ secrets.APIKEY }}" >> .env
-          echo "MODEL_NAME=${{ secrets.MODEL_NAME }}" >> .env
-          echo "BUCKET_NAME=${{ secrets.BUCKET_NAME }}" >> .env
           docker tag instagram-roast-backend:latest $ARTIFACT_REGISTRY_URL/instagram-roast-backend:latest
           docker push $ARTIFACT_REGISTRY_URL/instagram-roast-backend:latest      
   

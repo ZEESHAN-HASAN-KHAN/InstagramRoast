@@ -21,7 +21,7 @@ jobs:
 
       - name: Build the Docker image
         run: |
-          cp .env.example .env
+          cp ./backEnd/.env.example ./backEnd/.env
           sed -i "s/X_RAPIDAPI_KEY=.*/X_RAPIDAPI_KEY=${{ secrets.X_RAPIDAPI_KEY }}/g" .env
           sed -i "s/X_RAPIDAPI_HOST=.*/X_RAPIDAPI_HOST=${{ secrets.X_RAPIDAPI_HOST }}/g" .env
           sed -i "s/URL=.*/URL=${{ secrets.URL }}/g" .env

@@ -44,16 +44,18 @@ export function Roast() {
   const [received, setReceived] = useState(false);
   const shareLinks = {
     whatsapp:
-      "https://api.whatsapp.com/send?text=Hey%20X!%20Check%20out%20this%20AI%20roast%20I%20got%20from%20%40aioroast.%20https%3A%2F%2Finstaroast.com%2F" +
+      "https://api.whatsapp.com/send?text=Hey!%20Check%20out%20this%20AI%20roast%20I%20got%20from%20%20https%3A%2F%2Finstaroasts.com%2F" +
       username,
     linkedin:
-      "https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Finstaroast.com%2F" +
+      "https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Finstaroasts.com%2F" +
       username,
+
     threads:
-      "https://threads.net/intent/post?text=Hey%20Threads!%20Check%20out%20this%20AI%20roast%20I%20got%20from%20%40aioroast.%20https%3A%2F%2Finstaroast.com%2F" +
+      "https://threads.net/intent/post?text=Hey!%20Check%20out%20this%20AI%20roast%20I%20got%20from%20https%3A%2F%2Finstaroasts.com%2F" +
       username,
+
     twitter:
-      "https://x.com/intent/post?text=Hey+X%21+Check+out+this+AI+roast+I+got+from+%40aioroast.+https%3A%2F%2Finstaroast.com%2F" +
+      "https://x.com/intent/post?text=Hey!%21+Check+out+this+AI+roast+I+got+from+https%3A%2F%2Finstaroasts.com%2F" +
       username,
   };
 

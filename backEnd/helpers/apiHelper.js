@@ -43,7 +43,9 @@ const generateAIRoast = async (userData, profileUrl) => {
         content: [
           {
             type: "text",
-            text: "Roast this Instagram user " + JSON.stringify(userData),
+            text:
+              "Roast this Instagram user as a comedian " +
+              JSON.stringify(userData),
           },
           {
             type: "image_url",

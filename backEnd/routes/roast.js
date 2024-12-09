@@ -27,10 +27,20 @@ roastRouter.post("/roastMe", async (req, res) => {
 
       // Fetch the AI response from the table and return it
       const aiResponse = await getAIResponse(name);
-      return res.status(200).json({
-        insta_data: result,
-        data: aiResponse.response_text,
-      });
+      if (aiResponse) {
+        return res.status(200).json({
+          insta_data: result,
+          data: aiResponse.response_text,
+        });
+      } else {
+        // generate AI response and return it
+        const roast = await generateAIRoast(result, result.profile_pic_url);
+        addAIResponse(name, roast);
+        return res.status(200).json({
+          insta_data: result,
+          data: roast,
+        });
+      }
     }
 
     // Fetch the Instagram profile data

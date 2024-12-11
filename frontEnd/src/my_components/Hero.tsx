@@ -14,6 +14,7 @@ import { useNavigate } from "react-router-dom";
 import AnimatedGradientText from "@/components/ui/animated-gradient-text";
 import { ChartNoAxesCombined, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SelectDemo } from "./SelectDemo";
 // import { NeonGradientCard } from "@/components/ui/neon-gradient-card";
 export function Hero() {
   const { theme } = useTheme();
@@ -46,6 +47,7 @@ export function Hero() {
   }, []);
   return (
     <div>
+      {/* Profile Roasted Count */}
       <div className=" mt-2">
         <AnimatedGradientText>
           <span
@@ -60,6 +62,7 @@ export function Hero() {
           <ChevronRight className="ml-1 size-3 transition-transform duration-300 ease-in-out group-hover:translate-x-0.5" />
         </AnimatedGradientText>
       </div>
+
       <div className="flex flex-col lg:flex-row  ">
         {/* :Left Section */}
         <div className="lg:w-1/2 ml-5 mt-5 lg:ml-20 lg:mt-10">
@@ -106,6 +109,7 @@ export function Hero() {
             </RainbowButton>
           </div>
           {/* Agreement */}
+          <SelectDemo />
           <span
             style={{
               fontFamily: "Roboto Slab",

@@ -11,6 +11,7 @@ import { Roast } from "./my_components/Roast";
 import { ModeToggle } from "@/components/ui/ModeToggle";
 import { Faq } from "./my_components/Faq";
 import { motion } from "framer-motion";
+import { AvatarCirclesDemo } from "./my_components/Contributors";
 
 // import Meteors from "./components/ui/meteors";
 export default function App() {
@@ -46,6 +47,9 @@ export default function App() {
           </motion.div>
           <div className="fixed bottom-4 right-4 z-50 opacity-80 md:hidden">
             <ModeToggle />
+          </div>
+          <div className="fixed bottom-4 left-4 z-50  md:hidden">
+            <AvatarCirclesDemo />
           </div>
         </div>
       </BrowserRouter>

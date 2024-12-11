@@ -246,11 +246,11 @@ export function Roast() {
       ) : (
         // Skeleton Loading
         <div className="flex justify-center mt-5">
-          <Skeleton className="w-[350px] flex flex-row items-center">
+          <Skeleton className="w-[400px] flex flex-row items-center">
             <Skeleton className="w-12 h-12 rounded-full m-5"></Skeleton>
             <div className="flex flex-col gap-5 ml-10">
-              <Skeleton className="w-20 h-5"></Skeleton>
-              <Skeleton className="w-20 h-5"></Skeleton>
+              <Skeleton className="w-40 h-5"></Skeleton>
+              <Skeleton className="w-25 h-5"></Skeleton>
             </div>
           </Skeleton>
         </div>

@@ -1,5 +1,3 @@
-import * as React from "react";
-
 import {
   Select,
   SelectContent,
@@ -10,20 +8,28 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export function SelectDemo() {
+interface SelectDemoProps {
+  value: string;
+  onChange: (value: string) => void;
+}
+
+export function SelectDemo({value, onChange}: SelectDemoProps) {
   return (
-    <Select>
+    <Select
+      value={value}
+      onValueChange={onChange}
+      >
       <SelectTrigger className="w-[180px]">
         <SelectValue placeholder="Select Language" />
       </SelectTrigger>
       <SelectContent>
         <SelectGroup>
           <SelectLabel>Language</SelectLabel>
-          <SelectItem value="apple">English</SelectItem>
-          <SelectItem value="banana">Hindi</SelectItem>
-          <SelectItem value="blueberry">Urdu</SelectItem>
-          <SelectItem value="grapes">Spanish</SelectItem>
-          <SelectItem value="pineapple">Germany</SelectItem>
+          <SelectItem value="english">English</SelectItem>
+          <SelectItem value="hindi">Hindi</SelectItem>
+          <SelectItem value="urdu">Urdu</SelectItem>
+          <SelectItem value="spanish">Spanish</SelectItem>
+          <SelectItem value="germany">Germany</SelectItem>
           {/* <SelectItem value="pineapple">French</SelectItem> */}
         </SelectGroup>
       </SelectContent>

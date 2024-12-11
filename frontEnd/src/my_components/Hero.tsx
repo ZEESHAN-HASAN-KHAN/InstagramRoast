@@ -20,6 +20,7 @@ export function Hero() {
   const { theme } = useTheme();
   const [uname, setUname] = useState("");
   const [roastCount, setRoastCount] = useState(0);
+  const [language, setLanguage] = useState("english");
   const navigate = useNavigate();
   async function discover() {
     // send this data to backend
@@ -39,7 +40,7 @@ export function Hero() {
       const data = await result.json();
       setRoastCount(data.count);
     } catch (error) {
-      console.error("This is error");
+      console.error("This is error", error);
     }
   };
   useEffect(() => {
@@ -63,7 +64,7 @@ export function Hero() {
         </AnimatedGradientText>
       </div>
 
-      <div className="flex flex-col lg:flex-row  ">
+      <div className="flex flex-col lg:flex-row">
         {/* :Left Section */}
         <div className="lg:w-1/2 ml-5 mt-5 lg:ml-20 lg:mt-10">
           <div>
@@ -109,7 +110,12 @@ export function Hero() {
             </RainbowButton>
           </div>
           {/* Agreement */}
-          <SelectDemo />
+          <SelectDemo 
+            value={language}
+            onChange={(e) => {
+              setLanguage(e);
+            }}
+          />
           <span
             style={{
               fontFamily: "Roboto Slab",

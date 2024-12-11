@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ModeToggle } from "@/components/ui/ModeToggle";
 import { Search } from "./Search";
 import { Link } from "react-router-dom";
+import { AvatarCirclesDemo } from "./Contributors";
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const scrollToSection = (id: string) => {
@@ -84,7 +85,8 @@ export function Navbar() {
 
         {/* Search Bar & Mode Toggle */}
         <div className="hidden lg:flex items-center gap-5">
-          <Search />
+          {/* <Search /> */}
+          <AvatarCirclesDemo />
           <ModeToggle />
         </div>
       </div>

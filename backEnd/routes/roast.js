@@ -6,6 +6,7 @@ const {
   getAIResponse,
   addAIResponse,
   getUserData,
+  profilesRoasted,
 } = require("../database/db");
 const {
   generateAIRoast,
@@ -13,6 +14,20 @@ const {
 } = require("../helpers/apiHelper");
 const { uploadImage } = require("../helpers/storageHelper");
 
+roastRouter.get("/roastCount", async (req, res) => {
+  try {
+    const num = await profilesRoasted();
+
+    return res.status(200).json({
+      count: num,
+    });
+  } catch (error) {
+    console.error("Error from roast count");
+    return res.status(500).json({
+      message: "Internal Server Error",
+    });
+  }
+});
 roastRouter.post("/roastMe", async (req, res) => {
   const name = req.body.name;
 

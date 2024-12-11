@@ -4,17 +4,21 @@ import search from "../assets/search.png";
 import chatgpt from "../assets/chatgpt.png";
 import searchw from "../assets/searchw.png";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 // import { Button } from "@/components/ui/button";
 // import { AnimatedListDemo } from "./AnimatedListDemo";
 import { AnimatedBeamDemo } from "./AnimatedBeamDemo";
 import { useTheme } from "@/components/ui/theme-provider";
 import { RainbowButton } from "@/components/ui/rainbow-button";
 import { useNavigate } from "react-router-dom";
+import AnimatedGradientText from "@/components/ui/animated-gradient-text";
+import { ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 // import { NeonGradientCard } from "@/components/ui/neon-gradient-card";
 export function Hero() {
   const { theme } = useTheme();
   const [uname, setUname] = useState("");
+  const [roastCount, setRoastCount] = useState(0);
   const navigate = useNavigate();
   async function discover() {
     // send this data to backend
@@ -26,30 +30,59 @@ export function Hero() {
     navigate("/" + uname);
     // setUname("");
   }
+  const getRoastCount = async () => {
+    try {
+      const url = import.meta.env.VITE_APP_BASE_URL;
 
+      const result = await fetch(url + "/api/v1/roastCount");
+      const data = await result.json();
+      setRoastCount(data.count);
+    } catch (error) {
+      console.error("This is error");
+    }
+  };
+  useEffect(() => {
+    getRoastCount();
+  }, []);
   return (
     <div className="flex flex-col lg:flex-row  ">
       {/* :Left Section */}
-      <div className="lg:w-1/2 ml-5 mt-5 lg:mt-20 lg:ml-20">
-        <p
-          style={{
-            fontFamily: "Sansita",
-          }}
-          className="text-4xl text-gray-900 dark:text-gray-200  "
-        >
-          Discover your
-        </p>
-
-        <div className="flex  flex-row  items-center gap-5 mb-4 ">
-          <img src={Instagram} className=" w-[9%]" />
+      <div className="lg:w-1/2 ml-5 mt-5 lg:ml-10 lg:mt-10">
+        <div className="flex flex-col justify-start">
+          <AnimatedGradientText>
+            🔥
+            <span
+              className={cn(
+                `inline animate-gradient bg-gradient-to-r from-[#ffaa40] via-[#9c40ff] to-[#ffaa40] bg-[length:var(--bg-size)_100%] bg-clip-text text-transparent text-sm`
+              )}
+            >
+              Profile Roasted {roastCount}
+            </span>
+            <hr className="mx-2 h-4 w-px shrink-0 bg-gray-300" /> 🎉
+            <ChevronRight className="ml-1 size-3 transition-transform duration-300 ease-in-out group-hover:translate-x-0.5" />
+          </AnimatedGradientText>
+        </div>
+        <div>
           <p
             style={{
               fontFamily: "Sansita",
             }}
-            className="text-4xl text-gray-900 dark:text-gray-200 "
+            className="text-4xl text-gray-900 dark:text-gray-200  "
           >
-            Instagram Personality
+            Discover your
           </p>
+
+          <div className="flex  flex-row  items-center gap-5 mb-4 ">
+            <img src={Instagram} className=" w-[9%]" />
+            <p
+              style={{
+                fontFamily: "Sansita",
+              }}
+              className="text-4xl text-gray-900 dark:text-gray-200 "
+            >
+              Instagram Personality
+            </p>
+          </div>
         </div>
         {/* Input Sectton */}
         <div className="flex gap-1">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import {
   Card,
@@ -20,11 +20,17 @@ import threads from "../assets/threads.png";
 import threads_w from "../assets/threads_w.png";
 
 import { useTheme } from "@/components/ui/theme-provider";
+
+//Adding Confett
+import type { ConfettiRef } from "@/components/ui/confetti";
+import Confetti from "@/components/ui/confetti";
+
 // import { NeonGradientCard } from "@/components/ui/neon-gradient-card";
 // import { Underline } from "lucide-react";
 
 export function Roast() {
   const { theme } = useTheme();
+  const confettiRef = useRef<ConfettiRef>(null);
   interface InstagramData {
     insta_data: {
       profile_pic_url: string;
@@ -42,6 +48,8 @@ export function Roast() {
   const [userData, setUserData] = useState<InstagramData | null>(null);
   const [roastData, setRoastData] = useState("");
   const [received, setReceived] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+
   const shareLinks = {
     whatsapp:
       "https://api.whatsapp.com/send?text=Hey!%20Check%20out%20this%20AI%20roast%20I%20got%20from%20%20https%3A%2F%2Finstaroasts.com%2F" +
@@ -86,11 +94,22 @@ export function Roast() {
 
       setRoastData(parsedText);
       setUserData(data);
+
+      setIsRunning(true);
+      handleStartConfetti();
       setReceived(true);
       console.log(data);
     } catch (error) {
       console.error("Error:", error);
     }
+  };
+  const handleStartConfetti = () => {
+    // Start confetti animation
+    setTimeout(() => {
+      setIsRunning(false);
+
+      // Stop confetti after 5 seconds
+    }, 5000);
   };
 
   useEffect(() => {
@@ -205,6 +224,12 @@ export function Roast() {
               </CardHeader>
             </Card>
           </div>
+          {isRunning && (
+            <Confetti
+              ref={confettiRef}
+              className="absolute left-0 top-0 z-0 size-full"
+            />
+          )}
         </div>
       ) : (
         // Skeleton Loading

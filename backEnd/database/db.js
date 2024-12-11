@@ -7,7 +7,6 @@ const client = new Client({
   },
 });
 
-
 async function getUserData(username) {
   try {
     const result = await client.query(
@@ -43,7 +42,7 @@ async function dbConnect() {
     console.log("Database URL:", process.env.DB);
     await client.connect();
     console.log("Database is connected");
-  
+
     const result = await client.query(`
                       CREATE TABLE IF NOT EXISTS profiles (
                   id SERIAL PRIMARY KEY,
@@ -69,12 +68,10 @@ async function dbConnect() {
                   FOREIGN KEY (profile_id) REFERENCES profiles (id) ON DELETE CASCADE
               );
           `);
-  
   } catch (err) {
     console.error("Failed to connect to the database:", err.message);
   }
 }
-
 
 async function getAIResponse(username) {
   try {
@@ -166,6 +163,20 @@ async function addAIResponse(username, responseText) {
     throw error;
   }
 }
+async function profilesRoasted() {
+  try {
+    // Assuming you are using a PostgreSQL client like 'pg'
+    const result = await client.query(
+      "SELECT COUNT(*) AS count FROM profiles;"
+    );
+    const count = result.rows[0].count; // Extract the count value
+    console.log("Number of profiles: " + count);
+    return parseInt(count, 10); // Ensure the count is returned as a number
+  } catch (error) {
+    console.error("Error in counting the profiles:", error);
+    throw error; // Rethrow the error to handle it further up the call chain
+  }
+}
 
 module.exports = {
   dbConnect,
@@ -174,4 +185,5 @@ module.exports = {
   getAIResponse,
   addAIResponse,
   getUserData,
+  profilesRoasted,
 };

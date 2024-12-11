@@ -35,6 +35,21 @@ const getInstagramProfile = async (username) => {
 
 const generateAIRoast = async (userData, profileUrl) => {
   const openai = new OpenAI({ apiKey: process.env.APIKEY });
+  const inputPrompt = `
+    You are a professional no-filter comedian who is roasting an Instagram user. You job is to brutally roast the user based on their Instagram profile.
+    Please strictly roast the user based on the following information:
+    ${JSON.stringify(userData)}
+
+    Roast Guidelines:
+    - Rip apart every weak point, vague phrase, or generic line
+    - Make it darkly funny but straightforward, using basic, raw English
+    - Avoid sugarcoating anything—be blunt and ruthless
+    - Keep it under 100 words
+    - Do not include any pleasentries.
+    - Include emojis
+    - Output should be strictly in markdown format
+    - Highlight the user's weak points and make them feel bad about themselves
+  `
   const completion = await openai.chat.completions.create({
     model: process.env.MODEL_NAME,
     messages: [
@@ -43,9 +58,7 @@ const generateAIRoast = async (userData, profileUrl) => {
         content: [
           {
             type: "text",
-            text:
-              "Roast this Instagram user as a comedian " +
-              JSON.stringify(userData),
+            text: inputPrompt,
           },
           {
             type: "image_url",
@@ -57,7 +70,7 @@ const generateAIRoast = async (userData, profileUrl) => {
       },
     ],
   });
-  return JSON.stringify(completion.choices[0].message.content);
+  return completion.choices[0].message.content;
 };
 
 module.exports = { getInstagramProfile, generateAIRoast };

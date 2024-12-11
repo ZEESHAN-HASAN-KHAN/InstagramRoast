@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import {
   Card,
@@ -8,6 +8,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HyperText } from "@/components/ui/hyper-text";
@@ -85,12 +87,7 @@ export function Roast() {
       }
 
       const data: InstagramData = await result.json();
-
-      const parsedText = data.data
-        .replace(/\\"/g, '"') // Replace escaped double quotes
-        .replace(/\\n/g, "\n") // Replace escaped newlines
-        .replace(/\\'/g, "'")
-        .replace(/\\"/g, '"');
+      const parsedText = data.data;
 
       setRoastData(parsedText);
       setUserData(data);
@@ -117,6 +114,19 @@ export function Roast() {
     setRoastData("");
     getData();
   }, [username]);
+
+  const renderedMarkdown = useMemo(
+    () => (
+      <div
+        className="prose break-all whitespace-normal font-medium dark:text-gray-200 text-gray-900"
+      >
+        <ReactMarkdown 
+          remarkPlugins={[remarkGfm]}
+        >{roastData}</ReactMarkdown>
+      </div>
+    ),
+    [roastData]
+  );
 
   return (
     <div>
@@ -220,7 +230,9 @@ export function Roast() {
           <div className="flex justify-center mt-10">
             <Card className="w-[550px]">
               <CardHeader>
-                <CardDescription>{roastData}</CardDescription>
+                <CardDescription className="break-words whitespace-pre-wrap">
+                  {renderedMarkdown}
+                </CardDescription>
               </CardHeader>
             </Card>
           </div>

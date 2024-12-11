@@ -49,6 +49,7 @@ const generateAIRoast = async (userData, profileUrl) => {
     - Include emojis
     - Output should be strictly in markdown format
     - Highlight the user's weak points and make them feel bad about themselves
+    - Always give a roast response no matter what the user's profile is like
   `
   const completion = await openai.chat.completions.create({
     model: process.env.MODEL_NAME,

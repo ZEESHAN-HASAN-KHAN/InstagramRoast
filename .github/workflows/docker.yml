@@ -28,6 +28,7 @@ jobs:
           echo "APIKEY=${{ secrets.APIKEY }}" >> ./backEnd/.env
           echo "MODEL_NAME=${{ secrets.MODEL_NAME }}" >> ./backEnd/.env
           echo "BUCKET_NAME=${{ secrets.BUCKET_NAME }}" >> ./backEnd/.env
+          echo "ALLOWED_LANGUAGE=${{ secrets.ALLOWED_LANGUAGE }}" >> ./backEnd/.env
           docker build -t instagram-roast-backend:latest ./backEnd
           
       - name: Configure GCP Credentials
@@ -40,12 +41,13 @@ jobs:
       - name: Configure Docker Client
         run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
 
-      - name: Push the Docker image
+      - name: Push the Docker image (Skip on PR)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env: 
           ARTIFACT_REGISTRY_URL: asia-south1-docker.pkg.dev/roast-123/instagram-roast-backend
         run: |
           docker tag instagram-roast-backend:latest $ARTIFACT_REGISTRY_URL/instagram-roast-backend:latest
-          docker push $ARTIFACT_REGISTRY_URL/instagram-roast-backend:latest      
+          docker push $ARTIFACT_REGISTRY_URL/instagram-roast-backend:latest
 
   build-frontend:
     runs-on: ubuntu-latest
@@ -72,7 +74,8 @@ jobs:
       - name: Configure Docker Client
         run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
 
-      - name: Push the Docker image
+      - name: Push the Docker image (Skip on PR)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env: 
           ARTIFACT_REGISTRY_URL: asia-south1-docker.pkg.dev/roast-123/instagram-roast-frontend
         run: |

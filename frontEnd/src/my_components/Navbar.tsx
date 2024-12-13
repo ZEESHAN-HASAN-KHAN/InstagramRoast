@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { ModeToggle } from "@/components/ui/ModeToggle";
-import { Search } from "./Search";
 import { Link } from "react-router-dom";
 import { AvatarCirclesDemo } from "./Contributors";
 export function Navbar() {

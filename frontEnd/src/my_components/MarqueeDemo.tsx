@@ -9,39 +9,39 @@ import dj from "../assets/dj.png";
 import { Link } from "react-router-dom";
 const reviews = [
   {
-    name: "Cristiano Ronaldo ",
+    name: "Cristiano Ronaldo",
     username: "cristiano",
-    body: "I've never seen anything like this before. It's amazing. I love it.",
+    body: "Finally, an app brave enough to roast me. Respect.",
     img: cr,
   },
   {
     name: "Leo Messi",
     username: "leomessi",
-    body: "I don't know what to say. I'm speechless. This is amazing.",
+    body: "This app said I dribble better than I speak. Rude but true.",
     img: lm,
   },
   {
     name: "Neymar Jr",
     username: "neymarjr",
-    body: "I'm at a loss for words. This is amazing. I love it.",
+    body: "It called me a drama king. Who told them?",
     img: nj,
   },
   {
     name: "Dwayne Johnson",
     username: "therock",
-    body: "I'm at a loss for words. This is amazing. I love it.",
+    body: "Said I look like a boulder, not a rock. Savage.",
     img: dj,
   },
   {
     name: "Virat Kohli",
     username: "virat.kohli",
-    body: "I'm at a loss for words. This is amazing. I love it.",
+    body: "This app said I argue with umpires for fun. Ouch.",
     img: vk,
   },
   {
     name: "David Beckham",
     username: "davidbeckham",
-    body: "I'm at a loss for words. This is amazing. I love it.",
+    body: "Apparently, my haircuts are more famous than I am.",
     img: bk,
   },
 ];
@@ -110,7 +110,7 @@ const ReviewCard = ({
 
 export function MarqueeDemo() {
   return (
-    <div className="relative flex h-[500px] w-full flex-col items-center justify-center overflow-hidden rounded-lg border bg-background md:shadow-xl">
+    <div className="relative flex h-[500px] w-full flex-col items-center justify-center overflow-hidden rounded-lg border bg-background md:shadow-sm">
       <Marquee pauseOnHover className="[--duration:20s]">
         {firstRow.map((review) => (
           <ReviewCard key={review.username} {...review} />

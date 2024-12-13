@@ -1,18 +1,17 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useEffect, useState, useRef, useMemo } from "react";
+import { useParams, useLocation } from "react-router-dom";
 import {
   Card,
-  //   CardContent,
   CardDescription,
-  //   CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HyperText } from "@/components/ui/hyper-text";
 import NumberTicker from "@/components/ui/number-ticker";
-// import "dotenv/config";
 import twitter from "../assets/twitter.png";
 import whatsapp from "../assets/whatsapp.png";
 import linkedin from "../assets/linkedin.png";
@@ -20,11 +19,15 @@ import threads from "../assets/threads.png";
 import threads_w from "../assets/threads_w.png";
 
 import { useTheme } from "@/components/ui/theme-provider";
-// import { NeonGradientCard } from "@/components/ui/neon-gradient-card";
-// import { Underline } from "lucide-react";
+
+//Adding Confett
+import type { ConfettiRef } from "@/components/ui/confetti";
+import Confetti from "@/components/ui/confetti";
+
 
 export function Roast() {
   const { theme } = useTheme();
+  const confettiRef = useRef<ConfettiRef>(null);
   interface InstagramData {
     insta_data: {
       profile_pic_url: string;
@@ -39,9 +42,13 @@ export function Roast() {
   }
 
   const { username } = useParams();
+  const searchParams = new URLSearchParams(useLocation().search);
+  const ln = searchParams.get("language") || "english";
   const [userData, setUserData] = useState<InstagramData | null>(null);
   const [roastData, setRoastData] = useState("");
   const [received, setReceived] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+
   const shareLinks = {
     whatsapp:
       "https://api.whatsapp.com/send?text=Hey!%20Check%20out%20this%20AI%20roast%20I%20got%20from%20%20https%3A%2F%2Finstaroasts.com%2F" +
@@ -69,7 +76,7 @@ export function Roast() {
           Accept: "application/json",
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name: username }),
+        body: JSON.stringify({ name: username, language: ln }),
       });
 
       if (!result.ok) {
@@ -77,27 +84,44 @@ export function Roast() {
       }
 
       const data: InstagramData = await result.json();
-
-      const parsedText = data.data
-        .replace(/\\"/g, '"') // Replace escaped double quotes
-        .replace(/\\n/g, "\n") // Replace escaped newlines
-        .replace(/\\'/g, "'")
-        .replace(/\\"/g, '"');
+      const parsedText = data.data;
 
       setRoastData(parsedText);
       setUserData(data);
+
+      setIsRunning(true);
+      handleStartConfetti();
       setReceived(true);
       console.log(data);
     } catch (error) {
       console.error("Error:", error);
     }
   };
+  const handleStartConfetti = () => {
+    setTimeout(() => {
+      setIsRunning(false);
+    }, 5000);
+  };
 
   useEffect(() => {
+    // change the title of the page to the username
+    if (username) {
+      document.title = `Roast of ${username} 🔥`;
+    }
+
     setUserData(null);
     setRoastData("");
     getData();
-  }, [username]);
+  }, [username]);  
+
+  const renderedMarkdown = useMemo(
+    () => (
+      <div className="prose break-all whitespace-normal font-medium dark:text-gray-200 text-gray-900">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{roastData}</ReactMarkdown>
+      </div>
+    ),
+    [roastData]
+  );
 
   return (
     <div>
@@ -116,7 +140,17 @@ export function Roast() {
                     <AvatarFallback>CN</AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col gap-5">
-                    <CardTitle>@{userData.insta_data.username}</CardTitle>
+                    <CardTitle>
+                      <a
+                        href={`https://www.instagram.com/${userData.insta_data.username}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ textDecoration: "none", color: "inherit" }} // Optional styling
+                      >
+                        @{userData.insta_data.username}
+                      </a>
+                    </CardTitle>
+
                     <CardTitle>
                       <HyperText
                         className="dark:text-white"
@@ -146,74 +180,97 @@ export function Roast() {
           </div>
 
           {/* Roast Section */}
-          <p className="flex justify-center text-md mt-5 font-sansita">
-            Here is the AI Agent Analysis of Your Personality
-          </p>
-          <div className="flex flex-row gap-1 justify-center mt-4">
-            <span>Share:</span>
-            <ul className="flex flex-row gap-2">
-              <a
-                href={shareLinks.twitter}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <li className="flex flex-row gap-1 items-center">
-                  <img className="size-5" src={twitter} alt="Twitter" />
-                  <span>Twitter</span>
-                </li>
-              </a>
-              <a
-                href={shareLinks.whatsapp}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <li className="flex flex-row gap-1 items-center">
-                  <img className="size-5" src={whatsapp} alt="WhatsApp" />
-                  <span>WhatsApp</span>
-                </li>
-              </a>
-              <a
-                href={shareLinks.linkedin}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <li className="flex flex-row gap-1 items-center">
-                  <img className="size-5" src={linkedin} alt="LinkedIn" />
-                  <span>LinkedIn</span>
-                </li>
-              </a>
-              <a
-                href={shareLinks.threads}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <li className="flex gap-1 items-center">
-                  <img
-                    className="size-5"
-                    src={theme == "dark" ? threads_w : threads}
-                    alt="Threads"
-                  />
-                  <span>Threads</span>
-                </li>
-              </a>
-            </ul>
-          </div>
+          <div className="px-4 md:px-8">
+  <p className="flex justify-center text-sm md:text-xl mt-5 font-sansita text-center">
+    Here is the AI Agent Analysis of Your Personality
+  </p>
+  <div className="flex flex-col md:flex-row gap-4 justify-center items-center mt-4">
+    <span className="text-sm lg:text-xl">Share:</span>
+    <ul className="flex flex-row flex-wrap gap-4 justify-center">
+      <a
+        href={shareLinks.twitter}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <li className="flex items-center gap-2">
+          <img
+            className="w-4 h-4 lg:w-8 lg:h-8"
+            src={twitter}
+            alt="Twitter"
+          />
+          <span className="text-sm lg:text-xl">Twitter</span>
+        </li>
+      </a>
+      <a
+        href={shareLinks.whatsapp}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <li className="flex items-center gap-2">
+          <img
+            className="w-4 h-4 lg:w-8 lg:h-8"
+            src={whatsapp}
+            alt="WhatsApp"
+          />
+          <span className="text-sm lg:text-xl">WhatsApp</span>
+        </li>
+      </a>
+      <a
+        href={shareLinks.linkedin}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <li className="flex items-center gap-2">
+          <img
+            className="w-4 h-4 lg:w-8 lg:h-8"
+            src={linkedin}
+            alt="LinkedIn"
+          />
+          <span className="text-sm lg:text-xl">LinkedIn</span>
+        </li>
+      </a>
+      <a
+        href={shareLinks.threads}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <li className="flex items-center gap-2">
+          <img
+            className="w-4 h-4 lg:w-8 lg:h-8"
+            src={theme === "dark" ? threads_w : threads}
+            alt="Threads"
+          />
+          <span className="text-sm lg:text-xl">Threads</span>
+        </li>
+      </a>
+    </ul>
+  </div>
+</div>
+
           <div className="flex justify-center mt-10">
             <Card className="w-[550px]">
               <CardHeader>
-                <CardDescription>{roastData}</CardDescription>
+                <CardDescription className="break-words whitespace-pre-wrap">
+                  {renderedMarkdown}
+                </CardDescription>
               </CardHeader>
             </Card>
           </div>
+          {isRunning && (
+            <Confetti
+              ref={confettiRef}
+              className="absolute left-0 top-0 z-0 size-full"
+            />
+          )}
         </div>
       ) : (
         // Skeleton Loading
         <div className="flex justify-center mt-5">
-          <Skeleton className="w-[350px] flex flex-row items-center">
+          <Skeleton className="w-[380px] flex flex-row items-center">
             <Skeleton className="w-12 h-12 rounded-full m-5"></Skeleton>
             <div className="flex flex-col gap-5 ml-10">
-              <Skeleton className="w-20 h-5"></Skeleton>
-              <Skeleton className="w-20 h-5"></Skeleton>
+              <Skeleton className="w-40 h-5"></Skeleton>
+              <Skeleton className="w-25 h-5"></Skeleton>
             </div>
           </Skeleton>
         </div>

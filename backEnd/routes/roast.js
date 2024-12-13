@@ -6,6 +6,7 @@ const {
   getAIResponse,
   addAIResponse,
   getUserData,
+  profilesRoasted,
 } = require("../database/db");
 const {
   generateAIRoast,
@@ -13,8 +14,30 @@ const {
 } = require("../helpers/apiHelper");
 const { uploadImage } = require("../helpers/storageHelper");
 
+roastRouter.get("/roastCount", async (req, res) => {
+  try {
+    const num = await profilesRoasted();
+
+    return res.status(200).json({
+      count: num,
+    });
+  } catch (error) {
+    console.error("Error from roast count");
+    return res.status(500).json({
+      message: "Internal Server Error",
+    });
+  }
+});
 roastRouter.post("/roastMe", async (req, res) => {
   const name = req.body.name;
+  const language = req.body.language;
+  //Check the language
+  const allowedLanguage = process.env.ALLOWED_LANGUAGE.split(",");
+  if (!allowedLanguage.includes(language)) {
+    return res.status(500).json({
+      message: "API access is restricted",
+    });
+  }
 
   try {
     // Get the Instagram profile data from database
@@ -26,7 +49,7 @@ roastRouter.post("/roastMe", async (req, res) => {
       result.profile_pic_url = `https://storage.googleapis.com/${bucketName}/${result.profile_pic_url}`;
 
       // Fetch the AI response from the table and return it
-      const aiResponse = await getAIResponse(name);
+      const aiResponse = await getAIResponse(name, language);
       if (aiResponse) {
         return res.status(200).json({
           insta_data: result,
@@ -34,8 +57,12 @@ roastRouter.post("/roastMe", async (req, res) => {
         });
       } else {
         // generate AI response and return it
-        const roast = await generateAIRoast(result, result.profile_pic_url);
-        addAIResponse(name, roast);
+        const roast = await generateAIRoast(
+          result,
+          result.profile_pic_url,
+          language
+        );
+        addAIResponse(name, roast, language);
         return res.status(200).json({
           insta_data: result,
           data: roast,
@@ -74,10 +101,10 @@ roastRouter.post("/roastMe", async (req, res) => {
     );
 
     // roast instagram profile data
-    const roast = await generateAIRoast(roastData, roastData.profile_pic_url);
+    const roast = await generateAIRoast(roastData, roastData.profile_pic_url, language);
     // Update roastData with the GCS URL
     roastData.profile_pic_url = gcsProfileUrl;
-    addAIResponse(name, roast);
+    addAIResponse(name, roast, language);
 
     return res.status(200).json({
       insta_data: roastData,

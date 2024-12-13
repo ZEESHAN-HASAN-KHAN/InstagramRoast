@@ -10,7 +10,7 @@ export function Faq() {
     <div className="m-5 p-5">
       <span
         style={{ fontFamily: "Sansita" }}
-        className="flex text-3xl lg:text-5xl p-4 lg:p-5  justify-center"
+        className="flex text-2xl lg:text-4xl p-4 lg:p-5  justify-center"
       >
         FAQs
       </span>
@@ -18,15 +18,15 @@ export function Faq() {
         <AccordionItem value="item-1">
           <AccordionTrigger>Can I Roast anyone?</AccordionTrigger>
           <AccordionContent>
-            Yes!. You can roast & analyse anyone as long as the data is
-            publicily avaialable on the internet.
+            Yes!! You can roast & analyse anyone as long as the data is publicly
+            available on the internet.
           </AccordionContent>
         </AccordionItem>
       </Accordion>
       <Accordion type="single" collapsible>
         <AccordionItem value="item-1">
           <AccordionTrigger>Is this free?</AccordionTrigger>
-          <AccordionContent>Yes! It's free !!</AccordionContent>
+          <AccordionContent>Yes!! It's free !!</AccordionContent>
         </AccordionItem>
       </Accordion>
       <Accordion type="single" collapsible>
@@ -35,7 +35,7 @@ export function Faq() {
           <AccordionContent>
             It depends on the amount of data we need to process, but most of the
             times it takes around 1 to 2 minutes to get your roast card ready to
-            go! if it takes longer than 2 minutes, please contact us!
+            go! if it takes longer than 2 minutes, please contact us!!
           </AccordionContent>
         </AccordionItem>
       </Accordion>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ModeToggle } from "@/components/ui/ModeToggle";
-import { Search } from "./Search";
 import { Link } from "react-router-dom";
+import { AvatarCirclesDemo } from "./Contributors";
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const scrollToSection = (id: string) => {
@@ -42,7 +42,7 @@ export function Navbar() {
         {/* Navigation Links */}
         <div
           className={`${
-            isMenuOpen ? "block " : "hidden"
+            isMenuOpen ? "block z-10 " : "hidden"
           } absolute top-16 left-0 w-full bg-white dark:bg-black  border-gray-300 dark:border-gray-700 lg:static lg:block lg:w-auto`}
         >
           <ul
@@ -84,7 +84,8 @@ export function Navbar() {
 
         {/* Search Bar & Mode Toggle */}
         <div className="hidden lg:flex items-center gap-5">
-          <Search />
+          {/* <Search /> */}
+          <AvatarCirclesDemo />
           <ModeToggle />
         </div>
       </div>

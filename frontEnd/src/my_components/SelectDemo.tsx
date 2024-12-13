@@ -8,7 +8,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export function SelectDemo({ language, onValueChange }) {
+interface SelectDemoProps {
+  language: string;
+  onValueChange: (value: string) => void;
+}
+
+export function SelectDemo({ language, onValueChange }: SelectDemoProps) {
   return (
     <Select value={language} onValueChange={onValueChange}>
       <SelectTrigger className="w-[180px]">

@@ -180,129 +180,73 @@ export function Roast() {
           </div>
 
           {/* Roast Section */}
-          <p className="flex justify-center text-sm lg:text-xl mt-5 font-sansita">
-            Here is the AI Agent Analysis of Your Personality
-          </p>
-          <div className="flex flex-row gap-1 justify-center mt-4">
-            <span className="text-sm lg:text-xl">Share:</span>
-            <ul className="flex flex-row gap-4">
-              <a
-                href={shareLinks.twitter}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <li className="flex items-center gap-2">
-                  <img
-                    className="w-4 h-4 lg:w-8 lg:h-8"
-                    src={twitter}
-                    alt="Twitter"
-                  />
-                  <span className="text-sm lg:text-xl">Twitter</span>
-                </li>
-              </a>
-              <a
-                href={shareLinks.whatsapp}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <li className="flex items-center gap-2">
-                  <img
-                    className="w-4 h-4 lg:w-8 lg:h-8"
-                    src={whatsapp}
-                    alt="WhatsApp"
-                  />
-                  <span className="text-sm lg:text-xl">WhatsApp</span>
-                </li>
-              </a>
-              <a
-                href={shareLinks.linkedin}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <li className="flex items-center gap-2">
-                  <img
-                    className="w-4 h-4 lg:w-8 lg:h-8"
-                    src={linkedin}
-                    alt="LinkedIn"
-                  />
-                  <span className="text-sm lg:text-xl">LinkedIn</span>
-                </li>
-              </a>
-              <a
-                href={shareLinks.threads}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <li className="flex items-center gap-2">
-                  <img
-                    className="w-4 h-4 lg:w-8 lg:h-8"
-                    src={theme === "dark" ? threads_w : threads}
-                    alt="Threads"
-                  />
-                  <span className="text-sm lg:text-xl">Threads</span>
-                </li>
-              </a>
-            </ul>
+          <div className="px-4 md:px-8">
+  <p className="flex justify-center text-sm md:text-xl mt-5 font-sansita text-center">
+    Here is the AI Agent Analysis of Your Personality
+  </p>
+  <div className="flex flex-col md:flex-row gap-4 justify-center items-center mt-4">
+    <span className="text-sm lg:text-xl">Share:</span>
+    <ul className="flex flex-row flex-wrap gap-4 justify-center">
+      <a
+        href={shareLinks.twitter}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <li className="flex items-center gap-2">
+          <img
+            className="w-4 h-4 lg:w-8 lg:h-8"
+            src={twitter}
+            alt="Twitter"
+          />
+          <span className="text-sm lg:text-xl">Twitter</span>
+        </li>
+      </a>
+      <a
+        href={shareLinks.whatsapp}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <li className="flex items-center gap-2">
+          <img
+            className="w-4 h-4 lg:w-8 lg:h-8"
+            src={whatsapp}
+            alt="WhatsApp"
+          />
+          <span className="text-sm lg:text-xl">WhatsApp</span>
+        </li>
+      </a>
+      <a
+        href={shareLinks.linkedin}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <li className="flex items-center gap-2">
+          <img
+            className="w-4 h-4 lg:w-8 lg:h-8"
+            src={linkedin}
+            alt="LinkedIn"
+          />
+          <span className="text-sm lg:text-xl">LinkedIn</span>
+        </li>
+      </a>
+      <a
+        href={shareLinks.threads}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <li className="flex items-center gap-2">
+          <img
+            className="w-4 h-4 lg:w-8 lg:h-8"
+            src={theme === "dark" ? threads_w : threads}
+            alt="Threads"
+          />
+          <span className="text-sm lg:text-xl">Threads</span>
+        </li>
+      </a>
+    </ul>
+  </div>
+</div>
 
-            {/* <ul className="flex flex-row gap-1 lg:gap-3">
-              <a
-                href={shareLinks.twitter}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <li className="flex flex-row ">
-                  <img
-                    className="size-4 lg:size-8"
-                    src={twitter}
-                    alt="Twitter"
-                  />
-                  <span className="text-sm lg:text-xl">Twitter</span>
-                </li>
-              </a>
-              <a
-                href={shareLinks.whatsapp}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <li className="flex flex-row  gap-1">
-                  <img
-                    className="size-4 lg:size-8"
-                    src={whatsapp}
-                    alt="WhatsApp"
-                  />
-                  <span className="text-sm lg:text-xl">WhatsApp</span>
-                </li>
-              </a>
-              <a
-                href={shareLinks.linkedin}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <li className="flex flex-row gap-1">
-                  <img
-                    className="size-4 lg:size-8"
-                    src={linkedin}
-                    alt="LinkedIn"
-                  />
-                  <span className="text-sm lg:text-xl">LinkedIn</span>
-                </li>
-              </a>
-              <a
-                href={shareLinks.threads}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <li className="flex flex-row gap-1">
-                  <img
-                    className="size-4 lg:size-8"
-                    src={theme == "dark" ? threads_w : threads}
-                    alt="Threads"
-                  />
-                  <span className="text-sm lg:text-xl">Threads</span>
-                </li>
-              </a>
-            </ul> */}
-          </div>
           <div className="flex justify-center mt-10">
             <Card className="w-[550px]">
               <CardHeader>

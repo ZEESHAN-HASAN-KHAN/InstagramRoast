@@ -124,7 +124,7 @@ export function Hero() {
             style={{
               fontFamily: "Roboto Slab",
             }}
-            className=""
+            className="mt-5"
           >
             by clicking discover you agree to our terms
           </span>

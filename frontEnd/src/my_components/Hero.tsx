@@ -130,9 +130,8 @@ export function Hero() {
           </span>
         </div>
         {/* Right Section */}
-        <div className="lg:w-1/2  mt-10 lg:mt-[3%] p-4 lg:justify-center ">
-          <AnimatedBeamDemo></AnimatedBeamDemo>
-
+        <div className="w-full lg:w-1/2 mt-10 lg:mt-[3%] p-4 flex flex-col items-center">
+          <AnimatedBeamDemo />
           <div
             style={{
               fontFamily: "Sansita",

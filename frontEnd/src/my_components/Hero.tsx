@@ -120,14 +120,14 @@ export function Hero() {
           </div>
           {/* Agreement */}
           <SelectDemo language={language} onValueChange={handleValueChange} />
-          {/* <span
+          <span
             style={{
               fontFamily: "Roboto Slab",
             }}
             className=""
           >
             by clicking discover you agree to our terms
-          </span> */}
+          </span>
         </div>
         {/* Right Section */}
         <div className="lg:w-1/2  mt-10 lg:mt-[3%] p-4 lg:justify-center ">

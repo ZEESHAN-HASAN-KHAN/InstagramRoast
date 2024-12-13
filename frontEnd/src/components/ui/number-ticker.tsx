@@ -1,61 +1,3 @@
-// "use client";
-
-// import { useEffect, useRef } from "react";
-// import { useInView, useMotionValue, useSpring } from "framer-motion";
-
-// import { cn } from "@/lib/utils";
-
-// export default function NumberTicker({
-//   value,
-//   direction = "up",
-//   delay = 0,
-//   className,
-//   decimalPlaces = 0,
-// }: {
-//   value: number;
-//   direction?: "up" | "down";
-//   className?: string;
-//   delay?: number; // delay in s
-//   decimalPlaces?: number;
-// }) {
-//   const ref = useRef<HTMLSpanElement>(null);
-//   const motionValue = useMotionValue(direction === "down" ? value : 0);
-//   const springValue = useSpring(motionValue, {
-//     damping: 60,
-//     stiffness: 100,
-//   });
-//   const isInView = useInView(ref, { once: true, margin: "0px" });
-
-//   useEffect(() => {
-//     isInView &&
-//       setTimeout(() => {
-//         motionValue.set(direction === "down" ? 0 : value);
-//       }, delay * 1000);
-//   }, [motionValue, isInView, delay, value, direction]);
-
-//   useEffect(
-//     () =>
-//       springValue.on("change", (latest) => {
-//         if (ref.current) {
-//           ref.current.textContent = Intl.NumberFormat("en-US", {
-//             minimumFractionDigits: decimalPlaces,
-//             maximumFractionDigits: decimalPlaces,
-//           }).format(Number(latest.toFixed(decimalPlaces)));
-//         }
-//       }),
-//     [springValue, decimalPlaces],
-//   );
-
-//   return (
-//     <span
-//       className={cn(
-//         "inline-block tabular-nums text-black dark:text-white tracking-wider",
-//         className,
-//       )}
-//       ref={ref}
-//     />
-//   );
-// }
 "use client";
 
 import { useEffect, useRef } from "react";
@@ -84,6 +26,18 @@ export default function NumberTicker({
   });
   const isInView = useInView(ref, { once: true, margin: "0px" });
 
+  // Format numbers into k, M, B notation
+  const formatNumber = (num: number): string => {
+    if (num >= 1_000_000_000) {
+      return (num / 1_000_000_000).toFixed(1) + "B";
+    } else if (num >= 1_000_000) {
+      return (num / 1_000_000).toFixed(1) + "M";
+    } else if (num >= 1_000) {
+      return (num / 1_000).toFixed(1) + "k";
+    }
+    return num.toFixed(decimalPlaces);
+  };
+
   useEffect(() => {
     if (isInView) {
       setTimeout(() => {
@@ -95,10 +49,7 @@ export default function NumberTicker({
   useEffect(() => {
     const unsubscribe = springValue.on("change", (latest) => {
       if (ref.current) {
-        ref.current.textContent = Intl.NumberFormat("en-US", {
-          minimumFractionDigits: decimalPlaces,
-          maximumFractionDigits: decimalPlaces,
-        }).format(Number(latest.toFixed(decimalPlaces)));
+        ref.current.textContent = formatNumber(Number(latest.toFixed(decimalPlaces)));
       }
     });
 
@@ -110,10 +61,7 @@ export default function NumberTicker({
   // Ensure 0 is rendered explicitly
   useEffect(() => {
     if (value === 0 && ref.current) {
-      ref.current.textContent = Intl.NumberFormat("en-US", {
-        minimumFractionDigits: decimalPlaces,
-        maximumFractionDigits: decimalPlaces,
-      }).format(0);
+      ref.current.textContent = formatNumber(0);
     }
   }, [value, decimalPlaces]);
 

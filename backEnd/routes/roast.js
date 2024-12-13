@@ -101,10 +101,10 @@ roastRouter.post("/roastMe", async (req, res) => {
     );
 
     // roast instagram profile data
-    const roast = await generateAIRoast(roastData, roastData.profile_pic_url);
+    const roast = await generateAIRoast(roastData, roastData.profile_pic_url, language);
     // Update roastData with the GCS URL
     roastData.profile_pic_url = gcsProfileUrl;
-    addAIResponse(name, roast);
+    addAIResponse(name, roast, language);
 
     return res.status(200).json({
       insta_data: roastData,

@@ -1,8 +1,5 @@
 "use client";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-
-// import { cn } from "@/lib/utils";
-// import { DotPattern } from "@/components/ui/dot-pattern";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { ThemeProvider } from "./components/ui/theme-provider";
 import { Hero } from "./my_components/Hero";
 import { Navbar } from "./my_components/Navbar";
@@ -12,18 +9,48 @@ import { ModeToggle } from "@/components/ui/ModeToggle";
 import { Faq } from "./my_components/Faq";
 import { motion } from "framer-motion";
 import { AvatarCirclesDemo } from "./my_components/Contributors";
+import React from "react";
 
-// import Meteors from "./components/ui/meteors";
+const RedirectToUsername = () => {
+  const navigate = useNavigate();
+  const handleRedirect = () => {
+    const path = window.location.pathname; // Get the current path
+    if (path && path !== "/") {
+      let username = path.substring(1); // Remove the leading slash
+      if (username.includes("instagram.com")) {
+        // Extract username from Instagram URL
+        const instagramBase = "instagram.com/";
+        const startIndex = username.indexOf(instagramBase);
+        if (startIndex !== -1) {
+          const extractedPart = username.substring(
+            startIndex + instagramBase.length
+          );
+          const usernameArr = extractedPart.split("/").filter(Boolean);
+          username = usernameArr[0];
+        }
+      }
+      // Redirect to /:username route
+      navigate(`/${username}`);
+    }
+  };
+
+  React.useEffect(() => {
+    handleRedirect();
+  }, []); // Runs once on mount
+
+  return null; // Render nothing
+};
+
 export default function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <BrowserRouter>
         <div>
+          {/* Redirect logic */}
+          <RedirectToUsername />
           <Navbar />
           <Routes>
             <Route path="/" element={<Hero />} />
-            {/* <Route path="/about" element={<About />} /> */}
-            {/* <Route path="/faq" element={<Faq />} /> */}
             <Route path="/:username" element={<Roast />} />
           </Routes>
           {/* ScrollToSection using framer-motion */}

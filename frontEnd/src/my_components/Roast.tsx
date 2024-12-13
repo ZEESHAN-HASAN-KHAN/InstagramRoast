@@ -2,9 +2,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import {
   Card,
-  //   CardContent,
   CardDescription,
-  //   CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -14,7 +12,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HyperText } from "@/components/ui/hyper-text";
 import NumberTicker from "@/components/ui/number-ticker";
-// import "dotenv/config";
 import twitter from "../assets/twitter.png";
 import whatsapp from "../assets/whatsapp.png";
 import linkedin from "../assets/linkedin.png";
@@ -27,8 +24,6 @@ import { useTheme } from "@/components/ui/theme-provider";
 import type { ConfettiRef } from "@/components/ui/confetti";
 import Confetti from "@/components/ui/confetti";
 
-// import { NeonGradientCard } from "@/components/ui/neon-gradient-card";
-// import { Underline } from "lucide-react";
 
 export function Roast() {
   const { theme } = useTheme();
@@ -48,7 +43,7 @@ export function Roast() {
 
   const { username } = useParams();
   const searchParams = new URLSearchParams(useLocation().search);
-  const ln = searchParams.get("language");
+  const ln = searchParams.get("language") || "english";
   const [userData, setUserData] = useState<InstagramData | null>(null);
   const [roastData, setRoastData] = useState("");
   const [received, setReceived] = useState(false);
@@ -81,7 +76,7 @@ export function Roast() {
           Accept: "application/json",
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name: username ,language:ln}),
+        body: JSON.stringify({ name: username, language: ln }),
       });
 
       if (!result.ok) {
@@ -103,19 +98,21 @@ export function Roast() {
     }
   };
   const handleStartConfetti = () => {
-    // Start confetti animation
     setTimeout(() => {
       setIsRunning(false);
-
-      // Stop confetti after 5 seconds
     }, 5000);
   };
 
   useEffect(() => {
+    // change the title of the page to the username
+    if (username) {
+      document.title = `Roast of ${username} 🔥`;
+    }
+
     setUserData(null);
     setRoastData("");
     getData();
-  }, [username]);
+  }, [username]);  
 
   const renderedMarkdown = useMemo(
     () => (
@@ -143,7 +140,17 @@ export function Roast() {
                     <AvatarFallback>CN</AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col gap-5">
-                    <CardTitle>@{userData.insta_data.username}</CardTitle>
+                    <CardTitle>
+                      <a
+                        href={`https://www.instagram.com/${userData.insta_data.username}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ textDecoration: "none", color: "inherit" }} // Optional styling
+                      >
+                        @{userData.insta_data.username}
+                      </a>
+                    </CardTitle>
+
                     <CardTitle>
                       <HyperText
                         className="dark:text-white"

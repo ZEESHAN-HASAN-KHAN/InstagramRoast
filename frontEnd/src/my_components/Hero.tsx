@@ -63,9 +63,9 @@ export function Hero() {
         </AnimatedGradientText>
       </div>
 
-      <div className="flex flex-col lg:flex-row  ">
+      <div className="flex flex-col items-center lg:flex-row  ">
         {/* :Left Section */}
-        <div className="lg:w-1/2 ml-5 mt-5 lg:ml-20 lg:mt-10">
+        <div className="lg:w-1/2 flex flex-col items-center">
           <div>
             <p
               style={{

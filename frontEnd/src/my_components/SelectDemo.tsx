@@ -19,11 +19,11 @@ export function SelectDemo() {
       <SelectContent>
         <SelectGroup>
           <SelectLabel>Language</SelectLabel>
-          <SelectItem value="apple">English</SelectItem>
-          <SelectItem value="banana">Hindi</SelectItem>
-          <SelectItem value="blueberry">Urdu</SelectItem>
-          <SelectItem value="grapes">Spanish</SelectItem>
-          <SelectItem value="pineapple">Germany</SelectItem>
+          <SelectItem value="en">English</SelectItem>
+          <SelectItem value="en-hi">Hindi</SelectItem>
+          <SelectItem value="en-ur">Urdu</SelectItem>
+          <SelectItem value="sp">Spanish</SelectItem>
+          <SelectItem value="gr">Germany</SelectItem>
           {/* <SelectItem value="pineapple">French</SelectItem> */}
         </SelectGroup>
       </SelectContent>

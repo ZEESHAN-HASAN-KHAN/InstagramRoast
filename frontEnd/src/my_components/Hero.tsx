@@ -20,6 +20,11 @@ export function Hero() {
   const { theme } = useTheme();
   const [uname, setUname] = useState("");
   const [roastCount, setRoastCount] = useState(0);
+  const [language, setLanguage] = useState("english");
+  const handleValueChange = (value: string) => {
+    setLanguage(value); // Update state when value changes
+    // alert("Selected Language:" + language); // Optional: Log the value
+  };
   const navigate = useNavigate();
   async function discover() {
     // send this data to backend
@@ -27,8 +32,8 @@ export function Hero() {
     // other page
     //if username doesnot't exist or failed to fetch
     // we'll show the toast notification
-
-    navigate("/" + uname);
+    // navigate("/" + uname);
+    navigate(`/${uname}?language=${language}`);
     // setUname("");
   }
   const getRoastCount = async () => {
@@ -39,7 +44,7 @@ export function Hero() {
       const data = await result.json();
       setRoastCount(data.count);
     } catch (error) {
-      console.error("This is error");
+      console.error("This is error", error);
     }
   };
   useEffect(() => {
@@ -48,7 +53,7 @@ export function Hero() {
   return (
     <div>
       {/* Profile Roasted Count */}
-      <div className=" mt-2">
+      <div className="-z-10 mt-2">
         <AnimatedGradientText>
           <span
             className={cn(
@@ -66,36 +71,41 @@ export function Hero() {
       <div className="flex flex-col items-center lg:flex-row  ">
         {/* :Left Section */}
         <div className="lg:w-1/2 flex flex-col items-center">
-          <div>
+          <div className="flex flex-col items-center p-4">
             <p
               style={{
                 fontFamily: "Sansita",
               }}
-              className="text-4xl text-gray-900 dark:text-gray-200  "
+              className="text-3xl lg:text-4xl text-gray-900 dark:text-gray-200  "
             >
               Discover your
             </p>
 
             <div className="flex  flex-row  items-center gap-5 mb-4 ">
-              <img src={Instagram} className=" w-[9%]" />
+              <img src={Instagram} className=" w-10" />
               <p
                 style={{
                   fontFamily: "Sansita",
                 }}
-                className="text-4xl text-gray-900 dark:text-gray-200 "
+                className="text-3xl lg:text-4xl text-gray-900 dark:text-gray-200 "
               >
                 Instagram Personality
               </p>
             </div>
           </div>
           {/* Input Sectton */}
-          <div className="flex gap-1">
+          <div className="flex gap-1 px-4">
             <Input
               className="z-20  inline w-[55%] lg:w-[40%] "
               placeholder="@username"
               onChange={(e) => {
                 console.log(uname);
-                setUname(e.target.value);
+                setUname(e.target.value.trim());
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  discover(); // Trigger the button's functionality
+                }
               }}
               value={uname}
             />
@@ -109,15 +119,15 @@ export function Hero() {
             </RainbowButton>
           </div>
           {/* Agreement */}
-          <SelectDemo />
-          <span
+          <SelectDemo language={language} onValueChange={handleValueChange} />
+          {/* <span
             style={{
               fontFamily: "Roboto Slab",
             }}
             className=""
           >
             by clicking discover you agree to our terms
-          </span>
+          </span> */}
         </div>
         {/* Right Section */}
         <div className="lg:w-1/2  mt-10 lg:mt-[3%] p-4 lg:justify-center ">
@@ -129,9 +139,12 @@ export function Hero() {
             }}
             className=" flex mt-10 items-center lg:mt-20 "
           >
-            <span className="text-4xl text-red-400"> Powered By </span>
-            <img className="inline w-14" src={chatgpt}></img>
-            <span className="text-4xl">OpenAI</span>
+            <span className=" text-2xl lg:text-4xl text-red-400">
+              {" "}
+              Powered By{" "}
+            </span>
+            <img className="inline w-10 lg:w-14" src={chatgpt}></img>
+            <span className="text-2xl lg:text-4xl">OpenAI</span>
           </div>
         </div>
       </div>

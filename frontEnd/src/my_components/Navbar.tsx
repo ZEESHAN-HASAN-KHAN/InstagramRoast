@@ -43,7 +43,7 @@ export function Navbar() {
         {/* Navigation Links */}
         <div
           className={`${
-            isMenuOpen ? "block " : "hidden"
+            isMenuOpen ? "block z-10 " : "hidden"
           } absolute top-16 left-0 w-full bg-white dark:bg-black  border-gray-300 dark:border-gray-700 lg:static lg:block lg:w-auto`}
         >
           <ul

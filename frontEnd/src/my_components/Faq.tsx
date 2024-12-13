@@ -10,7 +10,7 @@ export function Faq() {
     <div className="m-5 p-5">
       <span
         style={{ fontFamily: "Sansita" }}
-        className="flex text-3xl lg:text-5xl p-4 lg:p-5  justify-center"
+        className="flex text-2xl lg:text-4xl p-4 lg:p-5  justify-center"
       >
         FAQs
       </span>

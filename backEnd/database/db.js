@@ -73,14 +73,15 @@ async function dbConnect() {
   }
 }
 
-async function getAIResponse(username) {
+async function getAIResponse(username, language) {
+  console.log("Language come in " + language);
   try {
     const result = await client.query(
       `SELECT ar.response_text
              FROM ai_responses ar
              JOIN profiles p ON ar.profile_id = p.id
-             WHERE p.username = $1;`,
-      [username]
+             WHERE p.username = $1 and ar.language = $2;`,
+      [username, language]
     );
     return result.rows[0]; // Returns the first matching row
   } catch (error) {
@@ -134,7 +135,7 @@ async function checkUserExists(username) {
     throw error;
   }
 }
-async function addAIResponse(username, responseText) {
+async function addAIResponse(username, responseText, language) {
   try {
     // Step 1: Get the profile ID for the given username
     const profileResult = await client.query(
@@ -150,10 +151,10 @@ async function addAIResponse(username, responseText) {
 
     // Step 2: Insert AI response into the ai_responses table
     const insertResult = await client.query(
-      `INSERT INTO ai_responses (profile_id, response_text)
-             VALUES ($1, $2)
+      `INSERT INTO ai_responses (profile_id, response_text, language)
+             VALUES ($1, $2, $3)
              RETURNING *;`,
-      [profileId, responseText]
+      [profileId, responseText, language]
     );
 
     console.log("AI response added successfully:", insertResult.rows[0]);

@@ -32,6 +32,7 @@ jobs:
           docker build -t instagram-roast-backend:latest ./backEnd
           
       - name: Configure GCP Credentials
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: google-github-actions/setup-gcloud@v0
         with:
           service_account_key: ${{ secrets.SERVICE_ACCOUNT_JSON }}
@@ -39,6 +40,7 @@ jobs:
           export_default_credentials: true
       
       - name: Configure Docker Client
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
 
       - name: Push the Docker image (Skip on PR)
@@ -65,6 +67,7 @@ jobs:
             --build-arg VITE_APP_BASE_URL=${{ secrets.VITE_APP_BASE_URL }}
           
       - name: Configure GCP Credentials
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: google-github-actions/setup-gcloud@v0
         with:
           service_account_key: ${{ secrets.SERVICE_ACCOUNT_JSON }}
@@ -72,6 +75,7 @@ jobs:
           export_default_credentials: true
       
       - name: Configure Docker Client
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
 
       - name: Push the Docker image (Skip on PR)

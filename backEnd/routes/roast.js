@@ -58,7 +58,11 @@ roastRouter.post("/roastMe", async (req, res) => {
       } else {
         // generate AI response and return it
         const roast = await generateAIRoast(
-          result,
+          // Create a copy of the result object excluding profile_pic_url
+          (() => {
+            const { profile_pic_url, ...rest } = result; // Destructure to exclude profile_pic_url
+            return rest; // Return the remaining object
+          })(),
           result.profile_pic_url,
           language
         );
@@ -101,7 +105,12 @@ roastRouter.post("/roastMe", async (req, res) => {
     );
 
     // roast instagram profile data
-    const roast = await generateAIRoast(roastData, roastData.profile_pic_url, language);
+    const roast = await generateAIRoast(
+        (() => {
+          const { profile_pic_url, ...rest } = roastData; // Destructure to exclude profile_pic_url
+          return rest; // Return the remaining object
+        })
+      , roastData.profile_pic_url, language);
     // Update roastData with the GCS URL
     roastData.profile_pic_url = gcsProfileUrl;
     addAIResponse(name, roast, language);

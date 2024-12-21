@@ -158,7 +158,7 @@ import { RainbowButton } from "@/components/ui/rainbow-button";
 import { useNavigate } from "react-router-dom";
 import { SelectDemo } from "./SelectDemo";
 import AnimatedGradientText from "@/components/ui/animated-gradient-text";
-import { cn } from "@/lib/utils";
+import { cn, createToken } from "@/lib/utils";
 import { ChartNoAxesCombined, ChevronRight } from "lucide-react";
 
 export function Hero() {
@@ -175,7 +175,12 @@ export function Hero() {
   const getRoastCount = async () => {
     try {
       const url = import.meta.env.VITE_APP_BASE_URL;
-      const result = await fetch(url + "/api/v1/roastCount");
+      const token = await createToken();
+      const result = await fetch(url + "/api/v1/roastCount", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       const data = await result.json();
       setRoastCount(data.count);
     } catch (error) {

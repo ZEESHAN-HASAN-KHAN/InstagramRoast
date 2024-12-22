@@ -10,6 +10,8 @@ import { Faq } from "./my_components/Faq";
 import { motion } from "framer-motion";
 import { AvatarCirclesDemo } from "./my_components/Contributors";
 import React from "react";
+import { Compatiblity } from "./my_components/Compatiblity";
+import { CompatiblityRoast } from "./my_components/CompatiblityRoast";
 
 const RedirectToUsername = () => {
   const navigate = useNavigate();
@@ -50,10 +52,21 @@ export default function App() {
           <RedirectToUsername />
           <Navbar />
           <Routes>
-            <Route path="/" element={<Hero />} />
+            <Route
+              path="/"
+              element={
+                <>
+                  <Hero />
+                  <Compatiblity />
+                </>
+              }
+            />
+            {/* <Route path="/" element={<Compatiblity />} /> */}
             <Route path="/:username" element={<Roast />} />
+            <Route path="/compatiblityRoast" element={<CompatiblityRoast />} />
           </Routes>
           {/* ScrollToSection using framer-motion */}
+
           <motion.div
             id="about"
             className="section"

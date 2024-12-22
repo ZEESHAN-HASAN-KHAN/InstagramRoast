@@ -33,49 +33,43 @@ const getInstagramProfile = async (username) => {
   return roastData;
 };
 
-// const generateAIRoast = async (userData, profileUrl, language) => {
-//   const openai = new OpenAI({ apiKey: process.env.APIKEY });
+const generateAICompatiblityRoast = async (userData1, userData2, language) => {
+  const openai = new OpenAI({ apiKey: process.env.APIKEY });
 
-//   const inputPrompt = `
-//     You are a professional no-filter comedian who is roasting an Instagram user. You job is to brutally roast the user based on their Instagram profile.
-//     Please strictly roast the user based on the following information:
-//     ${JSON.stringify(userData)}
+  const inputPrompt = `
+    You are a professional no-filter comedian who is roasting an Instagram user. You job is to brutally roast the user based on their Instagram profile.
+    Please strictly roast the user based on the following information:
+    ${JSON.stringify(userData1)} ${JSON.stringify(userData2)}
 
-//     Roast Guidelines:
-//     - Rip apart every weak point, vague phrase, or generic line
-//     - Make it darkly funny but straightforward
-//     - Roast output language should be ${language}
-//     - Avoid sugarcoating anything—be blunt and ruthless
-//     - Keep it under 100 words
-//     - Do not include any pleasentries.
-//     - Include emojis
-//     - Output should be strictly in markdown format
-//     - Highlight the user's weak points and make them feel bad about themselves
-//     - Always give a roast response no matter what the user's profile is like
-//   `;
-//   console.log("Input Prompt" + inputPrompt);
-//   const completion = await openai.chat.completions.create({
-//     model: process.env.MODEL_NAME,
-//     messages: [
-//       {
-//         role: "user",
-//         content: [
-//           {
-//             type: "text",
-//             text: inputPrompt,
-//           },
-//           {
-//             type: "image_url",
-//             image_url: {
-//               url: profileUrl,
-//             },
-//           },
-//         ],
-//       },
-//     ],
-//   });
-//   return completion.choices[0].message.content;
-// };
+    Roast Guidelines:
+    - Rip apart every weak point, vague phrase, or generic line
+    - Make it darkly funny but straightforward
+    - Roast output language should be ${language}
+    - Avoid sugarcoating anything—be blunt and ruthless
+    - Keep it under 100 words
+    - Do not include any pleasentries.
+    - Include emojis
+    - Output should be strictly in markdown format
+    - Highlight the user's weak points and make them feel bad about themselves
+    - Always give a roast response no matter what the user's profile is like
+  `;
+  console.log("Input Prompt" + inputPrompt);
+  const completion = await openai.chat.completions.create({
+    model: process.env.MODEL_NAME,
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: inputPrompt,
+          },
+        ],
+      },
+    ],
+  });
+  return completion.choices[0].message.content;
+};
 const generateAIRoast = async (userData, profileUrl, language) => {
   const openai = new OpenAI({ apiKey: process.env.APIKEY });
 
@@ -83,7 +77,9 @@ const generateAIRoast = async (userData, profileUrl, language) => {
   You are a professional comedian with a reputation for razor-sharp wit and dark humor. Your task is to roast an Instagram user based on their profile in a clever, ruthless, and darkly funny way.
 
   Instructions:
-  - Base your roast on the following user data: ${JSON.stringify(userData)} and the image attached.
+  - Base your roast on the following user data: ${JSON.stringify(
+    userData
+  )} and the image attached.
   - Be as sarcastic, blunt, and edgy as possible. Use clever wordplay and savage humor.
   - Do not include:
     - Compliments, motivation, or any form of praise.
@@ -121,4 +117,8 @@ const generateAIRoast = async (userData, profileUrl, language) => {
   return completion.choices[0].message.content;
 };
 
-module.exports = { getInstagramProfile, generateAIRoast };
+module.exports = {
+  getInstagramProfile,
+  generateAIRoast,
+  generateAICompatiblityRoast,
+};

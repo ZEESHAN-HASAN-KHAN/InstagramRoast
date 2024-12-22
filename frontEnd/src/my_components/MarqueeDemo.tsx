@@ -7,6 +7,69 @@ import bk from "../assets/bk.png";
 import vk from "../assets/vk.png";
 import dj from "../assets/dj.png";
 import { Link } from "react-router-dom";
+const reviews1 = [
+  {
+    name: "Ryan Reynolds",
+    username: "vancityreynolds",
+    body: "This app said Deadpool is just me in spandex. No lies detected.",
+    img: vk,
+  },
+  {
+    name: "Chris Hemsworth",
+    username: "chrishemsworth",
+    body: "Apparently, my hammer is more famous than me. I’m okay with that.",
+    img: vk,
+  },
+  {
+    name: "Will Smith",
+    username: "willsmith",
+    body: "It said my Oscar moment will outlive my entire career. Tough.",
+    img: vk,
+  },
+  {
+    name: "Chris Evans",
+    username: "chrisevans",
+    body: "This app said Captain America wouldn’t survive without the shield. Harsh.",
+    img: vk,
+  },
+  {
+    name: "Shaquille O'Neal",
+    username: "shaq",
+    body: "It said my free throws are still a national joke. I can’t argue.",
+    img: vk,
+  },
+  {
+    name: "Hugh Jackman",
+    username: "thehughjackman",
+    body: "Apparently, Wolverine’s claws are sharper than my acting. Ouch.",
+    img: vk,
+  },
+  {
+    name: "Mark Zuckerberg",
+    username: "zuck",
+    body: "This app claims the Metaverse is my midlife crisis. Brutal.",
+    img: vk,
+  },
+  {
+    name: "Michael Jordan",
+    username: "mj23",
+    body: "It said my crying meme is my real legacy. I’m not mad.",
+    img: vk,
+  },
+  {
+    name: "Jason Momoa",
+    username: "prideofgypsies",
+    body: "This app called me Aquaman with no water. Creative burn.",
+    img: vk,
+  },
+  {
+    name: "Tony Hawk",
+    username: "tonyhawk",
+    body: "Apparently, people know my name but not my face. True story.",
+    img: vk,
+  },
+];
+
 const reviews = [
   {
     name: "Cristiano Ronaldo",
@@ -121,6 +184,7 @@ export function MarqueeDemo() {
           <ReviewCard key={review.username} {...review} />
         ))}
       </Marquee>
+
       <div className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-white dark:from-background"></div>
       <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-white dark:from-background"></div>
     </div>

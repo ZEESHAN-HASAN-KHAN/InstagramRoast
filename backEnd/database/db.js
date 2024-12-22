@@ -68,6 +68,20 @@ async function dbConnect() {
                   FOREIGN KEY (profile_id) REFERENCES profiles (id) ON DELETE CASCADE
               );
           `);
+    const result3 = await client.query(`
+      CREATE TABLE IF NOT EXISTS compatibility_responses (
+        id SERIAL PRIMARY KEY,
+        profile_id_1 INTEGER NOT NULL,
+        profile_id_2 INTEGER NOT NULL,
+        compatibility_score INTEGER,
+        compatibility_text TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (profile_id_1) REFERENCES profiles (id) ON DELETE CASCADE,
+        FOREIGN KEY (profile_id_2) REFERENCES profiles (id) ON DELETE CASCADE,
+        UNIQUE (profile_id_1, profile_id_2)
+      );
+    `);
   } catch (err) {
     console.error("Failed to connect to the database:", err.message);
   }
@@ -164,6 +178,40 @@ async function addAIResponse(username, responseText, language) {
     throw error;
   }
 }
+// Adding Compatiblity Response
+async function addCompatiblityResponse(username1, username2, compatiblityText) {
+  try {
+    // Step 1: Get the profile ID for the given username
+    const profileResult1 = await client.query(
+      `SELECT id FROM profiles WHERE username = $1;`,
+      [username1]
+    );
+    const profileResult2 = await client.query(
+      `SELECT id FROM profiles WHERE username = $1;`,
+      [username2]
+    );
+    if (profileResult1.rows.length === 0 || profileResult2.rows.length === 0) {
+      throw new Error("User not found: Unable to add AI response.");
+    }
+
+    const profileId1 = profileResult1.rows[0].id;
+    const profileId2 = profileResult2.rows[0].id;
+
+    // Step 2: Insert AI response into the ai_responses table
+    const insertResult = await client.query(
+      `INSERT INTO compatibility_responses (profile_id_1,profile_id_2, compatibility_text)
+             VALUES ($1, $2, $3)
+             RETURNING *;`,
+      [profileId1, profileId2, compatiblityText]
+    );
+
+    console.log("AI response added successfully:", insertResult.rows[0]);
+    return insertResult.rows[0]; // Return the inserted row
+  } catch (error) {
+    console.error("Error adding AI response:", error.message);
+    throw error;
+  }
+}
 async function profilesRoasted() {
   try {
     // Assuming you are using a PostgreSQL client like 'pg'
@@ -187,4 +235,5 @@ module.exports = {
   addAIResponse,
   getUserData,
   profilesRoasted,
+  addCompatiblityResponse,
 };

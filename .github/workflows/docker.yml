@@ -29,6 +29,8 @@ jobs:
           echo "MODEL_NAME=${{ secrets.MODEL_NAME }}" >> ./backEnd/.env
           echo "BUCKET_NAME=${{ secrets.BUCKET_NAME }}" >> ./backEnd/.env
           echo "ALLOWED_LANGUAGE=${{ secrets.ALLOWED_LANGUAGE }}" >> ./backEnd/.env
+          echo "ALLOWED_ORIGIN=${{ secrets.ALLOWED_ORIGIN }}" >> ./backEnd/.env
+          echo "TOKEN_SECRET=${{ secrets.TOKEN_SECRET }}" >> ./backEnd/.env
           docker build -t instagram-roast-backend:latest ./backEnd
           
       - name: Configure GCP Credentials
@@ -64,7 +66,8 @@ jobs:
       - name: Build the Docker image
         run: |
           docker build -t instagram-roast-frontend:latest ./frontEnd \
-            --build-arg VITE_APP_BASE_URL=${{ secrets.VITE_APP_BASE_URL }}
+            --build-arg VITE_APP_BASE_URL=${{ secrets.VITE_APP_BASE_URL }} \
+            --build-arg VITE_APP_TOKEN_SECRET=${{ secrets.TOKEN_SECRET }} \
           
       - name: Configure GCP Credentials
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

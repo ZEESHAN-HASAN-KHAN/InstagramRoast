@@ -3,9 +3,11 @@ FROM node:21-alpine3.18
 
 # Accept environment variables passed as build arguments
 ARG VITE_APP_BASE_URL
+ARG VITE_APP_TOKEN_SECRET
 
 # Use ARG values as environment variables for the build stage
 ENV VITE_APP_BASE_URL=$VITE_APP_BASE_URL
+ENV VITE_APP_TOKEN_SECRET=$VITE_APP_TOKEN_SECRET
 
 # Create a directory for our application in the container 
 RUN mkdir -p /usr/src/app

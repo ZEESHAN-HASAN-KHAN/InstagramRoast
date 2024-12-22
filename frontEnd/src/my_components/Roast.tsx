@@ -19,6 +19,7 @@ import threads from "../assets/threads.png";
 import threads_w from "../assets/threads_w.png";
 
 import { useTheme } from "@/components/ui/theme-provider";
+import { createToken } from "@/lib/utils";
 
 //Adding Confett
 import type { ConfettiRef } from "@/components/ui/confetti";
@@ -69,10 +70,11 @@ export function Roast() {
   const getData = async () => {
     try {
       const url = import.meta.env.VITE_APP_BASE_URL;
-
+      const token = await createToken();
       const result = await fetch(url + "/api/v1/roastMe", {
         method: "POST",
         headers: {
+          Authorization: `Bearer ${token}`,
           Accept: "application/json",
           "Content-Type": "application/json",
         },

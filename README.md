@@ -120,5 +120,5 @@ Contributions are welcome! Please fork the repository and submit a pull request.
 
 ## Author
 [Zeeshan Hasan Khan](https://www.linkedin.com/in/zeeshan-hasan-khan-/)
-
+[Arghyadeep Ghosh](https://www.linkedin.com/in/arghyadeep-ghosh/)
 Happy roasting! 🎭

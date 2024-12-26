@@ -36,23 +36,18 @@ const getInstagramProfile = async (username) => {
 const generateAICompatiblityRoast = async (userData1, userData2, language) => {
   const openai = new OpenAI({ apiKey: process.env.APIKEY });
 
-  const inputPrompt = `
-    You are a professional no-filter comedian who is roasting an Instagram user. You job is to brutally roast the user based on their Instagram profile.
-    Please strictly roast the user based on the following information:
-    ${JSON.stringify(userData1)} ${JSON.stringify(userData2)}
-
-    Roast Guidelines:
-    - Rip apart every weak point, vague phrase, or generic line
-    - Make it darkly funny but straightforward
-    - Roast output language should be ${language}
-    - Avoid sugarcoating anything—be blunt and ruthless
-    - Keep it under 100 words
-    - Do not include any pleasentries.
-    - Include emojis
-    - Output should be strictly in markdown format
-    - Highlight the user's weak points and make them feel bad about themselves
-    - Always give a roast response no matter what the user's profile is like
-  `;
+  const inputPrompt = `Given the following profiles of two users, write a humorous and witty compatibility roast that playfully teases their differences and similarities.
+User 1:
+${JSON.stringify(userData1)}
+User 2:
+${JSON.stringify(userData2)}
+Example Format:
+Highlight key contrasts between the users with witty humor.
+Roast output language should be ${JSON.stringify(language)}
+Keep the roast concise (Under 100 words)
+Give us the compatiblity score
+Use emojis for emphasis
+`;
   console.log("Input Prompt" + inputPrompt);
   const completion = await openai.chat.completions.create({
     model: process.env.MODEL_NAME,

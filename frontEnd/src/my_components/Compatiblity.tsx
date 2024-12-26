@@ -11,15 +11,15 @@ import { SelectDemo } from "./SelectDemo";
 
 export function Compatiblity() {
   const { theme } = useTheme();
-  const [uname, setUname] = useState("");
   const [uname1, setUname1] = useState("");
+  const [uname2, setUname2] = useState("");
   const [language, setLanguage] = useState("english");
   const navigate = useNavigate();
 
   const handleValueChange = (value: string) => setLanguage(value);
 
   function discover(): void {
-    navigate(`/compatiblityRoast?uname=${uname}&uname1=${uname1}`);
+    navigate(`/compatiblityRoast?uname1=${uname1}&uname2=${uname2}`);
   }
 
   return (
@@ -39,17 +39,17 @@ export function Compatiblity() {
         <Input
           className="w-full px-4 py-2 rounded-md border border-gray-300 shadow-sm"
           placeholder="@username"
-          onChange={(e) => setUname(e.target.value.trim())}
+          onChange={(e) => setUname1(e.target.value.trim())}
           onKeyDown={(e) => e.key === "Enter" && discover()}
-          value={uname}
+          value={uname1}
         />
         <img className="size-6" src={add} />
         <Input
           className="w-full px-4 py-2 rounded-md border border-gray-300 shadow-sm"
           placeholder="@username"
-          onChange={(e) => setUname1(e.target.value.trim())}
+          onChange={(e) => setUname2(e.target.value.trim())}
           onKeyDown={(e) => e.key === "Enter" && discover()}
-          value={uname1}
+          value={uname2}
         />
         <RainbowButton
           onClick={discover}

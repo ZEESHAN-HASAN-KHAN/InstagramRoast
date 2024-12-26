@@ -1,6 +1,8 @@
 require("dotenv").config();
 const express = require("express");
 const roastRouter = express.Router();
+const fetch = (...args) =>
+  import("node-fetch").then(({ default: fetch }) => fetch(...args));
 const {
   addUser,
   getAIResponse,
@@ -8,6 +10,7 @@ const {
   getUserData,
   profilesRoasted,
   addCompatiblityResponse,
+  checkCompatibilityResponse,
 } = require("../database/db");
 const {
   generateAIRoast,
@@ -130,90 +133,123 @@ roastRouter.post("/roastMe", async (req, res) => {
 });
 
 // Route for check Compatiblity
-roastRouter.post("/compatiblityRoast", async (req, res) => {
-  const uname1 = req.body.uname1;
-  const uname2 = req.body.uname2;
-  // const language = req.body.language;
-  // with this username we need to check is there any record present in compatiblity response table
-  // if yes the we will return the response to user
+roastRouter.post("/compatibilityRoast", async (req, res) => {
+  console.log("Accessing compatibility roast route");
+  try {
+    const bucketName = process.env.BUCKET_NAME;
+    const uname1 = req.body.uname1;
+    const uname2 = req.body.uname2;
+    const language = req.body.language;
 
-  var userData1 = await getUserData(uname1);
-  var userData2 = await getUserData(uname2);
-  if (userData1 != null && userData2 != null) {
-  }
-  if (userData1 == null) {
-    userData1 = await getInstagramProfile(uname1);
-
-    console.log("Roast Data:", userData1);
-
-    // Download the profile picture to memory
-    const profileUrl = userData1.profile_pic_url;
-    console.log("Profile URL:", profileUrl);
-    const imageResponse = await fetch(profileUrl);
-
-    // Convert the image response to a Buffer
-    if (!imageResponse.ok) {
-      throw new Error(
-        `Failed to fetch profile picture: ${imageResponse.statusText}`
+    let profileUrl1;
+    let profileUrl2;
+    let userData1 = await getUserData(uname1);
+    let userData2 = await getUserData(uname2);
+    if (userData1 != null && userData2 != null) {
+      const check = await checkCompatibilityResponse(
+        userData1.id,
+        userData2.id,
+        language
       );
+      if (check.success) {
+        userData1.profile_pic_url = `https://storage.googleapis.com/${bucketName}/${userData1.profile_pic_url}`;
+        userData2.profile_pic_url = `https://storage.googleapis.com/${bucketName}/${userData2.profile_pic_url}`;
+        return res.status(200).json({
+          userData1: userData1,
+          userData2: userData2,
+          compatibilityText: check.compatibilityText,
+        });
+      }
     }
-    const arrayBuffer = await imageResponse.arrayBuffer();
-    const imageBuffer = Buffer.from(arrayBuffer);
-    const fileName = await uploadImage(imageBuffer);
-    const gcsProfileUrl = `https://storage.googleapis.com/${bucketName}/${fileName}`;
+    // if user data is not present in database
+    if (userData1 == null) {
+      userData1 = await getInstagramProfile(uname1);
 
-    await addUser(
-      fileName,
-      userData1.username,
-      userData1.full_name,
-      userData1.follower,
-      userData1.following,
-      userData1.biography,
-      userData1.post
-    );
-  }
-  if (userData2 == null) {
-    userData2 = await getInstagramProfile(uname2);
-    console.log("Roast Data:", userData2);
+      console.log("Roast Data:", userData1);
 
-    // Download the profile picture to memory
-    const profileUrl = roastData.profile_pic_url;
-    console.log("Profile URL:", profileUrl);
-    const imageResponse = await fetch(profileUrl);
+      // Download the profile picture to memory
+      profileUrl1 = userData1.profile_pic_url;
+      console.log("Profile URL:", profileUrl1);
+      const imageResponse = await fetch(profileUrl1);
 
-    // Convert the image response to a Buffer
-    if (!imageResponse.ok) {
-      throw new Error(
-        `Failed to fetch profile picture: ${imageResponse.statusText}`
-      );
+      // Convert the image response to a Buffer
+      if (!imageResponse.ok) {
+        throw new Error(
+          `Failed to fetch profile picture: ${imageResponse.statusText}`
+        );
+      }
+      const arrayBuffer = await imageResponse.arrayBuffer();
+      const imageBuffer = Buffer.from(arrayBuffer);
+      const fileName = await uploadImage(imageBuffer);
+      var gcsProfileUrl1 = `https://storage.googleapis.com/${bucketName}/${fileName}`;
+
+      if (userData1.username) {
+        await addUser(
+          fileName,
+          userData1.username,
+          userData1.full_name,
+          userData1.follower,
+          userData1.following,
+          userData1.biography,
+          userData1.post
+        );
+      } else {
+        throw new Error("Invalid user data: username is null");
+      }
     }
-    const arrayBuffer = await imageResponse.arrayBuffer();
-    const imageBuffer = Buffer.from(arrayBuffer);
-    const fileName = await uploadImage(imageBuffer);
-    const gcsProfileUrl = `https://storage.googleapis.com/${bucketName}/${fileName}`;
+    if (userData2 == null) {
+      // return ivalid user name if we don't get the profile
+      userData2 = await getInstagramProfile(uname2);
+      console.log("Roast Data:", userData2);
 
-    await addUser(
-      fileName,
-      userData2.username,
-      userData2.full_name,
-      userData2.follower,
-      userData2.following,
-      userData2.biography,
-      userData2.post
+      // Download the profile picture to memory
+      profileUrl2 = userData2.profile_pic_url;
+      console.log("Profile URL:", profileUrl2);
+      const imageResponse = await fetch(profileUrl2);
+
+      // Convert the image response to a Buffer
+      if (!imageResponse.ok) {
+        throw new Error(
+          `Failed to fetch profile picture: ${imageResponse.statusText}`
+        );
+      }
+      const arrayBuffer = await imageResponse.arrayBuffer();
+      const imageBuffer = Buffer.from(arrayBuffer);
+      const fileName = await uploadImage(imageBuffer);
+      var gcsProfileUrl2 = `https://storage.googleapis.com/${bucketName}/${fileName}`;
+
+      if (userData2.username) {
+        await addUser(
+          fileName,
+          userData2.username,
+          userData2.full_name,
+          userData2.follower,
+          userData2.following,
+          userData2.biography,
+          userData2.post
+        );
+      } else {
+        throw new Error("Invalid user data: username is null");
+      }
+    }
+
+    const compatibilityText = await generateAICompatiblityRoast(
+      userData1,
+      userData2,
+      language
     );
+
+    await addCompatiblityResponse(uname1, uname2, compatibilityText, language);
+    userData1.profile_pic_url = `https://storage.googleapis.com/${bucketName}/${userData1.profile_pic_url}`;
+    userData2.profile_pic_url = `https://storage.googleapis.com/${bucketName}/${userData2.profile_pic_url}`;
+    return res.status(200).json({
+      userData1: userData1,
+      userData2: userData2,
+      compatibilityText: compatibilityText,
+    });
+  } catch (error) {
+    console.error("Error from Compatiblity Roast " + error);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
-  // we need to generate the compatiblity response from ai
-  // and there we need to add uname uname1 as a foreign key to this compatiblity response table
-  const compatiblityText = generateAICompatiblityRoast(
-    userData1,
-    userData2,
-    language
-  );
-  // add compatiblity roast to our databse table where uname1 and uname2 are foreign key
-  // addCompatiblityRoast(compatiblityText,uname1,uname2);
-  addCompatiblityResponse(uname1, uname2, compatiblityText);
-  return res.status(200).json({
-    compatiblity: compatiblityText,
-  });
 });
 module.exports = roastRouter;

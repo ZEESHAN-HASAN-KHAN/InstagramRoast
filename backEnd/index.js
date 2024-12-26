@@ -5,13 +5,14 @@ const PORT = process.env.PORT;
 const cors = require("cors");
 const { dbConnect } = require("./database/db");
 const corsOptions = require("./middleware/cors");
-const  limiter  = require("./middleware/rateLimits");
+const limiter = require("./middleware/rateLimits");
 const jwt = require("./middleware/jwt");
 
 const roastRouter = require("./routes/roast");
 app.use(express.json());
 
 app.use(cors(corsOptions));
+// app.use(cors());
 app.use(limiter);
 app.use(jwt);
 

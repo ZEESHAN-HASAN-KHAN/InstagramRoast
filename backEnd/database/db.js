@@ -10,7 +10,8 @@ const client = new Client({
 async function getUserData(username) {
   try {
     const result = await client.query(
-      `SELECT 
+      `SELECT
+        id,
          profile_pic_url, 
          username, 
          full_name, 
@@ -78,8 +79,7 @@ async function dbConnect() {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (profile_id_1) REFERENCES profiles (id) ON DELETE CASCADE,
-        FOREIGN KEY (profile_id_2) REFERENCES profiles (id) ON DELETE CASCADE,
-        UNIQUE (profile_id_1, profile_id_2)
+        FOREIGN KEY (profile_id_2) REFERENCES profiles (id) ON DELETE CASCADE
       );
     `);
   } catch (err) {
@@ -103,6 +103,44 @@ async function getAIResponse(username, language) {
     throw error;
   }
 }
+
+const checkCompatibilityResponse = async (profileId1, profileId2, language) => {
+  try {
+    // Query the database to find the compatibility response
+    const result = await client.query(
+      `
+      SELECT cm.compatibility_text
+      FROM compatibility_responses cm
+      WHERE 
+       ( (cm.profile_id_1 = $1 AND cm.profile_id_2 = $2) OR (cm.profile_id_1 = $2 AND cm.profile_id_2 = $1))
+        AND cm.language = $3
+      LIMIT 1
+      `,
+      [profileId1, profileId2, language]
+    );
+
+    // Return the result if found
+    if (result.rows.length > 0) {
+      return {
+        success: true,
+        compatibilityText: result.rows[0].compatibility_text,
+      };
+    } else {
+      return {
+        success: false,
+        message:
+          "No compatibility response found for the given IDs and language.",
+      };
+    }
+  } catch (error) {
+    // Handle errors
+    console.error("Error checking compatibility response:", error);
+    return {
+      success: false,
+      message: "An error occurred while checking compatibility.",
+    };
+  }
+};
 
 async function addUser(
   profilePicUrl,
@@ -179,7 +217,12 @@ async function addAIResponse(username, responseText, language) {
   }
 }
 // Adding Compatiblity Response
-async function addCompatiblityResponse(username1, username2, compatiblityText) {
+async function addCompatiblityResponse(
+  username1,
+  username2,
+  compatiblityText,
+  language
+) {
   try {
     // Step 1: Get the profile ID for the given username
     const profileResult1 = await client.query(
@@ -199,10 +242,10 @@ async function addCompatiblityResponse(username1, username2, compatiblityText) {
 
     // Step 2: Insert AI response into the ai_responses table
     const insertResult = await client.query(
-      `INSERT INTO compatibility_responses (profile_id_1,profile_id_2, compatibility_text)
-             VALUES ($1, $2, $3)
+      `INSERT INTO compatibility_responses (profile_id_1,profile_id_2, compatibility_text,language)
+             VALUES ($1, $2, $3,$4)
              RETURNING *;`,
-      [profileId1, profileId2, compatiblityText]
+      [profileId1, profileId2, compatiblityText, language]
     );
 
     console.log("AI response added successfully:", insertResult.rows[0]);
@@ -236,4 +279,5 @@ module.exports = {
   getUserData,
   profilesRoasted,
   addCompatiblityResponse,
+  checkCompatibilityResponse,
 };

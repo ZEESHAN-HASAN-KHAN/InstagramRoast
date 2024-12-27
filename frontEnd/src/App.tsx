@@ -10,6 +10,8 @@ import { Faq } from "./my_components/Faq";
 import { motion } from "framer-motion";
 import { AvatarCirclesDemo } from "./my_components/Contributors";
 import React from "react";
+import { Compatibility } from "./my_components/Compatibility";
+import { CompatiblityRoast } from "./my_components/CompatibilityRoast";
 
 const RedirectToUsername = () => {
   const navigate = useNavigate();
@@ -28,9 +30,9 @@ const RedirectToUsername = () => {
           const usernameArr = extractedPart.split("/").filter(Boolean);
           username = usernameArr[0];
         }
-      }
-      // Redirect to /:username route
-      navigate(`/${username}`);
+        // Redirect to /:username route
+        navigate(`/${username}?language=english`);
+      }   
     }
   };
 
@@ -50,10 +52,21 @@ export default function App() {
           <RedirectToUsername />
           <Navbar />
           <Routes>
-            <Route path="/" element={<Hero />} />
+            <Route
+              path="/"
+              element={
+                <>
+                  <Hero />
+                  <Compatibility />
+                </>
+              }
+            />
+            {/* <Route path="/" element={<Compatibility />} /> */}
             <Route path="/:username" element={<Roast />} />
+            <Route path="/compatibilityRoast" element={<CompatiblityRoast />} />
           </Routes>
           {/* ScrollToSection using framer-motion */}
+
           <motion.div
             id="about"
             className="section"

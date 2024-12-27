@@ -1,16 +1,21 @@
 require("dotenv").config();
 const express = require("express");
 const roastRouter = express.Router();
+const fetch = (...args) =>
+  import("node-fetch").then(({ default: fetch }) => fetch(...args));
 const {
   addUser,
   getAIResponse,
   addAIResponse,
   getUserData,
   profilesRoasted,
+  addCompatiblityResponse,
+  checkCompatibilityResponse,
 } = require("../database/db");
 const {
   generateAIRoast,
   getInstagramProfile,
+  generateAICompatiblityRoast,
 } = require("../helpers/apiHelper");
 const { uploadImage } = require("../helpers/storageHelper");
 
@@ -28,6 +33,7 @@ roastRouter.get("/roastCount", async (req, res) => {
     });
   }
 });
+
 roastRouter.post("/roastMe", async (req, res) => {
   const name = req.body.name;
   const language = req.body.language;
@@ -76,11 +82,9 @@ roastRouter.post("/roastMe", async (req, res) => {
 
     // Fetch the Instagram profile data
     const roastData = await getInstagramProfile(name);
-    console.log("Roast Data:", roastData);
 
     // Download the profile picture to memory
     const profileUrl = roastData.profile_pic_url;
-    console.log("Profile URL:", profileUrl);
     const imageResponse = await fetch(profileUrl);
 
     // Convert the image response to a Buffer
@@ -106,11 +110,13 @@ roastRouter.post("/roastMe", async (req, res) => {
 
     // roast instagram profile data
     const roast = await generateAIRoast(
-        (() => {
-          const { profile_pic_url, ...rest } = roastData; // Destructure to exclude profile_pic_url
-          return rest; // Return the remaining object
-        })
-      , roastData.profile_pic_url, language);
+      () => {
+        const { profile_pic_url, ...rest } = roastData; // Destructure to exclude profile_pic_url
+        return rest; // Return the remaining object
+      },
+      roastData.profile_pic_url,
+      language
+    );
     // Update roastData with the GCS URL
     roastData.profile_pic_url = gcsProfileUrl;
     addAIResponse(name, roast, language);
@@ -125,4 +131,146 @@ roastRouter.post("/roastMe", async (req, res) => {
   }
 });
 
+// Route for check Compatibility
+roastRouter.post("/compatibilityRoast", async (req, res) => {
+  try {
+    const bucketName = process.env.BUCKET_NAME;
+    const uname1 = req.body.uname1;
+    const uname2 = req.body.uname2;
+    if (
+      uname1 == uname2 ||
+      uname1 == "" ||
+      uname2 == "" ||
+      uname1 == null ||
+      uname2 == null
+    ) {
+      return res.status(500).json({
+        message: "Invalid User Name",
+      });
+    }
+
+    const language = req.body.language;
+    //Check the language
+    const allowedLanguage = process.env.ALLOWED_LANGUAGE.split(",");
+    if (!allowedLanguage.includes(language)) {
+      return res.status(500).json({
+        message: "API access is restricted",
+      });
+    }
+
+    let profileUrl1;
+    let profileUrl2;
+    let userData1 = await getUserData(uname1);
+    let userData2 = await getUserData(uname2);
+    if (userData1 != null && userData2 != null) {
+      const check = await checkCompatibilityResponse(
+        userData1.id,
+        userData2.id,
+        language
+      );
+      if (check.success) {
+        userData1.profile_pic_url = `https://storage.googleapis.com/${bucketName}/${userData1.profile_pic_url}`;
+        userData2.profile_pic_url = `https://storage.googleapis.com/${bucketName}/${userData2.profile_pic_url}`;
+        return res.status(200).json({
+          userData1: userData1,
+          userData2: userData2,
+          compatibilityText: check.compatibilityText,
+        });
+      }
+    }
+    // if user data is not present in database
+    if (userData1 == null) {
+      userData1 = await getInstagramProfile(uname1);
+
+
+      // Download the profile picture to memory
+      profileUrl1 = userData1.profile_pic_url;
+      const imageResponse = await fetch(profileUrl1);
+
+      // Convert the image response to a Buffer
+      if (!imageResponse.ok) {
+        throw new Error(
+          `Failed to fetch profile picture: ${imageResponse.statusText}`
+        );
+      }
+      const arrayBuffer = await imageResponse.arrayBuffer();
+      const imageBuffer = Buffer.from(arrayBuffer);
+      const fileName = await uploadImage(imageBuffer);
+      userData1.profile_pic_url = fileName;
+
+      if (userData1.username) {
+        await addUser(
+          fileName,
+          userData1.username,
+          userData1.full_name,
+          userData1.follower,
+          userData1.following,
+          userData1.biography,
+          userData1.post
+        );
+      } else {
+        throw new Error("Invalid user data: username is null");
+      }
+    }
+    
+    if (userData2 == null) {
+      // return ivalid user name if we don't get the profile
+      userData2 = await getInstagramProfile(uname2);
+
+      // Download the profile picture to memory
+      profileUrl2 = userData2.profile_pic_url;
+      const imageResponse = await fetch(profileUrl2);
+
+      // Convert the image response to a Buffer
+      if (!imageResponse.ok) {
+        throw new Error(
+          `Failed to fetch profile picture: ${imageResponse.statusText}`
+        );
+      }
+      const arrayBuffer = await imageResponse.arrayBuffer();
+      const imageBuffer = Buffer.from(arrayBuffer);
+      const fileName = await uploadImage(imageBuffer);
+      userData2.profile_pic_url = fileName;
+
+      if (userData2.username) {
+        await addUser(
+          fileName,
+          userData2.username,
+          userData2.full_name,
+          userData2.follower,
+          userData2.following,
+          userData2.biography,
+          userData2.post
+        );
+      } else {
+        throw new Error("Invalid user data: username is null");
+      }
+    }
+
+    const compatibilityText = await generateAICompatiblityRoast(
+      // remove id and profile_pic_url from the object
+      (() => {
+        const { id, profile_pic_url, ...rest } = userData1;
+        return rest;
+      })(),
+      (() => {
+        const { id, profile_pic_url, ...rest } = userData2;
+        return rest;
+      })(),
+      language
+    );
+
+    await addCompatiblityResponse(uname1, uname2, compatibilityText, language);
+    userData1.profile_pic_url = `https://storage.googleapis.com/${bucketName}/${userData1.profile_pic_url}`;
+    userData2.profile_pic_url = `https://storage.googleapis.com/${bucketName}/${userData2.profile_pic_url}`;
+    return res.status(200).json({
+      userData1: userData1,
+      userData2: userData2,
+      compatibilityText: compatibilityText,
+    });
+  } catch (error) {
+    console.error("Error from Compatibility Roast " + error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 module.exports = roastRouter;

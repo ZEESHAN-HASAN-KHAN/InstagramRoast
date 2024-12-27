@@ -1,5 +1,4 @@
 import { Moon, Sun } from "lucide-react"
-
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -8,9 +7,33 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useTheme } from "./theme-provider"
+import { useEffect } from "react";
 
 export function ModeToggle() {
-  const { setTheme } = useTheme()
+  const { setTheme } = useTheme();
+
+  useEffect(() => {
+    // Apply theme based on system preferences
+    const systemThemeListener = window.matchMedia("(prefers-color-scheme: dark)");
+    const applySystemTheme = () => {
+      if (systemThemeListener.matches) {
+        setTheme("dark");
+      } else {
+        setTheme("light");
+      }
+    };
+
+    // Initial theme application
+    applySystemTheme();
+
+    // Listen for system theme changes
+    systemThemeListener.addEventListener("change", applySystemTheme);
+
+    return () => {
+      // Cleanup listener on unmount
+      systemThemeListener.removeEventListener("change", applySystemTheme);
+    };
+  }, [setTheme]);
 
   return (
     <DropdownMenu>
@@ -28,10 +51,16 @@ export function ModeToggle() {
         <DropdownMenuItem onClick={() => setTheme("dark")}>
           Dark
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>
+        <DropdownMenuItem onClick={() => {
+          if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+            setTheme("dark");
+          } else {
+            setTheme("light");
+          }
+        }}>
           System
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }

@@ -12,7 +12,7 @@ const roastRouter = require("./routes/roast");
 app.use(express.json());
 
 app.use(cors(corsOptions));
-// app.use(cors());
+app.use(cors());
 app.use(limiter);
 app.use(jwt);
 

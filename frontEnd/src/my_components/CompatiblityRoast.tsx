@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import add from "../assets/add.png";
 import {
   Card,
@@ -23,6 +23,7 @@ import { useTheme } from "@/components/ui/theme-provider";
 import ReactMarkdown from "react-markdown";
 import { createToken } from "@/lib/utils";
 export function CompatiblityRoast() {
+  const navigate = useNavigate();
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const uname1 = queryParams.get("uname1");
@@ -95,8 +96,16 @@ export function CompatiblityRoast() {
     setUserData2(data.userData2);
   };
   useEffect(() => {
+    if (uname1 === null || uname2 === null || language === null) {
+      navigate("/");
+    }
     fetchData();
   }, []);
+
+  useEffect(() => {
+    console.log(theme);
+  }, [theme]);
+
   return (
     <>
       {compatibilityRoast == "" ? (

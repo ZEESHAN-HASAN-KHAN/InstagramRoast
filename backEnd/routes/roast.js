@@ -33,6 +33,7 @@ roastRouter.get("/roastCount", async (req, res) => {
     });
   }
 });
+
 roastRouter.post("/roastMe", async (req, res) => {
   const name = req.body.name;
   const language = req.body.language;
@@ -200,7 +201,6 @@ roastRouter.post("/compatibilityRoast", async (req, res) => {
       const arrayBuffer = await imageResponse.arrayBuffer();
       const imageBuffer = Buffer.from(arrayBuffer);
       const fileName = await uploadImage(imageBuffer);
-      var gcsProfileUrl1 = `https://storage.googleapis.com/${bucketName}/${fileName}`;
 
       if (userData1.username) {
         await addUser(
@@ -216,6 +216,7 @@ roastRouter.post("/compatibilityRoast", async (req, res) => {
         throw new Error("Invalid user data: username is null");
       }
     }
+    
     if (userData2 == null) {
       // return ivalid user name if we don't get the profile
       userData2 = await getInstagramProfile(uname2);
@@ -235,7 +236,6 @@ roastRouter.post("/compatibilityRoast", async (req, res) => {
       const arrayBuffer = await imageResponse.arrayBuffer();
       const imageBuffer = Buffer.from(arrayBuffer);
       const fileName = await uploadImage(imageBuffer);
-      var gcsProfileUrl2 = `https://storage.googleapis.com/${bucketName}/${fileName}`;
 
       if (userData2.username) {
         await addUser(

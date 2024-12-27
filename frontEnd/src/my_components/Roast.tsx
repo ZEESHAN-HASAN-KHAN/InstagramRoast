@@ -25,7 +25,6 @@ import { createToken } from "@/lib/utils";
 import type { ConfettiRef } from "@/components/ui/confetti";
 import Confetti from "@/components/ui/confetti";
 
-
 export function Roast() {
   const { theme } = useTheme();
   const confettiRef = useRef<ConfettiRef>(null);
@@ -52,19 +51,25 @@ export function Roast() {
 
   const shareLinks = {
     whatsapp:
-      "https://api.whatsapp.com/send?text=Hey!%20Check%20out%20this%20AI%20roast%20I%20got%20from%20%20https%3A%2F%2Finstaroasts.com%2F" +
-      username,
+      "https://api.whatsapp.com/send?text=Hey!%20Check%20out%20this%20AI%20roast%20I%20got%20from%20https%3A%2F%2Finstaroasts.com%2F" +
+      username +
+      "%3Flanguage%3D" +
+      ln,
     linkedin:
       "https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Finstaroasts.com%2F" +
-      username,
-
+      username +
+      "%3Flanguage%3D" +
+      ln,
     threads:
       "https://threads.net/intent/post?text=Hey!%20Check%20out%20this%20AI%20roast%20I%20got%20from%20https%3A%2F%2Finstaroasts.com%2F" +
-      username,
-
+      username +
+      "%3Flanguage%3D" +
+      ln,
     twitter:
       "https://x.com/intent/post?text=Hey!%21+Check+out+this+AI+roast+I+got+from+https%3A%2F%2Finstaroasts.com%2F" +
-      username,
+      username +
+      "%3Flanguage%3D" +
+      ln,
   };
 
   const getData = async () => {
@@ -114,7 +119,7 @@ export function Roast() {
     setUserData(null);
     setRoastData("");
     getData();
-  }, [username]);  
+  }, [username]);
 
   const renderedMarkdown = useMemo(
     () => (
@@ -183,71 +188,71 @@ export function Roast() {
 
           {/* Roast Section */}
           <div className="px-4 md:px-8">
-  <p className="flex justify-center text-sm md:text-xl mt-5 font-sansita text-center">
-    Here is the AI Agent Analysis of Your Personality
-  </p>
-  <div className="flex flex-col md:flex-row gap-4 justify-center items-center mt-4">
-    <span className="text-sm lg:text-xl">Share:</span>
-    <ul className="flex flex-row flex-wrap gap-4 justify-center">
-      <a
-        href={shareLinks.twitter}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <li className="flex items-center gap-2">
-          <img
-            className="w-4 h-4 lg:w-8 lg:h-8"
-            src={twitter}
-            alt="Twitter"
-          />
-          <span className="text-sm lg:text-xl">Twitter</span>
-        </li>
-      </a>
-      <a
-        href={shareLinks.whatsapp}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <li className="flex items-center gap-2">
-          <img
-            className="w-4 h-4 lg:w-8 lg:h-8"
-            src={whatsapp}
-            alt="WhatsApp"
-          />
-          <span className="text-sm lg:text-xl">WhatsApp</span>
-        </li>
-      </a>
-      <a
-        href={shareLinks.linkedin}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <li className="flex items-center gap-2">
-          <img
-            className="w-4 h-4 lg:w-8 lg:h-8"
-            src={linkedin}
-            alt="LinkedIn"
-          />
-          <span className="text-sm lg:text-xl">LinkedIn</span>
-        </li>
-      </a>
-      <a
-        href={shareLinks.threads}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <li className="flex items-center gap-2">
-          <img
-            className="w-4 h-4 lg:w-8 lg:h-8"
-            src={theme === "dark" ? threads_w : threads}
-            alt="Threads"
-          />
-          <span className="text-sm lg:text-xl">Threads</span>
-        </li>
-      </a>
-    </ul>
-  </div>
-</div>
+            <p className="flex justify-center text-sm md:text-xl mt-5 font-sansita text-center">
+              Here is the AI Agent Analysis of Your Personality
+            </p>
+            <div className="flex flex-col md:flex-row gap-4 justify-center items-center mt-4">
+              <span className="text-sm lg:text-xl">Share:</span>
+              <ul className="flex flex-row flex-wrap gap-4 justify-center">
+                <a
+                  href={shareLinks.twitter}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <li className="flex items-center gap-2">
+                    <img
+                      className="w-4 h-4 lg:w-8 lg:h-8"
+                      src={twitter}
+                      alt="Twitter"
+                    />
+                    <span className="text-sm lg:text-xl">Twitter</span>
+                  </li>
+                </a>
+                <a
+                  href={shareLinks.whatsapp}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <li className="flex items-center gap-2">
+                    <img
+                      className="w-4 h-4 lg:w-8 lg:h-8"
+                      src={whatsapp}
+                      alt="WhatsApp"
+                    />
+                    <span className="text-sm lg:text-xl">WhatsApp</span>
+                  </li>
+                </a>
+                <a
+                  href={shareLinks.linkedin}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <li className="flex items-center gap-2">
+                    <img
+                      className="w-4 h-4 lg:w-8 lg:h-8"
+                      src={linkedin}
+                      alt="LinkedIn"
+                    />
+                    <span className="text-sm lg:text-xl">LinkedIn</span>
+                  </li>
+                </a>
+                <a
+                  href={shareLinks.threads}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <li className="flex items-center gap-2">
+                    <img
+                      className="w-4 h-4 lg:w-8 lg:h-8"
+                      src={theme === "dark" ? threads_w : threads}
+                      alt="Threads"
+                    />
+                    <span className="text-sm lg:text-xl">Threads</span>
+                  </li>
+                </a>
+              </ul>
+            </div>
+          </div>
 
           <div className="flex justify-center mt-10">
             <Card className="w-[550px]">

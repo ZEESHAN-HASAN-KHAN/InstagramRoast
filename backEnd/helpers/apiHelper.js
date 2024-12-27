@@ -4,8 +4,6 @@ const OpenAI = require("openai");
 const getInstagramProfile = async (username) => {
   const url = new URL(`${process.env.URL}` + "/v1/info");
   url.searchParams.append("username_or_id_or_url", username);
-  console.log("PROCESS ENV", process.env.X_RAPIDAPI_KEY);
-  console.log("PROCESS ENV", process.env.X_RAPIDAPI_HOST);
   const options = {
     method: "GET",
     headers: {
@@ -16,7 +14,6 @@ const getInstagramProfile = async (username) => {
 
   const response = await fetch(url, options);
   const data = await response.json();
-  console.log(data);
   const result = data.data;
 
   const roastData = {
@@ -54,7 +51,7 @@ ${JSON.stringify(userData2)}
 -Use emojis for emphasis
 -The response must ONLY contain the roast in markdown format. No additional commentary or formatting outside of markdown.
 `;
-  console.log("Input Prompt" + inputPrompt);
+  console.log("Input Prompt : " + inputPrompt);
   const completion = await openai.chat.completions.create({
     model: process.env.MODEL_NAME,
     messages: [
@@ -95,7 +92,7 @@ const generateAIRoast = async (userData, profileUrl, language) => {
   - The response must ONLY contain the roast in markdown format only. No additional commentary or formatting outside of markdown.
 `;
 
-  console.log("Input Prompt" + inputPrompt);
+  console.log("Input Prompt : " + inputPrompt);
   const completion = await openai.chat.completions.create({
     model: process.env.MODEL_NAME,
     messages: [

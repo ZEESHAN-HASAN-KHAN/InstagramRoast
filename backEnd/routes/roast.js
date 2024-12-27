@@ -82,11 +82,9 @@ roastRouter.post("/roastMe", async (req, res) => {
 
     // Fetch the Instagram profile data
     const roastData = await getInstagramProfile(name);
-    console.log("Roast Data:", roastData);
 
     // Download the profile picture to memory
     const profileUrl = roastData.profile_pic_url;
-    console.log("Profile URL:", profileUrl);
     const imageResponse = await fetch(profileUrl);
 
     // Convert the image response to a Buffer
@@ -135,7 +133,6 @@ roastRouter.post("/roastMe", async (req, res) => {
 
 // Route for check Compatibility
 roastRouter.post("/compatibilityRoast", async (req, res) => {
-  console.log("Accessing compatibility roast route");
   try {
     const bucketName = process.env.BUCKET_NAME;
     const uname1 = req.body.uname1;
@@ -185,11 +182,9 @@ roastRouter.post("/compatibilityRoast", async (req, res) => {
     if (userData1 == null) {
       userData1 = await getInstagramProfile(uname1);
 
-      console.log("Roast Data:", userData1);
 
       // Download the profile picture to memory
       profileUrl1 = userData1.profile_pic_url;
-      console.log("Profile URL:", profileUrl1);
       const imageResponse = await fetch(profileUrl1);
 
       // Convert the image response to a Buffer
@@ -201,6 +196,7 @@ roastRouter.post("/compatibilityRoast", async (req, res) => {
       const arrayBuffer = await imageResponse.arrayBuffer();
       const imageBuffer = Buffer.from(arrayBuffer);
       const fileName = await uploadImage(imageBuffer);
+      userData1.profile_pic_url = fileName;
 
       if (userData1.username) {
         await addUser(
@@ -220,11 +216,9 @@ roastRouter.post("/compatibilityRoast", async (req, res) => {
     if (userData2 == null) {
       // return ivalid user name if we don't get the profile
       userData2 = await getInstagramProfile(uname2);
-      console.log("Roast Data:", userData2);
 
       // Download the profile picture to memory
       profileUrl2 = userData2.profile_pic_url;
-      console.log("Profile URL:", profileUrl2);
       const imageResponse = await fetch(profileUrl2);
 
       // Convert the image response to a Buffer
@@ -236,6 +230,7 @@ roastRouter.post("/compatibilityRoast", async (req, res) => {
       const arrayBuffer = await imageResponse.arrayBuffer();
       const imageBuffer = Buffer.from(arrayBuffer);
       const fileName = await uploadImage(imageBuffer);
+      userData2.profile_pic_url = fileName;
 
       if (userData2.username) {
         await addUser(

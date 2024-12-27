@@ -99,7 +99,6 @@ export function Roast() {
       setIsRunning(true);
       handleStartConfetti();
       setReceived(true);
-      console.log(data);
     } catch (error) {
       console.error("Error:", error);
     }

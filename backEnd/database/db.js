@@ -25,11 +25,11 @@ async function getUserData(username) {
     );
 
     if (result.rows.length === 0) {
-      console.log("User data not found in the database.");
+      // console.log("User data not found in the database.");
       return null; // Return null if the user data does not exist
     }
 
-    console.log("User data retrieved:", result.rows[0]);
+    // console.log("User data retrieved:", result.rows[0]);
     return result.rows[0]; // Return the user data
   } catch (error) {
     console.error("Error fetching user data:", error);
@@ -40,7 +40,6 @@ async function getUserData(username) {
 async function dbConnect() {
   console.log("Attempting to connect to the database...");
   try {
-    console.log("Database URL:", process.env.DB);
     await client.connect();
     console.log("Database is connected");
 
@@ -88,7 +87,6 @@ async function dbConnect() {
 }
 
 async function getAIResponse(username, language) {
-  console.log("Language come in " + language);
   try {
     const result = await client.query(
       `SELECT ar.response_text
@@ -209,7 +207,7 @@ async function addAIResponse(username, responseText, language) {
       [profileId, responseText, language]
     );
 
-    console.log("AI response added successfully:", insertResult.rows[0]);
+    console.log("AI response added successfully");
     return insertResult.rows[0]; // Return the inserted row
   } catch (error) {
     console.error("Error adding AI response:", error.message);
@@ -248,7 +246,7 @@ async function addCompatiblityResponse(
       [profileId1, profileId2, compatiblityText, language]
     );
 
-    console.log("AI response added successfully:", insertResult.rows[0]);
+    console.log("AI response added successfully");
     return insertResult.rows[0]; // Return the inserted row
   } catch (error) {
     console.error("Error adding AI response:", error.message);

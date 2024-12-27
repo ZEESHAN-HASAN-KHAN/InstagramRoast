@@ -102,10 +102,6 @@ export function CompatiblityRoast() {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    console.log(theme);
-  }, [theme]);
-
   return (
     <>
       {compatibilityRoast == "" ? (

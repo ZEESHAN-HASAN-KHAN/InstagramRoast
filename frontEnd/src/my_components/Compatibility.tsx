@@ -9,7 +9,7 @@ import { RainbowButton } from "@/components/ui/rainbow-button";
 import { useNavigate } from "react-router-dom";
 import { SelectDemo } from "./SelectDemo";
 
-export function Compatiblity() {
+export function Compatibility() {
   const { theme } = useTheme();
   const [uname1, setUname1] = useState("");
   const [uname2, setUname2] = useState("");
@@ -20,7 +20,7 @@ export function Compatiblity() {
 
   function discover(): void {
     navigate(
-      `/compatiblityRoast?uname1=${uname1}&uname2=${uname2}&language=${language}`
+      `/compatibilityRoast?uname1=${uname1}&uname2=${uname2}&language=${language}`
     );
   }
 
@@ -32,7 +32,7 @@ export function Compatiblity() {
           style={{ fontFamily: "Sansita" }}
           className="text-3xl md:text-4xl lg:text-5xl text-gray-900 dark:text-gray-200 mt-4"
         >
-          Check Compatiblity ❤️‍🔥
+          Check Compatibility ❤️‍🔥
         </h1>
       </div>
 
@@ -70,7 +70,7 @@ export function Compatiblity() {
             />
           </div>
           <RainbowButton type="submit" className="h-10 px-4 flex items-center">
-            Compatiblity
+            Compatibility
             <img
               className="w-5 ml-1"
               src={theme === "dark" ? search : searchw}

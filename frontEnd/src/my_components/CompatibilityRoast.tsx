@@ -34,28 +34,28 @@ export function CompatiblityRoast() {
   const [compatibilityRoast, setCompatibilityRoast] = useState("");
   const shareLinks = {
     whatsapp:
-      "https://api.whatsapp.com/send?text=Hey!%20Check%20out%20this%20AI%20roast%20I%20got%20from%20https%3A%2F%2Finstaroasts.com%2FcompatiblityRoast%3Funame1%3D" +
+      "https://api.whatsapp.com/send?text=Hey!%20Check%20out%20this%20AI%20roast%20I%20got%20from%20https%3A%2F%2Finstaroasts.com%2FcompatibilityRoast%3Funame1%3D" +
       uname1 +
       "%26uname2%3D" +
       uname2 +
       "%26language%3D" +
       language,
     linkedin:
-      "https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Finstaroasts.com%2FcompatiblityRoast%3Funame1%3D" +
+      "https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Finstaroasts.com%2FcompatibilityRoast%3Funame1%3D" +
       uname1 +
       "%26uname2%3D" +
       uname2 +
       "%26language%3D" +
       language,
     threads:
-      "https://threads.net/intent/post?text=Hey!%20Check%20out%20this%20AI%20roast%20I%20got%20from%20https%3A%2F%2Finstaroasts.com%2FcompatiblityRoast%3Funame1%3D" +
+      "https://threads.net/intent/post?text=Hey!%20Check%20out%20this%20AI%20roast%20I%20got%20from%20https%3A%2F%2Finstaroasts.com%2FcompatibilityRoast%3Funame1%3D" +
       uname1 +
       "%26uname2%3D" +
       uname2 +
       "%26language%3D" +
       language,
     twitter:
-      "https://x.com/intent/post?text=Hey!%21+Check+out+this+AI+roast+I+got+from+https%3A%2F%2Finstaroasts.com%2FcompatiblityRoast%3Funame1%3D" +
+      "https://x.com/intent/post?text=Hey!%21+Check+out+this+AI+roast+I+got+from+https%3A%2F%2Finstaroasts.com%2FcompatibilityRoast%3Funame1%3D" +
       uname1 +
       "%26uname2%3D" +
       uname2 +
@@ -228,7 +228,7 @@ export function CompatiblityRoast() {
             {/* Roast Section */}
             <div className="px-4 md:px-8">
               <p className="flex justify-center text-sm md:text-xl mt-5 font-sansita text-center">
-                Here is the AI Agent Analysis of Your Personality
+              Your Compatibility Roast Results Are In! 🎭
               </p>
               <div className="flex flex-col md:flex-row gap-4 justify-center items-center mt-4">
                 <span className="text-sm lg:text-xl">Share:</span>

@@ -216,7 +216,7 @@ async function addAIResponse(username, responseText, language) {
     throw error;
   }
 }
-// Adding Compatiblity Response
+// Adding Compatibility Response
 async function addCompatiblityResponse(
   username1,
   username2,

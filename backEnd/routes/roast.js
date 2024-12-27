@@ -133,7 +133,7 @@ roastRouter.post("/roastMe", async (req, res) => {
   }
 });
 
-// Route for check Compatiblity
+// Route for check Compatibility
 roastRouter.post("/compatibilityRoast", async (req, res) => {
   console.log("Accessing compatibility roast route");
   try {
@@ -253,8 +253,15 @@ roastRouter.post("/compatibilityRoast", async (req, res) => {
     }
 
     const compatibilityText = await generateAICompatiblityRoast(
-      userData1,
-      userData2,
+      // remove id and profile_pic_url from the object
+      (() => {
+        const { id, profile_pic_url, ...rest } = userData1;
+        return rest;
+      })(),
+      (() => {
+        const { id, profile_pic_url, ...rest } = userData2;
+        return rest;
+      })(),
       language
     );
 
@@ -267,7 +274,7 @@ roastRouter.post("/compatibilityRoast", async (req, res) => {
       compatibilityText: compatibilityText,
     });
   } catch (error) {
-    console.error("Error from Compatiblity Roast " + error);
+    console.error("Error from Compatibility Roast " + error);
     return res.status(500).json({ error: "Internal Server Error" });
   }
 });

@@ -13,27 +13,34 @@ export function ModeToggle() {
   const { setTheme } = useTheme();
 
   useEffect(() => {
-    // Apply theme based on system preferences
-    const systemThemeListener = window.matchMedia("(prefers-color-scheme: dark)");
-    const applySystemTheme = () => {
-      if (systemThemeListener.matches) {
-        setTheme("dark");
-      } else {
-        setTheme("light");
-      }
-    };
-
-    // Initial theme application
-    applySystemTheme();
+    // Check for a saved user preference in localStorage
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme) {
+      setTheme(savedTheme);
+    } else {
+      // Default to system preference if no user preference exists
+      const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      setTheme(systemPrefersDark ? "dark" : "light");
+    }
 
     // Listen for system theme changes
-    systemThemeListener.addEventListener("change", applySystemTheme);
+    const systemThemeListener = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleSystemThemeChange = () => {
+      if (!localStorage.getItem("theme")) { // Only apply system changes if no user preference exists
+        setTheme(systemThemeListener.matches ? "dark" : "light");
+      }
+    };
+    systemThemeListener.addEventListener("change", handleSystemThemeChange);
 
     return () => {
-      // Cleanup listener on unmount
-      systemThemeListener.removeEventListener("change", applySystemTheme);
+      systemThemeListener.removeEventListener("change", handleSystemThemeChange);
     };
   }, [setTheme]);
+
+  const updateTheme = (newTheme: string) => {
+    setTheme(newTheme);
+    localStorage.setItem("theme", newTheme); // Persist user preference
+  };
 
   return (
     <DropdownMenu>
@@ -45,18 +52,16 @@ export function ModeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")}>
+        <DropdownMenuItem onClick={() => updateTheme("light")}>
           Light
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
+        <DropdownMenuItem onClick={() => updateTheme("dark")}>
           Dark
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => {
-          if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-            setTheme("dark");
-          } else {
-            setTheme("light");
-          }
+          localStorage.removeItem("theme"); // Remove user preference to defer to system preference
+          const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          setTheme(systemPrefersDark ? "dark" : "light");
         }}>
           System
         </DropdownMenuItem>

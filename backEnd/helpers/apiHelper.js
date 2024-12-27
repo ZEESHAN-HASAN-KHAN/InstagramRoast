@@ -36,19 +36,23 @@ const getInstagramProfile = async (username) => {
 const generateAICompatiblityRoast = async (userData1, userData2, language) => {
   const openai = new OpenAI({ apiKey: process.env.APIKEY });
 
-  const inputPrompt = `Given the following profiles of two users, write a humorous and witty compatibility that playfully teases their differences and similarities.
+  const inputPrompt = `You are a professional comedian with a reputation for razor-sharp wit and dark humor. Your task is to write a humorous and personalized compability roast for two person that teases their quirks, contrasts, and similarities.
+If the profiles are of opposite genders, add a witty take on their potential compatibility (or lack thereof) with a relationship dynamic.
 User 1:
 ${JSON.stringify(userData1)}
 User 2:
 ${JSON.stringify(userData2)}
-Example Format:
--Highlight key contrasts between the users with witty humor.
--Roast output language should be ${JSON.stringify(language)}
--Keep the roast concise (Under 100 words)
--Give us the compatiblity score
+  Instructions:
+- Be as sarcastic, blunt, and edgy as possible. Use clever wordplay and savage humor.
+- Use personalized taunts and playful jabs.
+- Do not include:
+    - Compliments, motivation, or any form of praise.
+    - Pleasantries, introductions, or conclusions. Jump straight into the compability roast.
+- Write strictly in ${JSON.stringify(language)} and output in **markdown format**.
+-Keep the roast concise (under 100 words).
+-Add a compatibility score with humor out of 10.
 -Use emojis for emphasis
--The response must ONLY contain the roast in markdown format only. No additional commentary or formatting outside of markdown.
-
+-The response must ONLY contain the roast in markdown format. No additional commentary or formatting outside of markdown.
 `;
   console.log("Input Prompt" + inputPrompt);
   const completion = await openai.chat.completions.create({
@@ -67,6 +71,7 @@ Example Format:
   });
   return completion.choices[0].message.content;
 };
+
 const generateAIRoast = async (userData, profileUrl, language) => {
   const openai = new OpenAI({ apiKey: process.env.APIKEY });
 

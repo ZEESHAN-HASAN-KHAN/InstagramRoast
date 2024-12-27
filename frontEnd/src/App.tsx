@@ -30,9 +30,9 @@ const RedirectToUsername = () => {
           const usernameArr = extractedPart.split("/").filter(Boolean);
           username = usernameArr[0];
         }
-      }
-      // Redirect to /:username route
-      navigate(`/${username}`);
+        // Redirect to /:username route
+        navigate(`/${username}?language=english`);
+      }   
     }
   };
 

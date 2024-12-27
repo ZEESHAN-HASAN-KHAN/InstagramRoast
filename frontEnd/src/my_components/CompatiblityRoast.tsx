@@ -36,24 +36,32 @@ export function CompatiblityRoast() {
       "https://api.whatsapp.com/send?text=Hey!%20Check%20out%20this%20AI%20roast%20I%20got%20from%20https%3A%2F%2Finstaroasts.com%2FcompatiblityRoast%3Funame1%3D" +
       uname1 +
       "%26uname2%3D" +
-      uname2,
+      uname2 +
+      "%26language%3D" +
+      language,
     linkedin:
       "https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Finstaroasts.com%2FcompatiblityRoast%3Funame1%3D" +
       uname1 +
       "%26uname2%3D" +
-      uname2,
+      uname2 +
+      "%26language%3D" +
+      language,
     threads:
       "https://threads.net/intent/post?text=Hey!%20Check%20out%20this%20AI%20roast%20I%20got%20from%20https%3A%2F%2Finstaroasts.com%2FcompatiblityRoast%3Funame1%3D" +
       uname1 +
       "%26uname2%3D" +
-      uname2,
+      uname2 +
+      "%26language%3D" +
+      language,
     twitter:
       "https://x.com/intent/post?text=Hey!%21+Check+out+this+AI+roast+I+got+from+https%3A%2F%2Finstaroasts.com%2FcompatiblityRoast%3Funame1%3D" +
       uname1 +
       "%26uname2%3D" +
-      uname2,
+      uname2 +
+      "%26language%3D" +
+      language,
   };
-  const theme = useTheme();
+  const { theme } = useTheme();
 
   const renderedMarkdown = useMemo(
     () => (

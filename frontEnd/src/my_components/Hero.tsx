@@ -285,6 +285,20 @@ export function Hero() {
           >
             By clicking discover you agree to our terms
           </span>
+          <div className="mt-4 -z-30">
+            <a
+              href="https://www.producthunt.com/posts/instaroasts-2?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-instaroasts&#0045;2"
+              target="_blank"
+            >
+              <img
+                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=702163&theme=light"
+                alt="InstaRoasts - Where&#0032;Humor&#0032;Meets&#0032;the&#0032;Heat&#0033;&#0032;🔥 | Product Hunt"
+                style={{ width: "200px", height: "50px" }}
+                width="250"
+                height="54"
+              />
+            </a>
+          </div>
         </div>
       </div>
     </div>

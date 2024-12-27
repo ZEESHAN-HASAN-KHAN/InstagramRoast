@@ -49,24 +49,26 @@ export function Compatiblity() {
           }
         }}
       >
-        <div className="flex justify-center items-center w-full max-w-md gap-2 mt-6">
-          <Input
-            required
-            className="w-full px-4 py-2 rounded-md border border-gray-300 shadow-sm"
-            placeholder="@username"
-            onChange={(e) => setUname1(e.target.value.trim())}
-            onKeyDown={(e) => e.key === "Enter" && discover()}
-            value={uname1}
-          />
-          <img className="size-6" src={add} />
-          <Input
-            required
-            className="w-full px-4 py-2 rounded-md border border-gray-300 shadow-sm"
-            placeholder="@username"
-            onChange={(e) => setUname2(e.target.value.trim())}
-            onKeyDown={(e) => e.key === "Enter" && discover()}
-            value={uname2}
-          />
+        <div className="flex flex-col lg:flex-row justify-center items-center w-full max-w-md gap-2 mt-6">
+          <div className="flex items-center gap-2">
+            <Input
+              required
+              className="w-full px-4 py-2 rounded-md border border-gray-300 shadow-sm"
+              placeholder="@username"
+              onChange={(e) => setUname1(e.target.value.trim())}
+              onKeyDown={(e) => e.key === "Enter" && discover()}
+              value={uname1}
+            />
+            <img className="size-6" src={add} />
+            <Input
+              required
+              className="w-full px-4 py-2 rounded-md border border-gray-300 shadow-sm"
+              placeholder="@username"
+              onChange={(e) => setUname2(e.target.value.trim())}
+              onKeyDown={(e) => e.key === "Enter" && discover()}
+              value={uname2}
+            />
+          </div>
           <RainbowButton type="submit" className="h-10 px-4 flex items-center">
             Compatiblity
             <img

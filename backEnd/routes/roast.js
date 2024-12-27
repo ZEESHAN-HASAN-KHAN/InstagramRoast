@@ -139,7 +139,26 @@ roastRouter.post("/compatibilityRoast", async (req, res) => {
     const bucketName = process.env.BUCKET_NAME;
     const uname1 = req.body.uname1;
     const uname2 = req.body.uname2;
+    if (
+      uname1 == uname2 ||
+      uname1 == "" ||
+      uname2 == "" ||
+      uname1 == null ||
+      uname2 == null
+    ) {
+      return res.status(500).json({
+        message: "Invalid User Name",
+      });
+    }
+
     const language = req.body.language;
+    //Check the language
+    const allowedLanguage = process.env.ALLOWED_LANGUAGE.split(",");
+    if (!allowedLanguage.includes(language)) {
+      return res.status(500).json({
+        message: "API access is restricted",
+      });
+    }
 
     let profileUrl1;
     let profileUrl2;

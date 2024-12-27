@@ -19,7 +19,9 @@ export function Compatiblity() {
   const handleValueChange = (value: string) => setLanguage(value);
 
   function discover(): void {
-    navigate(`/compatiblityRoast?uname1=${uname1}&uname2=${uname2}`);
+    navigate(
+      `/compatiblityRoast?uname1=${uname1}&uname2=${uname2}&language=${language}`
+    );
   }
 
   return (
@@ -35,34 +37,46 @@ export function Compatiblity() {
       </div>
 
       {/* Input Section */}
-      <div className="flex justify-center items-center w-full max-w-md gap-2 mt-6">
-        <Input
-          className="w-full px-4 py-2 rounded-md border border-gray-300 shadow-sm"
-          placeholder="@username"
-          onChange={(e) => setUname1(e.target.value.trim())}
-          onKeyDown={(e) => e.key === "Enter" && discover()}
-          value={uname1}
-        />
-        <img className="size-6" src={add} />
-        <Input
-          className="w-full px-4 py-2 rounded-md border border-gray-300 shadow-sm"
-          placeholder="@username"
-          onChange={(e) => setUname2(e.target.value.trim())}
-          onKeyDown={(e) => e.key === "Enter" && discover()}
-          value={uname2}
-        />
-        <RainbowButton
-          onClick={discover}
-          className="h-10 px-4 flex items-center"
-        >
-          Compatiblity
-          <img
-            className="w-5 ml-1"
-            src={theme === "dark" ? search : searchw}
-            alt="Search Icon"
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (uname1 && uname2 && uname1 !== uname2) {
+            discover();
+          } else {
+            alert(
+              "Please fill in both usernames. Also, they should be different."
+            );
+          }
+        }}
+      >
+        <div className="flex justify-center items-center w-full max-w-md gap-2 mt-6">
+          <Input
+            required
+            className="w-full px-4 py-2 rounded-md border border-gray-300 shadow-sm"
+            placeholder="@username"
+            onChange={(e) => setUname1(e.target.value.trim())}
+            onKeyDown={(e) => e.key === "Enter" && discover()}
+            value={uname1}
           />
-        </RainbowButton>
-      </div>
+          <img className="size-6" src={add} />
+          <Input
+            required
+            className="w-full px-4 py-2 rounded-md border border-gray-300 shadow-sm"
+            placeholder="@username"
+            onChange={(e) => setUname2(e.target.value.trim())}
+            onKeyDown={(e) => e.key === "Enter" && discover()}
+            value={uname2}
+          />
+          <RainbowButton type="submit" className="h-10 px-4 flex items-center">
+            Compatiblity
+            <img
+              className="w-5 ml-1"
+              src={theme === "dark" ? search : searchw}
+              alt="Search Icon"
+            />
+          </RainbowButton>
+        </div>
+      </form>
 
       {/* Agreement */}
       <div className="mt-4">

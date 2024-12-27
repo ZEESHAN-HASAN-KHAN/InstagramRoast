@@ -36,17 +36,19 @@ const getInstagramProfile = async (username) => {
 const generateAICompatiblityRoast = async (userData1, userData2, language) => {
   const openai = new OpenAI({ apiKey: process.env.APIKEY });
 
-  const inputPrompt = `Given the following profiles of two users, write a humorous and witty compatibility roast that playfully teases their differences and similarities.
+  const inputPrompt = `Given the following profiles of two users, write a humorous and witty compatibility that playfully teases their differences and similarities.
 User 1:
 ${JSON.stringify(userData1)}
 User 2:
 ${JSON.stringify(userData2)}
 Example Format:
-Highlight key contrasts between the users with witty humor.
-Roast output language should be ${JSON.stringify(language)}
-Keep the roast concise (Under 100 words)
-Give us the compatiblity score
-Use emojis for emphasis
+-Highlight key contrasts between the users with witty humor.
+-Roast output language should be ${JSON.stringify(language)}
+-Keep the roast concise (Under 100 words)
+-Give us the compatiblity score
+-Use emojis for emphasis
+-The response must ONLY contain the roast in markdown format only. No additional commentary or formatting outside of markdown.
+
 `;
   console.log("Input Prompt" + inputPrompt);
   const completion = await openai.chat.completions.create({

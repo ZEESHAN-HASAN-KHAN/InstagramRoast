@@ -21,12 +21,13 @@ import threads_w from "../assets/threads_w.png";
 
 import { useTheme } from "@/components/ui/theme-provider";
 import ReactMarkdown from "react-markdown";
-// import { createToken } from "@/lib/utils";
+import { createToken } from "@/lib/utils";
 export function CompatiblityRoast() {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const uname1 = queryParams.get("uname1");
   const uname2 = queryParams.get("uname2");
+  const language = queryParams.get("language");
   const [userData1, setUserData1] = useState(null);
   const [userData2, setUserData2] = useState(null);
   const [compatibilityRoast, setCompatibilityRoast] = useState("");
@@ -66,18 +67,18 @@ export function CompatiblityRoast() {
   );
   const fetchData = async () => {
     const url = import.meta.env.VITE_APP_BASE_URL;
-    // const token = await createToken();
+    const token = await createToken();
     const result = await fetch(url + "/api/v1/compatibilityRoast", {
       method: "POST",
       headers: {
-        // Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         Accept: "application/json",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         uname1: uname1,
         uname2: uname2,
-        language: "english",
+        language: language,
       }),
     });
     const data = await result.json();

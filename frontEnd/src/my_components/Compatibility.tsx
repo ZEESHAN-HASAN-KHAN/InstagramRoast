@@ -25,7 +25,7 @@ export function Compatibility() {
   }
 
   return (
-    <div className="container flex flex-col justify-center items-center p-5 mt-10">
+    <div className="flex flex-col justify-center items-center p-5 mt-10">
       <div className="flex flex-col justify-center items-center text-center w-full px-4">
         {/* Heading */}
         <h1

@@ -1,24 +1,26 @@
-import { Moon, Sun } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Moon, Sun } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { useTheme } from "./theme-provider"
+} from "@/components/ui/dropdown-menu";
+import { useTheme } from "./theme-provider";
 import { useEffect } from "react";
+
+type Theme = "light" | "dark" | "system"; // Define or import the Theme type if not already available
 
 export function ModeToggle() {
   const { setTheme } = useTheme();
 
   useEffect(() => {
     // Check for a saved user preference in localStorage
-    const savedTheme = localStorage.getItem("theme");
-    if (savedTheme) {
+    const savedTheme = localStorage.getItem("theme") as Theme;
+    if (savedTheme === "light" || savedTheme === "dark" || savedTheme === "system") {
       setTheme(savedTheme);
     } else {
-      // Default to system preference if no user preference exists
+      // Default to system preference if no valid user preference exists
       const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
       setTheme(systemPrefersDark ? "dark" : "light");
     }
@@ -26,7 +28,8 @@ export function ModeToggle() {
     // Listen for system theme changes
     const systemThemeListener = window.matchMedia("(prefers-color-scheme: dark)");
     const handleSystemThemeChange = () => {
-      if (!localStorage.getItem("theme")) { // Only apply system changes if no user preference exists
+      if (!localStorage.getItem("theme")) {
+        // Only apply system changes if no user preference exists
         setTheme(systemThemeListener.matches ? "dark" : "light");
       }
     };
@@ -37,7 +40,7 @@ export function ModeToggle() {
     };
   }, [setTheme]);
 
-  const updateTheme = (newTheme: string) => {
+  const updateTheme = (newTheme: Theme) => {
     setTheme(newTheme);
     localStorage.setItem("theme", newTheme); // Persist user preference
   };
@@ -58,11 +61,13 @@ export function ModeToggle() {
         <DropdownMenuItem onClick={() => updateTheme("dark")}>
           Dark
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => {
-          localStorage.removeItem("theme"); // Remove user preference to defer to system preference
-          const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-          setTheme(systemPrefersDark ? "dark" : "light");
-        }}>
+        <DropdownMenuItem
+          onClick={() => {
+            localStorage.removeItem("theme"); // Remove user preference to defer to system preference
+            const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+            setTheme(systemPrefersDark ? "dark" : "light");
+          }}
+        >
           System
         </DropdownMenuItem>
       </DropdownMenuContent>

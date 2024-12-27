@@ -23,14 +23,24 @@ import { useTheme } from "@/components/ui/theme-provider";
 import ReactMarkdown from "react-markdown";
 import { createToken } from "@/lib/utils";
 export function CompatiblityRoast() {
+  interface userData {
+    profile_pic_url: string;
+    username: string;
+    full_name: string;
+    follower: number;
+    following: number;
+    biography: string;
+    post: number;
+    compatibilityText: string;
+  }
   const navigate = useNavigate();
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const uname1 = queryParams.get("uname1");
   const uname2 = queryParams.get("uname2");
   const language = queryParams.get("language");
-  const [userData1, setUserData1] = useState(null);
-  const [userData2, setUserData2] = useState(null);
+  const [userData1, setUserData1] = useState<userData | null>(null);
+  const [userData2, setUserData2] = useState<userData | null>(null);
   const [compatibilityRoast, setCompatibilityRoast] = useState("");
   const shareLinks = {
     whatsapp:
@@ -130,13 +140,13 @@ export function CompatiblityRoast() {
           <div>
             {/* User Card */}
             <div className="flex flex-col lg:flex-row  justify-center  items-center gap-5 mt-5">
-              <Card className="w-[440px]">
+              {userData1 !== null && <Card className="w-[440px]">
                 <CardHeader>
                   <div className="flex flex-row gap-12">
                     <Avatar className="size-[90px]">
                       <AvatarImage
-                        src={userData1.profile_pic_url}
-                        alt={userData1.username}
+                        src={userData1?.profile_pic_url ?? ""}
+                        alt={userData1?.username ?? ""}
                       />
                       <AvatarFallback>CN</AvatarFallback>
                     </Avatar>
@@ -173,9 +183,10 @@ export function CompatiblityRoast() {
                   </div>
                   <CardDescription>{userData1.biography}</CardDescription>
                 </CardHeader>
-              </Card>
+              </Card>}
+              
               <img className="size-8 animate-pulse" src={add} />
-              <Card className="w-[440px]">
+              {userData2 !== null && <Card className="w-[440px]">
                 <CardHeader>
                   <div className="flex flex-row gap-12">
                     <Avatar className="size-[90px]">
@@ -188,7 +199,7 @@ export function CompatiblityRoast() {
                     <div className="flex flex-col gap-5">
                       <CardTitle>
                         <a
-                          href={`https://www.instagram.com/${userData1.username}`}
+                          href={`https://www.instagram.com/${userData2.username}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           style={{ textDecoration: "none", color: "inherit" }} // Optional styling
@@ -218,7 +229,8 @@ export function CompatiblityRoast() {
                   </div>
                   <CardDescription>{userData2.biography}</CardDescription>
                 </CardHeader>
-              </Card>
+              </Card>}
+              
             </div>
 
             {/* Roast Section */}

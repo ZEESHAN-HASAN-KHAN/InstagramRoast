@@ -13,7 +13,7 @@ app.use(express.json());
 
 app.use(cors(corsOptions));
 app.use(limiter);
-app.use(jwt);
+// app.use(jwt);
 
 app.use("/api/v1", roastRouter);
 

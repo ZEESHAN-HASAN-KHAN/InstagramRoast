@@ -17,6 +17,7 @@ import whatsapp from "../assets/whatsapp.png";
 import linkedin from "../assets/linkedin.png";
 import threads from "../assets/threads.png";
 import threads_w from "../assets/threads_w.png";
+import SharableRoastImage from "./SharableRoastImage";
 
 import { useTheme } from "@/components/ui/theme-provider";
 import { createToken } from "@/lib/utils";
@@ -250,7 +251,22 @@ export function Roast() {
                   </li>
                 </a>
               </ul>
+
+                
+
             </div>
+           
+          </div>
+          <div className="flex justify-center">
+            <SharableRoastImage 
+              profileImage={userData.insta_data.profile_pic_url}
+              name={userData.insta_data.full_name}
+              username={userData.insta_data.username}
+              verified={true}
+              logo={theme === "dark" ? threads_w : threads}
+              text={roastData}
+              date="Just Now"
+            />
           </div>
 
           <div className="flex justify-center mt-10">

@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const roastRouter = express.Router();
+const { createCanvas, loadImage } = require("canvas");
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
 const {
@@ -182,7 +183,6 @@ roastRouter.post("/compatibilityRoast", async (req, res) => {
     if (userData1 == null) {
       userData1 = await getInstagramProfile(uname1);
 
-
       // Download the profile picture to memory
       profileUrl1 = userData1.profile_pic_url;
       const imageResponse = await fetch(profileUrl1);
@@ -212,7 +212,7 @@ roastRouter.post("/compatibilityRoast", async (req, res) => {
         throw new Error("Invalid user data: username is null");
       }
     }
-    
+
     if (userData2 == null) {
       // return ivalid user name if we don't get the profile
       userData2 = await getInstagramProfile(uname2);
@@ -273,4 +273,73 @@ roastRouter.post("/compatibilityRoast", async (req, res) => {
     return res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
+roastRouter.post("/generate-sharable-roast-image", async (req, res) => {
+  const { profileImage, name, verified, username, logo, text, date } = req.body;
+
+  const canvas = createCanvas(400, 300);
+  const ctx = canvas.getContext("2d");
+
+  try {
+    // Background
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Fetch profile image and draw it
+    const profileImg = await fetchImage(profileImage);
+    ctx.drawImage(profileImg, 20, 20, 50, 50);
+
+    // Draw name and username
+    ctx.font = "16px Arial";
+    ctx.fillStyle = "#000000";
+    ctx.fillText(name, 80, 40);
+
+    if (verified) {
+      const verifiedBadge = await fetchImage(
+        "https://upload.wikimedia.org/wikipedia/commons/e/e4/Twitter_Verified_Badge.svg"
+      );
+      ctx.drawImage(verifiedBadge, 180, 25, 16, 16);
+    }
+
+    ctx.font = "14px Arial";
+    ctx.fillStyle = "#555555";
+    ctx.fillText(`@${username}`, 80, 60);
+
+    // Fetch logo and draw it
+    const logoImg = await fetchImage(logo);
+    ctx.drawImage(logoImg, canvas.width - 60, 20, 40, 40);
+
+    // Draw main text
+    ctx.font = "16px Arial";
+    ctx.fillStyle = "#000000";
+    const textLines = text.split("\n");
+    textLines.forEach((line, index) => {
+      ctx.fillText(line, 20, 100 + index * 20);
+    });
+
+    // Draw date
+    ctx.font = "12px Arial";
+    ctx.fillStyle = "#888888";
+    ctx.fillText(date, 20, canvas.height - 20);
+
+    // Send the image as a response
+    const buffer = canvas.toBuffer("image/png");
+    res.set("Content-Type", "image/png");
+    res.send(buffer);
+  } catch (error) {
+    console.error("Error generating image:", error);
+    res.status(500).send("Error generating image");
+  }
+});
+
+async function fetchImage(url) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image from ${url}`);
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return loadImage(buffer);
+}
+
 module.exports = roastRouter;

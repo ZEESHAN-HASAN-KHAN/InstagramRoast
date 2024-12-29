@@ -54,6 +54,10 @@ roastRouter.post("/roastMe", async (req, res) => {
     if (result) {
       console.log("Data is already in Database");
       result.profile_pic_url = `https://storage.googleapis.com/${bucketName}/${result.profile_pic_url}`;
+      const response = await fetch(result.profile_pic_url);
+      const buffer = await response.buffer();
+      const base64 = buffer.toString("base64");
+      result.profile_pic_url = base64;
 
       // Fetch the AI response from the table and return it
       const aiResponse = await getAIResponse(name, language);
@@ -121,6 +125,12 @@ roastRouter.post("/roastMe", async (req, res) => {
     // Update roastData with the GCS URL
     roastData.profile_pic_url = gcsProfileUrl;
     addAIResponse(name, roast, language);
+
+    // convert the gcs url to base64
+    const response = await fetch(gcsProfileUrl);
+    const buffer = await response.buffer();
+    const base64 = buffer.toString("base64");
+    roastData.profile_pic_url = base64;
 
     return res.status(200).json({
       insta_data: roastData,

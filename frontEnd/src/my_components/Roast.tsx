@@ -17,6 +17,7 @@ import whatsapp from "../assets/whatsapp.png";
 import linkedin from "../assets/linkedin.png";
 import threads from "../assets/threads.png";
 import threads_w from "../assets/threads_w.png";
+import instagram from "../assets/instagram.png";
 import SharableRoastImage from "./SharableRoastImage";
 
 import { useTheme } from "@/components/ui/theme-provider";
@@ -141,7 +142,7 @@ export function Roast() {
                 <div className="flex flex-row gap-12">
                   <Avatar className="size-[90px]">
                     <AvatarImage
-                      src={userData.insta_data.profile_pic_url}
+                      src={userData.insta_data.profile_pic_url.startsWith('data:image') ? userData.insta_data.profile_pic_url : `data:image/jpeg;base64,${userData.insta_data.profile_pic_url}`}
                       alt={userData.insta_data.username}
                     />
                     <AvatarFallback>CN</AvatarFallback>
@@ -257,17 +258,23 @@ export function Roast() {
             </div>
            
           </div>
-          <div className="flex justify-center">
+            <div className="flex justify-center">
             <SharableRoastImage 
               profileImage={userData.insta_data.profile_pic_url}
               name={userData.insta_data.full_name}
               username={userData.insta_data.username}
-              verified={true}
-              logo={theme === "dark" ? threads_w : threads}
+              verified={false}
+              logo={instagram}
               text={roastData}
-              date="Just Now"
+              date={new Date().toLocaleString('en-GB', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              })}
             />
-          </div>
+            </div>
 
           <div className="flex justify-center mt-10">
             <Card className="w-[550px]">

@@ -1,5 +1,15 @@
-import React, { useRef } from "react";
+import React, { useMemo, useRef } from "react";
+import html2canvas from "html2canvas"; // Import html2canvas
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogClose,
+} from "@/components/ui/dialog"; // Adjust the import path based on your ShadCN setup
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import ShinyButton from "@/components/ui/ShinyButton";
+import VerifiedTwitter from "../assets/Twitter_Verified_Badge.png";
 
 interface ShareableImageProps {
   profileImage: string; // URL of the person's profile image
@@ -11,7 +21,7 @@ interface ShareableImageProps {
   date: string; // Date of the post
 }
 
-const ShareableImageCanvas: React.FC<ShareableImageProps> = ({
+const ShareableRoastImage: React.FC<ShareableImageProps> = ({
   profileImage,
   name,
   verified,
@@ -20,109 +30,113 @@ const ShareableImageCanvas: React.FC<ShareableImageProps> = ({
   text,
   date,
 }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
-  const generateImage = async () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  const shareScreenshot = async () => {
+    if (!dialogRef.current) return;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    // Clear the canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Set canvas background
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Draw profile image
-    const profileImg = new Image();
-    profileImg.crossOrigin = "anonymous";
-    // fetch base64 image from the url
-    const response = await fetch(profileImage);
-    const blob = await response.blob();
-    const objectURL = URL.createObjectURL(blob);
-    profileImg.src = objectURL;
-
-    profileImg.onload = () => {
-      ctx.drawImage(profileImg, 20, 20, 50, 50); // x, y, width, height
-
-      // Draw name and username
-      ctx.font = "16px Arial";
-      ctx.fillStyle = "#000000";
-      ctx.fillText(name, 80, 40); // x, y
-
-      if (verified) {
-        const verifiedBadge = new Image();
-        verifiedBadge.crossOrigin = "anonymous";
-        verifiedBadge.src =
-          "https://upload.wikimedia.org/wikipedia/commons/e/e4/Twitter_Verified_Badge.svg";
-        verifiedBadge.onload = () => {
-          ctx.drawImage(verifiedBadge, 180, 25, 16, 16); // x, y, width, height
-        };
-      }
-
-      ctx.font = "14px Arial";
-      ctx.fillStyle = "#555555";
-      ctx.fillText(`@${username}`, 80, 60);
-
-      // Draw logo
-      const logoImg = new Image();
-      logoImg.crossOrigin = "anonymous";
-      logoImg.src = logo;
-      logoImg.onload = () => {
-        ctx.drawImage(logoImg, canvas.width - 60, 20, 40, 40); // x, y, width, height
-      };
-
-      // Draw main text
-      ctx.font = "16px Arial";
-      ctx.fillStyle = "#000000";
-      const textLines = text.split("\n");
-      textLines.forEach((line, index) => {
-        ctx.fillText(line, 20, 100 + index * 20); // x, y
+    try {
+      const canvas = await html2canvas(dialogRef.current, {
+        useCORS: true, // Ensure cross-origin images are handled
+        logging: true, // Enable logging to debug if needed
+        allowTaint: true, // Allow tainted images if required
       });
+      const dataUrl = canvas.toDataURL("image/png"); // Convert canvas to Data URL
 
-      // Draw date
-      ctx.font = "12px Arial";
-      ctx.fillStyle = "#888888";
-      ctx.fillText(date, 20, canvas.height - 20); // x, y
-    };
+      const blob = await (await fetch(dataUrl)).blob(); // Convert Data URL to Blob
+      const file = new File([blob], "shareable_image.png", { type: "image/png" });
+
+      // Use Web Share API
+      if (navigator.share) {
+        await navigator.share({
+          files: [file],
+          title: "Check out this roast!",
+          text: "Here's a hilarious roast I just got:",
+        });
+      } else {
+        alert("Sharing is not supported on this device.");
+      }
+    } catch (error) {
+      console.error("Error capturing screenshot or sharing:", error);
+    }
   };
 
-  const downloadImage = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const link = document.createElement("a");
-    link.download = "shareable_image.png";
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-  };
+  const renderedMarkdown = useMemo(
+    () => (
+      <div className="prose break-all whitespace-normal font-medium text-gray-900">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+      </div>
+    ),
+    [text]
+  );
 
   return (
     <div>
-      {/* Hidden Canvas */}
-      <canvas
-        ref={canvasRef}
-        width={400}
-        height={300}
-        style={{ display: "none" }} // Hide the canvas from the user
-      ></canvas>
+      {/* ShadCN Dialog */}
+      <Dialog>
+        {/* Button to Open Dialog */}
+        <DialogTrigger asChild>
+          <ShinyButton className="mt-5">Share this roast as Image</ShinyButton>
+        </DialogTrigger>
 
-      {/* Button to Generate and Download Image */}
-      <ShinyButton
-        onClick={() => {
-          generateImage();
-          downloadImage();
-        }}
-        className="mt-5 justify-center items-center"
-      >
-        Generate Shareable Image
-      </ShinyButton>
+        {/* Dialog Content */}
+        <DialogContent className="max-w-lg">
+          <div
+            ref={dialogRef}
+            className="bg-white p-6 rounded-lg shadow-lg w-full h-auto mt-5"
+          >
+            {/* Profile Image and Details */}
+            <div className="flex items-center mb-4">
+              <img
+                src={
+                  profileImage.startsWith("data:image")
+                    ? profileImage
+                    : `data:image/jpeg;base64,${profileImage}`
+                }
+                alt="Profile"
+                className="w-12 h-12 rounded-full"
+              />
+              <div className="ml-4">
+                <div className="font-bold text-lg text-black">
+                  {name}
+                  {verified && (
+                    <img
+                      src={VerifiedTwitter}
+                      alt="Verified"
+                      className="w-4 h-4 inline-block ml-1"
+                    />
+                  )}
+                  <img
+                    src={logo}
+                    alt="Logo"
+                    className="absolute top-16 right-12 w-10 h-10"
+                  />
+                </div>
+
+                <div className="text-gray-500">@{username}</div>
+              </div>
+            </div>
+
+            {/* Main Text */}
+            <div className="text-base text-black">{renderedMarkdown}</div>
+
+            {/* Date */}
+            <div className="text-gray-400 text-sm mt-4">{date}</div>
+          </div>
+
+          {/* Share Button */}
+          <div className="mt-4 flex justify-end">
+            <ShinyButton onClick={shareScreenshot}>Share</ShinyButton>
+          </div>
+
+          {/* Close Button */}
+          <DialogClose asChild>
+            <ShinyButton className="ml-4">Close</ShinyButton>
+          </DialogClose>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
-export default ShareableImageCanvas;
-
+export default ShareableRoastImage;

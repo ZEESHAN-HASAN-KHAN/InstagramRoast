@@ -26,11 +26,14 @@ jobs:
           echo "URL=${{ secrets.URL }}" >> ./backEnd/.env
           echo "DB=${{ secrets.DB }}" >> ./backEnd/.env
           echo "APIKEY=${{ secrets.APIKEY }}" >> ./backEnd/.env
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> ./backEnd/.env
+          echo "AI_PROVIDER=${{ secrets.AI_PROVIDER }}" >> ./backEnd/.env
           echo "MODEL_NAME=${{ secrets.MODEL_NAME }}" >> ./backEnd/.env
           echo "BUCKET_NAME=${{ secrets.BUCKET_NAME }}" >> ./backEnd/.env
           echo "ALLOWED_LANGUAGE=${{ secrets.ALLOWED_LANGUAGE }}" >> ./backEnd/.env
           echo "ALLOWED_ORIGIN=${{ secrets.ALLOWED_ORIGIN }}" >> ./backEnd/.env
           echo "TOKEN_SECRET=${{ secrets.TOKEN_SECRET }}" >> ./backEnd/.env
+          echo "PORT=${{ secrets.PORT }}" >> ./backEnd/.env
           docker build -t instagram-roast-backend:latest ./backEnd
           
       - name: Configure GCP Credentials

@@ -1,4 +1,3 @@
-
 # Instagram Roast Generator
 
 An Express.js-based application that fetches Instagram profile details and generates AI-generated humorous roasts based on the user’s profile picture and details. Built using OpenAI's GPT model for generating witty responses and integrates with a database for storing user information.

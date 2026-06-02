@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useTheme } from "@/components/ui/theme-provider";
 import { createToken } from "@/lib/utils";
 import InstaCard from "./InstaCard";
 

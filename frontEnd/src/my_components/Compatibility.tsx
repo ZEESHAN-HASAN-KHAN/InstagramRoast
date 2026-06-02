@@ -1,16 +1,8 @@
-import search from "../assets/search.png";
-import searchw from "../assets/searchw.png";
-import add from "../assets/add.png";
-
-import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import { useTheme } from "@/components/ui/theme-provider";
-import { RainbowButton } from "@/components/ui/rainbow-button";
 import { useNavigate } from "react-router-dom";
 import { SelectDemo } from "./SelectDemo";
 
 export function Compatibility() {
-  const { theme } = useTheme();
   const [uname1, setUname1] = useState("");
   const [uname2, setUname2] = useState("");
   const [language, setLanguage] = useState("english");
@@ -19,77 +11,81 @@ export function Compatibility() {
   const handleValueChange = (value: string) => setLanguage(value);
 
   function discover(): void {
-    navigate(
-      `/compatibilityRoast?uname1=${uname1}&uname2=${uname2}&language=${language}`
-    );
+    navigate(`/compatibilityRoast?uname1=${uname1}&uname2=${uname2}&language=${language}`);
   }
 
   return (
-    <div className="flex flex-col justify-center items-center p-5 mt-10">
-      <div className="flex flex-col justify-center items-center text-center w-full px-4">
-        {/* Heading */}
-        <h1
-          style={{ fontFamily: "Sansita" }}
-          className="text-3xl md:text-4xl lg:text-5xl text-gray-900 dark:text-gray-200 mt-4"
-        >
-          Check Compatibility ❤️‍🔥
-        </h1>
-      </div>
+    <section className="py-20 px-6 border-t-2 border-foreground bg-background relative overflow-hidden">
+      <div className="pointer-events-none absolute top-10 -right-20 size-60 rounded-full bg-pink-300/10 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-10 -left-20 size-60 rounded-full bg-primary/10 blur-3xl" />
 
-      {/* Input Section */}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (uname1 && uname2 && uname1 !== uname2) {
-            discover();
-          } else {
-            alert(
-              "Please fill in both usernames. Also, they should be different."
-            );
-          }
-        }}
-      >
-        <div className="flex flex-col lg:flex-row justify-center items-center w-full max-w-md gap-2 mt-6">
-          <div className="flex items-center gap-2">
-            <Input
-              required
-              className="w-full px-4 py-2 rounded-md border border-gray-300 shadow-sm"
-              placeholder="@username"
-              onChange={(e) => setUname1(e.target.value.trim())}
-              onKeyDown={(e) => e.key === "Enter" && discover()}
-              value={uname1}
-            />
-            <img className="size-6" src={add} />
-            <Input
-              required
-              className="w-full px-4 py-2 rounded-md border border-gray-300 shadow-sm"
-              placeholder="@username"
-              onChange={(e) => setUname2(e.target.value.trim())}
-              onKeyDown={(e) => e.key === "Enter" && discover()}
-              value={uname2}
-            />
-          </div>
-          <RainbowButton type="submit" className="h-10 px-4 flex items-center">
-            Compatibility
-            <img
-              className="w-5 ml-1"
-              src={theme === "dark" ? search : searchw}
-              alt="Search Icon"
-            />
-          </RainbowButton>
+      <div className="max-w-2xl mx-auto relative">
+        <div className="text-center mb-10">
+          <span className="inline-block bg-foreground text-background px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider rotate-[-2deg] mb-4">
+            ❤️‍🔥 new feature
+          </span>
+          <h2 className="text-4xl md:text-5xl font-serif font-bold italic text-balance">
+            check your{" "}
+            <span className="inline-block bg-pink-200 dark:bg-pink-900/40 px-2 -rotate-1 border-2 border-foreground rounded-xl">
+              compatibility
+            </span>
+          </h2>
+          <p className="mt-4 text-foreground/70">
+            How compatible are two Instagram personalities? Let the AI judge. 👀
+          </p>
         </div>
-      </form>
 
-      {/* Agreement */}
-      <div className="mt-4">
-        <SelectDemo language={language} onValueChange={handleValueChange} />
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (uname1 && uname2 && uname1 !== uname2) {
+              discover();
+            } else {
+              alert("Please fill in both usernames. Also, they should be different.");
+            }
+          }}
+          className="bg-card border-2 border-foreground rounded-3xl p-6 md:p-8 shadow-brutal rotate-[-0.3deg]"
+        >
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="flex-1 w-full">
+              <input
+                required
+                type="text"
+                value={uname1}
+                onChange={(e) => setUname1(e.target.value.trim())}
+                placeholder="@username1"
+                className="w-full px-4 py-3 bg-background border-2 border-foreground rounded-2xl font-mono outline-none focus:shadow-[3px_3px_0_0_hsl(24_72%_52%)] transition-all text-foreground placeholder:text-muted-foreground"
+              />
+            </div>
+            <div className="shrink-0 size-10 bg-pink-200 dark:bg-pink-900/40 border-2 border-foreground rounded-full flex items-center justify-center font-black text-xs shadow-[3px_3px_0_0_hsl(0_0%_8%)]">
+              VS
+            </div>
+            <div className="flex-1 w-full">
+              <input
+                required
+                type="text"
+                value={uname2}
+                onChange={(e) => setUname2(e.target.value.trim())}
+                placeholder="@username2"
+                className="w-full px-4 py-3 bg-background border-2 border-foreground rounded-2xl font-mono outline-none focus:shadow-[3px_3px_0_0_hsl(24_72%_52%)] transition-all text-foreground placeholder:text-muted-foreground"
+              />
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-col items-center gap-3">
+            <SelectDemo language={language} onValueChange={handleValueChange} />
+            <button
+              type="submit"
+              className="w-full bg-primary text-primary-foreground px-6 py-3 rounded-2xl font-black uppercase tracking-wider hover:-translate-y-0.5 transition-all cursor-pointer border-2 border-foreground shadow-[4px_4px_0_0_hsl(0_0%_8%)]"
+            >
+              check compatibility ❤️‍🔥
+            </button>
+            <p className="text-xs text-muted-foreground italic">
+              ⚠️ results may be embarrassing. proceed with caution.
+            </p>
+          </div>
+        </form>
       </div>
-      <span
-        className="mt-2 text-xs md:text-sm text-gray-500"
-        style={{ fontFamily: "Roboto Slab" }}
-      >
-        By clicking discover you agree to our terms
-      </span>
-    </div>
+    </section>
   );
 }

@@ -5,83 +5,79 @@ export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        serif: ["Playfair Display", "Georgia", "serif"],
+        mono: ["JetBrains Mono", "ui-monospace", "monospace"],
+        sans: ["Inter", "system-ui", "sans-serif"],
+      },
+      boxShadow: {
+        brutal: "8px 8px 0px 0px hsl(0 0% 8%)",
+        "brutal-lg": "12px 12px 0px 0px hsl(0 0% 8%)",
+      },
       animation: {
         gradient: "gradient 8s linear infinite",
         marquee: "marquee var(--duration) infinite linear",
         "marquee-vertical": "marquee-vertical var(--duration) linear infinite",
+        "marquee-slow": "marquee 40s linear infinite",
+        "marquee-slow-reverse": "marquee-reverse 40s linear infinite",
         "background-position-spin":
           "background-position-spin 3000ms infinite alternate",
         rainbow: "rainbow var(--speed, 2s) infinite linear",
         meteor: "meteor 5s linear infinite",
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        float: "float 6s ease-in-out infinite",
+        reveal: "reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) both",
+        "pulse-dot": "pulse-dot 1.6s ease-in-out infinite",
       },
       keyframes: {
         gradient: {
-          to: {
-            backgroundPosition: "var(--bg-size) 0",
-          },
+          to: { backgroundPosition: "var(--bg-size) 0" },
         },
         marquee: {
-          from: {
-            transform: "translateX(0)",
-          },
-          to: {
-            transform: "translateX(calc(-100% - var(--gap)))",
-          },
+          from: { transform: "translateX(0)" },
+          to: { transform: "translateX(calc(-100% - var(--gap)))" },
+        },
+        "marquee-reverse": {
+          from: { transform: "translateX(-50%)" },
+          to: { transform: "translateX(0)" },
         },
         "marquee-vertical": {
-          from: {
-            transform: "translateY(0)",
-          },
-          to: {
-            transform: "translateY(calc(-100% - var(--gap)))",
-          },
+          from: { transform: "translateY(0)" },
+          to: { transform: "translateY(calc(-100% - var(--gap)))" },
         },
         "background-position-spin": {
-          "0%": {
-            backgroundPosition: "top center",
-          },
-          "100%": {
-            backgroundPosition: "bottom center",
-          },
+          "0%": { backgroundPosition: "top center" },
+          "100%": { backgroundPosition: "bottom center" },
         },
         rainbow: {
-          "0%": {
-            "background-position": "0%",
-          },
-          "100%": {
-            "background-position": "200%",
-          },
+          "0%": { "background-position": "0%" },
+          "100%": { "background-position": "200%" },
         },
         meteor: {
-          "0%": {
-            transform: "rotate(215deg) translateX(0)",
-            opacity: "1",
-          },
-          "70%": {
-            opacity: "1",
-          },
-          "100%": {
-            transform: "rotate(215deg) translateX(-500px)",
-            opacity: "0",
-          },
+          "0%": { transform: "rotate(215deg) translateX(0)", opacity: "1" },
+          "70%": { opacity: "1" },
+          "100%": { transform: "rotate(215deg) translateX(-500px)", opacity: "0" },
         },
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+        float: {
+          "0%, 100%": { transform: "translateY(0px) rotate(-1deg)" },
+          "50%": { transform: "translateY(-10px) rotate(1deg)" },
+        },
+        reveal: {
+          from: { opacity: "0", transform: "translateY(20px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        "pulse-dot": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.3" },
         },
       },
       borderRadius: {

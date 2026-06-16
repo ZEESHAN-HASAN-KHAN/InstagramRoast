@@ -1,29 +1,6 @@
 require("dotenv").config();
-const OpenAI = require("openai");
-const {
-  GoogleGenerativeAI,
-  HarmCategory,
-  HarmBlockThreshold,
-} = require("@google/generative-ai");
+const { callLLM } = require("./llmProvider");
 
-const geminiSafetySettings = [
-  {
-    category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-    threshold: HarmBlockThreshold.BLOCK_NONE,
-  },
-  {
-    category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-    threshold: HarmBlockThreshold.BLOCK_NONE,
-  },
-  {
-    category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-    threshold: HarmBlockThreshold.BLOCK_NONE,
-  },
-  {
-    category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-    threshold: HarmBlockThreshold.BLOCK_NONE,
-  },
-];
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
@@ -70,44 +47,22 @@ ${JSON.stringify(userData2)}
   Instructions:
 - Be as sarcastic, blunt, and edgy as possible. Use clever wordplay and savage humor.
 - Use personalized taunts and playful jabs.
-- Do not include:
-    - Compliments, motivation, or any form of praise.
-    - Pleasantries, introductions, or conclusions. Jump straight into the compability roast.
+- Be as sarcastic, blunt, and edgy as possible. Use clever wordplay and savage humor.
+- Keep the roast concise (under 100 words).
+- Add a compatibility score with humor out of 10.
+- Use emojis for emphasis.
 - Write strictly in ${JSON.stringify(language)} and output in **markdown format**.
--Keep the roast concise (under 100 words).
--Add a compatibility score with humor out of 10.
--Use emojis for emphasis
--The response must ONLY contain the roast in markdown format. No additional commentary or formatting outside of markdown.
+
+STRICT RULES — violating any of these will make the output unusable:
+- NO titles, headers, or labels (e.g. do NOT write "Compatibility Roast", "Roast", "#HotTake", etc.)
+- NO sign-offs, closings, or sign-ins (e.g. do NOT write "— your AI bestie", "Sincerely", etc.)
+- NO compliments, praise, motivation, or kind words of any kind.
+- NO meta-commentary like "Here is your roast:" or "Sure! Here's a roast:"
+- Start the roast IMMEDIATELY. The very first word must be part of the roast itself.
+- The response must contain ONLY the roast text in markdown. Nothing else.
 `;
   console.log("Input Prompt : " + inputPrompt);
-
-  if (process.env.AI_PROVIDER === "gemini") {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({
-      model: process.env.MODEL_NAME,
-      generationConfig: { temperature: 1.5 },
-      safetySettings: geminiSafetySettings,
-    });
-    const result = await model.generateContent(inputPrompt);
-    return result.response.text();
-  }
-
-  const openai = new OpenAI({ apiKey: process.env.APIKEY });
-  const completion = await openai.chat.completions.create({
-    model: process.env.MODEL_NAME,
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: inputPrompt,
-          },
-        ],
-      },
-    ],
-  });
-  return completion.choices[0].message.content;
+  return callLLM(inputPrompt);
 };
 
 const generateAIRoast = async (userData, profileUrl, language) => {
@@ -119,58 +74,22 @@ const generateAIRoast = async (userData, profileUrl, language) => {
     userData,
   )} and the image attached.
   - Be as sarcastic, blunt, and edgy as possible. Use clever wordplay and savage humor.
-  - Do not include:
-    - Compliments, motivation, or any form of praise.
-    - Pleasantries, introductions, or conclusions. Jump straight into the roast.
+  - Be as sarcastic, blunt, and edgy as possible. Use clever wordplay and savage humor.
   - Keep the roast concise (under 100 words).
   - Use emojis for emphasis.
   - Write strictly in ${language} and output in **markdown format**.
 
-  Final Output:
-  - The response must ONLY contain the roast in markdown format only. No additional commentary or formatting outside of markdown.
+  STRICT RULES — violating any of these will make the output unusable:
+  - NO titles, headers, or labels (e.g. do NOT write "Roast", "Hot Take", "#Roast", etc.)
+  - NO sign-offs, closings, or sign-ins (e.g. do NOT write "— your AI bestie", "Sincerely", "Love,", etc.)
+  - NO compliments, praise, motivation, or kind words of any kind.
+  - NO meta-commentary like "Here is your roast:" or "Sure! Here's a roast:"
+  - Start the roast IMMEDIATELY. The very first word must be part of the roast itself.
+  - The response must contain ONLY the roast text in markdown. Nothing else.
 `;
 
   console.log("Input Prompt : " + inputPrompt);
-
-  if (process.env.AI_PROVIDER === "gemini") {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({
-      model: process.env.MODEL_NAME,
-      generationConfig: { temperature: 1.5 },
-      safetySettings: geminiSafetySettings,
-    });
-    const imageResponse = await fetch(profileUrl);
-    const arrayBuffer = await imageResponse.arrayBuffer();
-    const base64Image = Buffer.from(arrayBuffer).toString("base64");
-    const result = await model.generateContent([
-      inputPrompt,
-      { inlineData: { data: base64Image, mimeType: "image/jpeg" } },
-    ]);
-    return result.response.text();
-  }
-
-  const openai = new OpenAI({ apiKey: process.env.APIKEY });
-  const completion = await openai.chat.completions.create({
-    model: process.env.MODEL_NAME,
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: inputPrompt,
-          },
-          {
-            type: "image_url",
-            image_url: {
-              url: profileUrl,
-            },
-          },
-        ],
-      },
-    ],
-  });
-  return completion.choices[0].message.content;
+  return callLLM(inputPrompt, profileUrl);
 };
 
 module.exports = {

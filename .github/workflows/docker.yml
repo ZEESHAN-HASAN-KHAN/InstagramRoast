@@ -56,9 +56,8 @@ jobs:
 
       - name: Build the Docker image
         run: |
-          docker build -t instagram-roast-frontend:latest ./frontEnd \
-            --build-arg VITE_APP_BASE_URL=${{ secrets.VITE_APP_BASE_URL }} \
-            --build-arg VITE_APP_TOKEN_SECRET=${{ secrets.TOKEN_SECRET }} \
+          echo "${{ secrets.FRONTEND_ENV }}" > ./frontEnd/.env
+          docker build -t instagram-roast-frontend:latest ./frontEnd
 
       - name: Configure GCP Credentials
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

@@ -5,6 +5,7 @@ const {
   HarmCategory,
   HarmBlockThreshold,
 } = require("@google/generative-ai");
+const logger = require("./logger");
 
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
@@ -109,16 +110,16 @@ const callLLM = async (prompt, imageUrl = null) => {
   for (const name of order) {
     const config = PROVIDER_CONFIGS[name];
     if (!config) {
-      console.warn(`[LLM] Unknown provider "${name}", skipping`);
+      logger.warning(`[LLM] Unknown provider "${name}", skipping`);
       continue;
     }
     if (requiresVision && !config.supportsVision) {
-      console.log(`[LLM] Skipping "${name}": no vision support`);
+      logger.debug(`[LLM] Skipping "${name}": no vision support`);
       continue;
     }
     const apiKey = config.apiKey();
     if (!apiKey) {
-      console.log(`[LLM] Skipping "${name}": no API key configured`);
+      logger.warning(`[LLM] Skipping "${name}": no API key configured`, { provider: name });
       continue;
     }
 
@@ -129,10 +130,10 @@ const callLLM = async (prompt, imageUrl = null) => {
       } else {
         result = await callOpenAICompat(config, prompt, imageUrl);
       }
-      console.log(`[LLM] Response from "${name}" (${config.model()})`);
+      logger.info(`[LLM] Response from "${name}"`, { provider: name, model: config.model() });
       return result;
     } catch (err) {
-      console.error(`[LLM] Provider "${name}" failed: ${err.message}`);
+      logger.error(`[LLM] Provider "${name}" failed`, { provider: name, error: err.message });
       errors.push({ provider: name, error: err.message });
     }
   }

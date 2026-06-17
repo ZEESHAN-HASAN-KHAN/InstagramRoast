@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const roastRouter = express.Router();
+const logger = require("../helpers/logger");
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
 const {
@@ -27,7 +28,7 @@ roastRouter.get("/roastCount", async (req, res) => {
       count: num,
     });
   } catch (error) {
-    console.error("Error from roast count");
+    logger.error("Error from roast count", { error: error.message });
     return res.status(500).json({
       message: "Internal Server Error",
     });
@@ -51,7 +52,7 @@ roastRouter.post("/roastMe", async (req, res) => {
     const bucketName = process.env.BUCKET_NAME;
     // if data is present in database
     if (result) {
-      console.log("Data is already in Database");
+      logger.info("Cache hit: profile already in DB", { username: name });
       result.profile_pic_url = `https://storage.googleapis.com/${bucketName}/${result.profile_pic_url}`;
 
       // Fetch the AI response from the table and return it
@@ -126,7 +127,7 @@ roastRouter.post("/roastMe", async (req, res) => {
       data: roast,
     });
   } catch (e) {
-    console.error("Error:", e);
+    logger.error("Error in /roastMe", { error: e.message, stack: e.stack });
     return res.status(500).json({ error: "Something went wrong" });
   }
 });
@@ -269,7 +270,7 @@ roastRouter.post("/compatibilityRoast", async (req, res) => {
       compatibilityText: compatibilityText,
     });
   } catch (error) {
-    console.error("Error from Compatibility Roast " + error);
+    logger.error("Error in /compatibilityRoast", { error: error.message, stack: error.stack });
     return res.status(500).json({ error: "Internal Server Error" });
   }
 });

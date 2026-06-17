@@ -1,40 +1,71 @@
 require("dotenv").config();
 const { callLLM } = require("./llmProvider");
+const logger = require("./logger");
 
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
+const getRapidAPIKeys = () => {
+  const multi = process.env.X_RAPIDAPI_KEYS;
+  if (multi) return multi.split(",").map((k) => k.trim()).filter(Boolean);
+  const single = process.env.X_RAPIDAPI_KEY;
+  if (single) return [single];
+  return [];
+};
+
 const getInstagramProfile = async (username) => {
+  const keys = getRapidAPIKeys();
+  if (keys.length === 0) throw new Error("No RapidAPI keys configured");
+
   const url = new URL(`${process.env.URL}` + "/v1/info");
   url.searchParams.append("username_or_id_or_url", username);
-  const options = {
-    method: "GET",
-    headers: {
-      "x-rapidapi-key": process.env.X_RAPIDAPI_KEY,
-      "x-rapidapi-host": process.env.X_RAPIDAPI_HOST,
-    },
-  };
+  const errors = [];
 
-  const response = await fetch(url, options);
-  const data = await response.json();
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    try {
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        headers: {
+          "x-rapidapi-key": key,
+          "x-rapidapi-host": process.env.X_RAPIDAPI_HOST,
+        },
+      });
 
-  console.log("Instagram API Status:", response.status);
-  console.log("Instagram API Response:", JSON.stringify(data, null, 2));
+      logger.info(`[Instagram API] Key ${i + 1}/${keys.length} responded`, { keyIndex: i + 1, status: response.status });
 
-  const result = data.data;
+      if (response.status === 429 || response.status === 403) {
+        logger.warning(`[Instagram API] Key ${i + 1} rate-limited/forbidden, trying next`, { keyIndex: i + 1, status: response.status });
+        errors.push({ key: i + 1, status: response.status });
+        continue;
+      }
 
-  const roastData = {
-    full_name: result.full_name,
-    username: result.username,
-    follower: result.follower_count,
-    following: result.following_count,
-    isPrivate: result.is_private,
-    biography: result.biography,
-    post: result.media_count,
-    profile_pic_url: result.profile_pic_url_hd,
-  };
+      const data = await response.json();
 
-  return roastData;
+      if (!response.ok || !data.data) {
+        logger.warning(`[Instagram API] Key ${i + 1} bad response`, { keyIndex: i + 1, status: response.status, body: data });
+        errors.push({ key: i + 1, status: response.status, body: data });
+        continue;
+      }
+
+      const result = data.data;
+      return {
+        full_name: result.full_name,
+        username: result.username,
+        follower: result.follower_count,
+        following: result.following_count,
+        isPrivate: result.is_private,
+        biography: result.biography,
+        post: result.media_count,
+        profile_pic_url: result.profile_pic_url_hd,
+      };
+    } catch (err) {
+      logger.error(`[Instagram API] Key ${i + 1} threw`, { keyIndex: i + 1, error: err.message });
+      errors.push({ key: i + 1, error: err.message });
+    }
+  }
+
+  throw new Error(`All RapidAPI keys failed: ${JSON.stringify(errors)}`);
 };
 
 const generateAICompatiblityRoast = async (userData1, userData2, language) => {
@@ -61,7 +92,7 @@ STRICT RULES — violating any of these will make the output unusable:
 - Start the roast IMMEDIATELY. The very first word must be part of the roast itself.
 - The response must contain ONLY the roast text in markdown. Nothing else.
 `;
-  console.log("Input Prompt : " + inputPrompt);
+  logger.debug("LLM input prompt", { prompt: inputPrompt });
   return callLLM(inputPrompt);
 };
 
@@ -88,7 +119,7 @@ const generateAIRoast = async (userData, profileUrl, language) => {
   - The response must contain ONLY the roast text in markdown. Nothing else.
 `;
 
-  console.log("Input Prompt : " + inputPrompt);
+  logger.debug("LLM input prompt", { prompt: inputPrompt });
   return callLLM(inputPrompt, profileUrl);
 };
 

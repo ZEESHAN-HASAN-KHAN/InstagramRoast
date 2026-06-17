@@ -1,4 +1,5 @@
 const { Client } = require("pg");
+const logger = require("../helpers/logger");
 
 const client = new Client({
   connectionString: process.env.DB,
@@ -32,16 +33,16 @@ async function getUserData(username) {
     // console.log("User data retrieved:", result.rows[0]);
     return result.rows[0]; // Return the user data
   } catch (error) {
-    console.error("Error fetching user data:", error);
+    logger.error("Error fetching user data", { error: error.message });
     throw error;
   }
 }
 
 async function dbConnect() {
-  console.log("Attempting to connect to the database...");
+  logger.info("Attempting to connect to the database");
   try {
     await client.connect();
-    console.log("Database is connected");
+    logger.info("Database connected");
 
     const result = await client.query(`
                       CREATE TABLE IF NOT EXISTS profiles (
@@ -82,7 +83,7 @@ async function dbConnect() {
       );
     `);
   } catch (err) {
-    console.error("Failed to connect to the database:", err.message);
+    logger.critical("Failed to connect to the database", { error: err.message });
   }
 }
 
@@ -97,7 +98,7 @@ async function getAIResponse(username, language) {
     );
     return result.rows[0]; // Returns the first matching row
   } catch (error) {
-    console.error("Error fetching AI response:", error);
+    logger.error("Error fetching AI response", { error: error.message });
     throw error;
   }
 }
@@ -132,7 +133,7 @@ const checkCompatibilityResponse = async (profileId1, profileId2, language) => {
     }
   } catch (error) {
     // Handle errors
-    console.error("Error checking compatibility response:", error);
+    logger.error("Error checking compatibility response", { error: error.message });
     return {
       success: false,
       message: "An error occurred while checking compatibility.",
@@ -159,10 +160,10 @@ async function addUser(
       [profilePicUrl, username, fullName, follower, following, biography, post]
     );
 
-    console.log("User added successfully:", result.rows[0]);
+    logger.info("User added successfully", { username });
     return result.rows[0];
   } catch (error) {
-    console.error("Error adding user:", error);
+    logger.error("Error adding user", { username, error: error.message });
     throw error;
   }
 }
@@ -174,14 +175,14 @@ async function checkUserExists(username) {
     );
 
     if (result.rows.length > 0) {
-      console.log("User exists:", result.rows[0]);
-      return true; // Data exists
+      logger.debug("User exists in DB", { username });
+      return true;
     } else {
-      console.log("User does not exist");
-      return false; // Data does not exist
+      logger.debug("User not found in DB", { username });
+      return false;
     }
   } catch (error) {
-    console.error("Error checking user existence:", error);
+    logger.error("Error checking user existence", { username, error: error.message });
     throw error;
   }
 }
@@ -207,10 +208,10 @@ async function addAIResponse(username, responseText, language) {
       [profileId, responseText, language]
     );
 
-    console.log("AI response added successfully");
+    logger.info("AI response added successfully");
     return insertResult.rows[0]; // Return the inserted row
   } catch (error) {
-    console.error("Error adding AI response:", error.message);
+    logger.error("Error adding AI response", { error: error.message });
     throw error;
   }
 }
@@ -246,10 +247,10 @@ async function addCompatiblityResponse(
       [profileId1, profileId2, compatiblityText, language]
     );
 
-    console.log("AI response added successfully");
+    logger.info("AI response added successfully");
     return insertResult.rows[0]; // Return the inserted row
   } catch (error) {
-    console.error("Error adding AI response:", error.message);
+    logger.error("Error adding AI response", { error: error.message });
     throw error;
   }
 }
@@ -260,10 +261,10 @@ async function profilesRoasted() {
       "SELECT COUNT(*) AS count FROM profiles;"
     );
     const count = result.rows[0].count; // Extract the count value
-    console.log("Number of profiles: " + count);
-    return parseInt(count, 10); // Ensure the count is returned as a number
+    logger.debug("Profiles roasted count", { count });
+    return parseInt(count, 10);
   } catch (error) {
-    console.error("Error in counting the profiles:", error);
+    logger.error("Error counting profiles", { error: error.message });
     throw error; // Rethrow the error to handle it further up the call chain
   }
 }

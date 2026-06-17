@@ -9,6 +9,7 @@ const limiter = require("./middleware/rateLimits");
 const jwt = require("./middleware/jwt");
 
 const roastRouter = require("./routes/roast");
+const logger = require("./helpers/logger");
 app.use(express.json());
 
 app.use(cors(corsOptions));
@@ -19,5 +20,5 @@ app.use("/api/v1", roastRouter);
 
 app.listen(PORT, () => {
   dbConnect();
-  console.log("App is listening on the Port " + PORT);
+  logger.info("Server started", { port: PORT });
 });

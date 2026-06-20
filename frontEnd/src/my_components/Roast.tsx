@@ -6,6 +6,7 @@ import Confetti from "@/components/ui/confetti";
 import { ProfileCard } from "./ProfileCard";
 import { RoastCard } from "./RoastCard";
 import { ShareBar } from "./ShareBar";
+import { AdBanner } from "./AdBanner";
 
 interface InstagramData {
   insta_data: {
@@ -155,6 +156,9 @@ export function Roast() {
         <div className="animate-reveal [animation-delay:200ms]">
           <ProfileCard profile={profile} />
         </div>
+
+        {/* Ad between profile and roast */}
+        <AdBanner slot="5114214544" />
 
         {/* Roast Card */}
         <div className="animate-reveal [animation-delay:300ms] pt-4">

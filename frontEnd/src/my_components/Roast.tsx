@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useLocation, Link } from "react-router-dom";
+import { Helmet } from "react-helmet";
 import { createToken } from "@/lib/utils";
 import type { ConfettiRef } from "@/components/ui/confetti";
 import Confetti from "@/components/ui/confetti";
@@ -116,8 +117,26 @@ export function Roast() {
   };
   const shareTitle = `Here is the roast for ${insta_data.full_name} @${insta_data.username} 🔥`;
 
+  const roastSnippet = roastData.substring(0, 200).replace(/[#*_`]/g, "");
+  const pageUrl = `https://instaroasts.com/${insta_data.username}`;
+
   return (
     <div className="relative overflow-hidden px-6 py-12">
+      <Helmet>
+        <title>Roast of @{insta_data.username} 🔥 — InstaRoasts</title>
+        <meta name="description" content={`AI roast of @${insta_data.username}: ${roastSnippet}...`} />
+        <link rel="canonical" href={pageUrl} />
+        <meta property="og:type" content="article" />
+        <meta property="og:url" content={pageUrl} />
+        <meta property="og:title" content={`Roast of @${insta_data.username} 🔥`} />
+        <meta property="og:description" content={roastSnippet} />
+        <meta property="og:image" content={insta_data.profile_pic_url} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`Roast of @${insta_data.username} 🔥`} />
+        <meta name="twitter:description" content={roastSnippet} />
+        <meta name="twitter:image" content={insta_data.profile_pic_url} />
+      </Helmet>
+
       {/* Background blobs */}
       <div className="pointer-events-none absolute -top-20 -left-20 size-72 rounded-full bg-primary/20 blur-3xl" />
       <div className="pointer-events-none absolute top-40 -right-20 size-72 rounded-full bg-accent/20 blur-3xl" />

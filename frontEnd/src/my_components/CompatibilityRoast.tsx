@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { createToken } from "@/lib/utils";
@@ -136,8 +137,24 @@ export function CompatiblityRoast() {
     );
   }
 
+  const compatSnippet = compatibilityRoast.substring(0, 200).replace(/[#*_`]/g, "");
+  const pageUrl = `https://instaroasts.com/compatibilityRoast?uname1=${uname1}&uname2=${uname2}&language=${language}`;
+
   return (
     <div className="max-w-3xl mx-auto px-6 py-12 flex flex-col gap-8">
+      <Helmet>
+        <title>@{uname1} vs @{uname2} Compatibility Roast 💀 — InstaRoasts</title>
+        <meta name="description" content={`AI compatibility roast between @${uname1} and @${uname2}: ${compatSnippet}...`} />
+        <link rel="canonical" href="https://instaroasts.com/compatibilityRoast" />
+        <meta property="og:type" content="article" />
+        <meta property="og:url" content={pageUrl} />
+        <meta property="og:title" content={`@${uname1} vs @${uname2} Compatibility Roast 💀`} />
+        <meta property="og:description" content={compatSnippet} />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content={`@${uname1} vs @${uname2} Compatibility Roast 💀`} />
+        <meta name="twitter:description" content={compatSnippet} />
+      </Helmet>
+
       {/* Profile cards */}
       <div className="flex flex-col lg:flex-row justify-center items-center gap-8">
         {userData1 && <InstaCard insta_data={userData1} />}

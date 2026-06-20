@@ -25,11 +25,16 @@ export function SelectDemo({ language, onValueChange }: SelectDemoProps) {
           <SelectItem value="english">English</SelectItem>
           <SelectItem value="hinglish">Hinglish</SelectItem>
           <SelectItem value="hindi">Hindi</SelectItem>
-          <SelectItem value="اردو">Urdu</SelectItem>
+          {/* <SelectItem value="اردو">Urdu</SelectItem> */}
           <SelectItem value="spanish">Spanish</SelectItem>
           <SelectItem value="bangla">Bengali</SelectItem>
-          <SelectItem value="korean">Korean</SelectItem>
-          {/* <SelectItem value="pineapple">French</SelectItem> */}
+          <SelectItem value="bahasa indonesia">Bahasa Indonesia</SelectItem>
+          <SelectItem value="singlish">Singlish (Singapore)</SelectItem>
+          <SelectItem value="italian">Italian</SelectItem>
+          <SelectItem value="french">French</SelectItem>
+          <SelectItem value="german">German</SelectItem>
+          <SelectItem value="malay">Malay (Malaysia)</SelectItem>
+          {/* <SelectItem value="korean">Korean</SelectItem> */}
         </SelectGroup>
       </SelectContent>
     </Select>

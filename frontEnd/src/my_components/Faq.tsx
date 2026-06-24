@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Helmet } from "react-helmet";
 
 const FAQS = [
   {
@@ -23,11 +24,27 @@ const FAQS = [
   },
 ];
 
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": FAQS.map(({ q, a }) => ({
+    "@type": "Question",
+    "name": q.replace(/[\u{1F300}-\u{1FFFF}]/gu, "").trim(),
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": a,
+    },
+  })),
+};
+
 export function Faq() {
   const [open, setOpen] = useState<number | null>(0);
 
   return (
     <section id="faq" className="py-24 bg-background relative overflow-hidden">
+      <Helmet>
+        <script type="application/ld+json">{JSON.stringify(faqSchema)}</script>
+      </Helmet>
       <div className="pointer-events-none absolute top-20 -left-20 size-72 rounded-full bg-accent/20 blur-3xl" />
       <div className="pointer-events-none absolute bottom-20 -right-20 size-72 rounded-full bg-primary/20 blur-3xl" />
 
@@ -76,11 +93,11 @@ export function Faq() {
                     +
                   </span>
                 </button>
-                {isOpen && (
-                  <p className="px-4 pb-4 text-foreground/80 animate-reveal">
-                    {item.a}
-                  </p>
-                )}
+                <p
+                  className={`px-4 pb-4 text-foreground/80 ${isOpen ? "animate-reveal" : "hidden"}`}
+                >
+                  {item.a}
+                </p>
               </div>
             );
           })}

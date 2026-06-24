@@ -1,5 +1,5 @@
 "use client";
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { ThemeProvider } from "./components/ui/theme-provider";
 import { Hero } from "./my_components/Hero";
 import { Navbar } from "./my_components/Navbar";
@@ -12,6 +12,10 @@ import React from "react";
 import { Compatibility } from "./my_components/Compatibility";
 import { CompatiblityRoast } from "./my_components/CompatibilityRoast";
 import { SiteFooter } from "./my_components/SiteFooter";
+import { Terms } from "./my_components/Terms";
+import { Privacy } from "./my_components/Privacy";
+
+const LEGAL_PATHS = ["/terms", "/privacy"];
 
 const RedirectToUsername = () => {
   const navigate = useNavigate();
@@ -39,43 +43,58 @@ const RedirectToUsername = () => {
   return null;
 };
 
+function AppLayout() {
+  const { pathname } = useLocation();
+  const isLegalPage = LEGAL_PATHS.includes(pathname);
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <RedirectToUsername />
+      <Navbar />
+
+      <main className="flex-1">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <>
+                <Hero />
+                <Compatibility />
+              </>
+            }
+          />
+          <Route path="/compatibilityRoast" element={<CompatiblityRoast />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/:username" element={<Roast />} />
+        </Routes>
+
+        {!isLegalPage && (
+          <>
+            <About />
+            <Faq />
+          </>
+        )}
+      </main>
+
+      <SiteFooter />
+
+      {/* Mobile floating controls */}
+      <div className="fixed bottom-4 right-4 z-50 opacity-80 md:hidden">
+        <ModeToggle />
+      </div>
+      <div className="fixed bottom-4 left-4 z-50 md:hidden">
+        <AvatarCirclesDemo />
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <BrowserRouter>
-        <div className="min-h-screen flex flex-col">
-          <RedirectToUsername />
-          <Navbar />
-
-          <main className="flex-1">
-            <Routes>
-              <Route
-                path="/"
-                element={
-                  <>
-                    <Hero />
-                    <Compatibility />
-                  </>
-                }
-              />
-              <Route path="/:username" element={<Roast />} />
-              <Route path="/compatibilityRoast" element={<CompatiblityRoast />} />
-            </Routes>
-
-            <About />
-            <Faq />
-          </main>
-
-          <SiteFooter />
-
-          {/* Mobile floating controls */}
-          <div className="fixed bottom-4 right-4 z-50 opacity-80 md:hidden">
-            <ModeToggle />
-          </div>
-          <div className="fixed bottom-4 left-4 z-50 md:hidden">
-            <AvatarCirclesDemo />
-          </div>
-        </div>
+        <AppLayout />
       </BrowserRouter>
     </ThemeProvider>
   );

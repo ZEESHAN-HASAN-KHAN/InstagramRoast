@@ -67,8 +67,17 @@ export function Roast() {
   }, [username]);
 
   if (!received) {
+    const loadingUrl = `https://instaroasts.com/${username}`;
     return (
       <div className="relative overflow-hidden px-6 py-12">
+        <Helmet>
+          <title>Roast of @{username} — InstaRoasts</title>
+          <meta name="description" content={`AI-generated roast of @${username} on InstaRoasts — drop any Instagram handle and get roasted in seconds.`} />
+          <link rel="canonical" href={loadingUrl} />
+          <meta property="og:url" content={loadingUrl} />
+          <meta property="og:title" content={`Roast of @${username} — InstaRoasts`} />
+          <meta name="robots" content="index, follow" />
+        </Helmet>
         <div className="max-w-3xl mx-auto space-y-10">
           {/* Profile skeleton */}
           <div className="bg-card border-2 border-foreground rounded-3xl p-6 md:p-8 shadow-brutal animate-pulse">

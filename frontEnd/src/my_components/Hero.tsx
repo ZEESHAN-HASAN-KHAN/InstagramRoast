@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet";
 import { SelectDemo } from "./SelectDemo";
 import { createToken } from "@/lib/utils";
 import NumberTicker from "@/components/ui/number-ticker";
@@ -36,6 +37,12 @@ export function Hero() {
 
   return (
     <section className="relative pt-16 pb-24 px-6 overflow-hidden">
+      <Helmet>
+        <title>InstaRoasts — AI Roasts Your Instagram Profile</title>
+        <link rel="canonical" href="https://instaroasts.com/" />
+        <meta property="og:url" content="https://instaroasts.com/" />
+        <meta name="twitter:url" content="https://instaroasts.com/" />
+      </Helmet>
       {/* Background blobs */}
       <div className="pointer-events-none absolute -top-20 -left-20 size-72 rounded-full bg-primary/20 blur-3xl" />
       <div className="pointer-events-none absolute top-20 -right-20 size-72 rounded-full bg-accent/20 blur-3xl" />

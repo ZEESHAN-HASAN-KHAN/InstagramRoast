@@ -5,6 +5,16 @@ const logger = require("./logger");
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
+// Thrown when a source directly confirms the account doesn't exist (as opposed
+// to being rate-limited/unreachable), so callers can show a "not found" message
+// instead of a generic failure.
+class ProfileNotFoundError extends Error {
+  constructor(username) {
+    super(`Instagram profile @${username} not found`);
+    this.name = "ProfileNotFoundError";
+  }
+}
+
 const getRapidAPIKeys = () => {
   const multi = process.env.X_RAPIDAPI_KEYS;
   if (multi) return multi.split(",").map((k) => k.trim()).filter(Boolean);
@@ -23,6 +33,10 @@ const getInstagramProfileFromScrapper = async (username) => {
   const response = await fetch(url, { method: "GET" });
 
   logger.info(`[Instagram API] Scrapper fallback responded`, { status: response.status });
+
+  if (response.status === 404) {
+    throw new ProfileNotFoundError(username);
+  }
 
   if (!response.ok) {
     throw new Error(`Scrapper fallback failed with status ${response.status}`);
@@ -98,6 +112,7 @@ const getInstagramProfile = async (username) => {
   try {
     return await getInstagramProfileFromScrapper(username);
   } catch (err) {
+    if (err instanceof ProfileNotFoundError) throw err;
     logger.error(`[Instagram API] Scrapper fallback threw`, { error: err.message });
     errors.push({ source: "scrapper", error: err.message });
   }
@@ -164,4 +179,5 @@ module.exports = {
   getInstagramProfile,
   generateAIRoast,
   generateAICompatiblityRoast,
+  ProfileNotFoundError,
 };

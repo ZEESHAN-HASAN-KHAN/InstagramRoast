@@ -111,12 +111,23 @@ export function Roast() {
   }, [received]);
 
   if (status === "failed") {
+    const [code, ...rest] = (error ?? "").split(": ");
+    const isNotFound = code === "NOT_FOUND";
+    const detail = rest.join(": ");
+
     return (
-      <div className="max-w-3xl mx-auto px-6 py-12 text-center space-y-4">
-        <p className="text-lg font-bold">😬 something went wrong roasting @{username}</p>
-        <p className="text-sm text-muted-foreground">{error}</p>
-        <Link to="/" className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-4 py-2 text-sm font-bold">
-          ← try again
+      <div className="max-w-3xl mx-auto px-6 py-16 text-center space-y-6">
+        <div className="text-7xl animate-bounce">{isNotFound ? "🕵️‍♂️" : "🥵"}</div>
+        <h1 className="text-2xl md:text-3xl font-serif font-bold italic text-balance">
+          {isNotFound ? <>couldn't find @{username} anywhere</> : "our roast chefs are overwhelmed"}
+        </h1>
+        <p className="text-sm text-muted-foreground max-w-md mx-auto">
+          {isNotFound
+            ? "double-check the username — it might be misspelled, deactivated, or private."
+            : detail || "give it a minute and try again."}
+        </p>
+        <Link to="/" className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-4 py-2 text-sm font-bold hover:-translate-y-0.5 transition-all shadow-[3px_3px_0_0_hsl(0_0%_8%)]">
+          ← try another username
         </Link>
       </div>
     );

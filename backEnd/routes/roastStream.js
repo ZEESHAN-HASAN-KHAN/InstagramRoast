@@ -16,6 +16,17 @@ const { publishJobUpdate, subscribeToJob } = require("../database/pubsub");
 const { acquire: acquireSlot } = require("../worker/concurrencyLimiter");
 const { processSingleRoastJob } = require("../worker/processSingleRoastJob");
 const { processCompatibilityRoastJob } = require("../worker/processCompatibilityRoastJob");
+const { ProfileNotFoundError } = require("../helpers/apiHelper");
+
+// Maps a caught error to a short code the frontend can key off of, plus a
+// clean user-facing message. Raw error text (stack traces, provider JSON
+// blobs) stays in the server logs only — never sent to the client.
+function toUserFacingFailure(error) {
+  if (error instanceof ProfileNotFoundError) {
+    return { code: "NOT_FOUND", message: "NOT_FOUND: that Instagram profile doesn't exist or is private" };
+  }
+  return { code: "UNAVAILABLE", message: "UNAVAILABLE: our roast servers are getting hammered right now — try again in a bit" };
+}
 
 const TERMINAL_STATUSES = ["done", "failed", "cancelled"];
 
@@ -157,7 +168,8 @@ roastStreamRouter.get("/roastStream/:jobId", async (req, res) => {
       await publishJobUpdate(jobId, cancelledRow);
     } else {
       logger.error("Roast job processing failed", { jobId, error: error.message, stack: error.stack });
-      const failedRow = await failRoastJob(jobId, error.message);
+      const { message } = toUserFacingFailure(error);
+      const failedRow = await failRoastJob(jobId, message);
       await publishJobUpdate(jobId, failedRow);
     }
   }

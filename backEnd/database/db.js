@@ -187,10 +187,17 @@ async function addUser(
 ) {
   try {
     const result = await pool.query(
-      `INSERT INTO profiles 
-                (profile_pic_url, username, full_name, follower, following, biography, post) 
-             VALUES 
-                ($1, $2, $3, $4, $5, $6, $7) 
+      `INSERT INTO profiles
+                (profile_pic_url, username, full_name, follower, following, biography, post)
+             VALUES
+                ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT (username) DO UPDATE SET
+                profile_pic_url = EXCLUDED.profile_pic_url,
+                full_name = EXCLUDED.full_name,
+                follower = EXCLUDED.follower,
+                following = EXCLUDED.following,
+                biography = EXCLUDED.biography,
+                post = EXCLUDED.post
              RETURNING *;`,
       [profilePicUrl, username, fullName, follower, following, biography, post]
     );

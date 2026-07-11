@@ -1,7 +1,7 @@
-const { Client } = require("pg");
+const { Pool } = require("pg");
 const logger = require("../helpers/logger");
 
-const client = new Client({
+const pool = new Pool({
   connectionString: process.env.DB,
   ssl: {
     rejectUnauthorized: false, // For self-signed certificates
@@ -10,7 +10,7 @@ const client = new Client({
 
 async function getUserData(username) {
   try {
-    const result = await client.query(
+    const result = await pool.query(
       `SELECT
         id,
          profile_pic_url, 
@@ -41,10 +41,10 @@ async function getUserData(username) {
 async function dbConnect() {
   logger.info("Attempting to connect to the database");
   try {
-    await client.connect();
+    await pool.query("SELECT 1");
     logger.info("Database connected");
 
-    const result = await client.query(`
+    const result = await pool.query(`
                       CREATE TABLE IF NOT EXISTS profiles (
                   id SERIAL PRIMARY KEY,
                   profile_pic_url TEXT,
@@ -59,7 +59,7 @@ async function dbConnect() {
               );
   
           `);
-    const result2 = await client.query(`
+    const result2 = await pool.query(`
               CREATE TABLE IF NOT EXISTS ai_responses (
                   id SERIAL PRIMARY KEY,
                   profile_id INTEGER NOT NULL,
@@ -69,7 +69,7 @@ async function dbConnect() {
                   FOREIGN KEY (profile_id) REFERENCES profiles (id) ON DELETE CASCADE
               );
           `);
-    const result3 = await client.query(`
+    const result3 = await pool.query(`
       CREATE TABLE IF NOT EXISTS compatibility_responses (
         id SERIAL PRIMARY KEY,
         profile_id_1 INTEGER NOT NULL,
@@ -82,6 +82,41 @@ async function dbConnect() {
         FOREIGN KEY (profile_id_2) REFERENCES profiles (id) ON DELETE CASCADE
       );
     `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS roast_jobs (
+        id              UUID PRIMARY KEY,
+        job_type        VARCHAR(20) NOT NULL CHECK (job_type IN ('single','compatibility')),
+        status          VARCHAR(20) NOT NULL DEFAULT 'queued'
+                          CHECK (status IN ('queued','processing','done','failed','cancelled')),
+        stage           VARCHAR(40),
+        stage_index     INTEGER DEFAULT 0,
+        total_stages    INTEGER,
+        stage_message   TEXT,
+        username        VARCHAR(50),
+        username_2      VARCHAR(50),
+        language        VARCHAR(20) NOT NULL,
+        cancellation_requested BOOLEAN NOT NULL DEFAULT false,
+        result          JSONB,
+        error_message   TEXT,
+        locked_by       TEXT,
+        locked_at       TIMESTAMP WITH TIME ZONE,
+        created_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_roast_jobs_queued ON roast_jobs (created_at) WHERE status = 'queued';
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_roast_jobs_stale ON roast_jobs (locked_at) WHERE status = 'processing';
+    `);
+
+    // Requeue anything left stranded in 'processing' by an instance that died mid-job
+    // (deploy rollover, crash) — no long-lived background process to rely on completing cleanly.
+    await pool.query(`
+      UPDATE roast_jobs SET status = 'queued', locked_by = NULL
+      WHERE status = 'processing' AND locked_at < now() - interval '5 minutes';
+    `);
   } catch (err) {
     logger.critical("Failed to connect to the database", { error: err.message });
   }
@@ -89,7 +124,7 @@ async function dbConnect() {
 
 async function getAIResponse(username, language) {
   try {
-    const result = await client.query(
+    const result = await pool.query(
       `SELECT ar.response_text
              FROM ai_responses ar
              JOIN profiles p ON ar.profile_id = p.id
@@ -106,7 +141,7 @@ async function getAIResponse(username, language) {
 const checkCompatibilityResponse = async (profileId1, profileId2, language) => {
   try {
     // Query the database to find the compatibility response
-    const result = await client.query(
+    const result = await pool.query(
       `
       SELECT cm.compatibility_text
       FROM compatibility_responses cm
@@ -151,7 +186,7 @@ async function addUser(
   post
 ) {
   try {
-    const result = await client.query(
+    const result = await pool.query(
       `INSERT INTO profiles 
                 (profile_pic_url, username, full_name, follower, following, biography, post) 
              VALUES 
@@ -169,7 +204,7 @@ async function addUser(
 }
 async function checkUserExists(username) {
   try {
-    const result = await client.query(
+    const result = await pool.query(
       `SELECT * FROM profiles WHERE username = $1;`,
       [username]
     );
@@ -189,7 +224,7 @@ async function checkUserExists(username) {
 async function addAIResponse(username, responseText, language) {
   try {
     // Step 1: Get the profile ID for the given username
-    const profileResult = await client.query(
+    const profileResult = await pool.query(
       `SELECT id FROM profiles WHERE username = $1;`,
       [username]
     );
@@ -201,7 +236,7 @@ async function addAIResponse(username, responseText, language) {
     const profileId = profileResult.rows[0].id;
 
     // Step 2: Insert AI response into the ai_responses table
-    const insertResult = await client.query(
+    const insertResult = await pool.query(
       `INSERT INTO ai_responses (profile_id, response_text, language)
              VALUES ($1, $2, $3)
              RETURNING *;`,
@@ -224,11 +259,11 @@ async function addCompatiblityResponse(
 ) {
   try {
     // Step 1: Get the profile ID for the given username
-    const profileResult1 = await client.query(
+    const profileResult1 = await pool.query(
       `SELECT id FROM profiles WHERE username = $1;`,
       [username1]
     );
-    const profileResult2 = await client.query(
+    const profileResult2 = await pool.query(
       `SELECT id FROM profiles WHERE username = $1;`,
       [username2]
     );
@@ -240,7 +275,7 @@ async function addCompatiblityResponse(
     const profileId2 = profileResult2.rows[0].id;
 
     // Step 2: Insert AI response into the ai_responses table
-    const insertResult = await client.query(
+    const insertResult = await pool.query(
       `INSERT INTO compatibility_responses (profile_id_1,profile_id_2, compatibility_text,language)
              VALUES ($1, $2, $3,$4)
              RETURNING *;`,
@@ -257,7 +292,7 @@ async function addCompatiblityResponse(
 async function profilesRoasted() {
   try {
     // Assuming you are using a PostgreSQL client like 'pg'
-    const result = await client.query(
+    const result = await pool.query(
       "SELECT COUNT(*) AS count FROM profiles;"
     );
     const count = result.rows[0].count; // Extract the count value
@@ -270,6 +305,7 @@ async function profilesRoasted() {
 }
 
 module.exports = {
+  pool,
   dbConnect,
   addUser,
   checkUserExists,

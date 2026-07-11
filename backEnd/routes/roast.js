@@ -2,23 +2,15 @@ require("dotenv").config();
 const express = require("express");
 const roastRouter = express.Router();
 const logger = require("../helpers/logger");
-const fetch = (...args) =>
-  import("node-fetch").then(({ default: fetch }) => fetch(...args));
 const {
-  addUser,
-  getAIResponse,
-  addAIResponse,
-  getUserData,
   profilesRoasted,
-  addCompatiblityResponse,
+  getUserData,
+  getAIResponse,
   checkCompatibilityResponse,
 } = require("../database/db");
-const {
-  generateAIRoast,
-  getInstagramProfile,
-  generateAICompatiblityRoast,
-} = require("../helpers/apiHelper");
-const { uploadImage } = require("../helpers/storageHelper");
+const { createRoastJob, requeueStaleJobs } = require("../database/roastJobs");
+const { mintStreamToken } = require("../helpers/streamToken");
+const { publishJobUpdate } = require("../database/pubsub");
 
 roastRouter.get("/roastCount", async (req, res) => {
   try {
@@ -38,7 +30,10 @@ roastRouter.get("/roastCount", async (req, res) => {
 roastRouter.post("/roastMe", async (req, res) => {
   const name = req.body.name;
   const language = req.body.language;
-  //Check the language
+
+  if (!name) {
+    return res.status(400).json({ message: "Username is required" });
+  }
   const allowedLanguage = process.env.ALLOWED_LANGUAGE.split(",");
   if (!allowedLanguage.includes(language)) {
     return res.status(500).json({
@@ -47,85 +42,37 @@ roastRouter.post("/roastMe", async (req, res) => {
   }
 
   try {
-    // Get the Instagram profile data from database
-    const result = await getUserData(name);
     const bucketName = process.env.BUCKET_NAME;
-    // if data is present in database
-    if (result) {
-      logger.info("Cache hit: profile already in DB", { username: name });
-      result.profile_pic_url = `https://storage.googleapis.com/${bucketName}/${result.profile_pic_url}`;
 
-      // Fetch the AI response from the table and return it
+    // Fully cached (profile + roast for this language already exist): answer
+    // immediately, no queue/SSE round-trip needed for something that costs
+    // nothing to fetch.
+    const profile = await getUserData(name);
+    if (profile) {
       const aiResponse = await getAIResponse(name, language);
       if (aiResponse) {
         return res.status(200).json({
-          insta_data: result,
-          data: aiResponse.response_text,
-        });
-      } else {
-        // generate AI response and return it
-        const roast = await generateAIRoast(
-          // Create a copy of the result object excluding profile_pic_url
-          (() => {
-            const { profile_pic_url, ...rest } = result; // Destructure to exclude profile_pic_url
-            return rest; // Return the remaining object
-          })(),
-          result.profile_pic_url,
-          language
-        );
-        addAIResponse(name, roast, language);
-        return res.status(200).json({
-          insta_data: result,
-          data: roast,
+          done: true,
+          result: {
+            insta_data: {
+              ...profile,
+              profile_pic_url: `https://storage.googleapis.com/${bucketName}/${profile.profile_pic_url}`,
+            },
+            data: aiResponse.response_text,
+          },
         });
       }
     }
 
-    // Fetch the Instagram profile data
-    const roastData = await getInstagramProfile(name);
-
-    // Download the profile picture to memory
-    const profileUrl = roastData.profile_pic_url;
-    const imageResponse = await fetch(profileUrl);
-
-    // Convert the image response to a Buffer
-    if (!imageResponse.ok) {
-      throw new Error(
-        `Failed to fetch profile picture: ${imageResponse.statusText}`
-      );
-    }
-    const arrayBuffer = await imageResponse.arrayBuffer();
-    const imageBuffer = Buffer.from(arrayBuffer);
-    const fileName = await uploadImage(imageBuffer);
-    const gcsProfileUrl = `https://storage.googleapis.com/${bucketName}/${fileName}`;
-
-    await addUser(
-      fileName,
-      roastData.username,
-      roastData.full_name,
-      roastData.follower,
-      roastData.following,
-      roastData.biography,
-      roastData.post
+    // Cache miss (new profile, or profile cached but not yet roasted in this
+    // language) — needs real scrape/LLM work, goes through the queue+SSE flow.
+    requeueStaleJobs(); // opportunistic backstop, not awaited on the hot path
+    const job = await createRoastJob({ jobType: "single", username: name, language });
+    const streamToken = mintStreamToken(job.id);
+    publishJobUpdate(job.id, job).catch((error) =>
+      logger.error("Failed to publish job update", { error: error.message })
     );
-
-    // roast instagram profile data
-    const roast = await generateAIRoast(
-      () => {
-        const { profile_pic_url, ...rest } = roastData; // Destructure to exclude profile_pic_url
-        return rest; // Return the remaining object
-      },
-      roastData.profile_pic_url,
-      language
-    );
-    // Update roastData with the GCS URL
-    roastData.profile_pic_url = gcsProfileUrl;
-    addAIResponse(name, roast, language);
-
-    return res.status(200).json({
-      insta_data: roastData,
-      data: roast,
-    });
+    return res.status(202).json({ done: false, jobId: job.id, streamToken });
   } catch (e) {
     logger.error("Error in /roastMe", { error: e.message, stack: e.stack });
     return res.status(500).json({ error: "Something went wrong" });
@@ -135,7 +82,6 @@ roastRouter.post("/roastMe", async (req, res) => {
 // Route for check Compatibility
 roastRouter.post("/compatibilityRoast", async (req, res) => {
   try {
-    const bucketName = process.env.BUCKET_NAME;
     const uname1 = req.body.uname1;
     const uname2 = req.body.uname2;
     if (
@@ -151,7 +97,6 @@ roastRouter.post("/compatibilityRoast", async (req, res) => {
     }
 
     const language = req.body.language;
-    //Check the language
     const allowedLanguage = process.env.ALLOWED_LANGUAGE.split(",");
     if (!allowedLanguage.includes(language)) {
       return res.status(500).json({
@@ -159,116 +104,46 @@ roastRouter.post("/compatibilityRoast", async (req, res) => {
       });
     }
 
-    let profileUrl1;
-    let profileUrl2;
-    let userData1 = await getUserData(uname1);
-    let userData2 = await getUserData(uname2);
-    if (userData1 != null && userData2 != null) {
-      const check = await checkCompatibilityResponse(
-        userData1.id,
-        userData2.id,
-        language
-      );
+    const bucketName = process.env.BUCKET_NAME;
+
+    // Fully cached (both profiles + a compatibility roast for this language
+    // pair already exist): answer immediately, no queue/SSE needed.
+    const userData1 = await getUserData(uname1);
+    const userData2 = await getUserData(uname2);
+    if (userData1 && userData2) {
+      const check = await checkCompatibilityResponse(userData1.id, userData2.id, language);
       if (check.success) {
-        userData1.profile_pic_url = `https://storage.googleapis.com/${bucketName}/${userData1.profile_pic_url}`;
-        userData2.profile_pic_url = `https://storage.googleapis.com/${bucketName}/${userData2.profile_pic_url}`;
         return res.status(200).json({
-          userData1: userData1,
-          userData2: userData2,
-          compatibilityText: check.compatibilityText,
+          done: true,
+          result: {
+            userData1: {
+              ...userData1,
+              profile_pic_url: `https://storage.googleapis.com/${bucketName}/${userData1.profile_pic_url}`,
+            },
+            userData2: {
+              ...userData2,
+              profile_pic_url: `https://storage.googleapis.com/${bucketName}/${userData2.profile_pic_url}`,
+            },
+            compatibilityText: check.compatibilityText,
+          },
         });
       }
     }
-    // if user data is not present in database
-    if (userData1 == null) {
-      userData1 = await getInstagramProfile(uname1);
 
-
-      // Download the profile picture to memory
-      profileUrl1 = userData1.profile_pic_url;
-      const imageResponse = await fetch(profileUrl1);
-
-      // Convert the image response to a Buffer
-      if (!imageResponse.ok) {
-        throw new Error(
-          `Failed to fetch profile picture: ${imageResponse.statusText}`
-        );
-      }
-      const arrayBuffer = await imageResponse.arrayBuffer();
-      const imageBuffer = Buffer.from(arrayBuffer);
-      const fileName = await uploadImage(imageBuffer);
-      userData1.profile_pic_url = fileName;
-
-      if (userData1.username) {
-        await addUser(
-          fileName,
-          userData1.username,
-          userData1.full_name,
-          userData1.follower,
-          userData1.following,
-          userData1.biography,
-          userData1.post
-        );
-      } else {
-        throw new Error("Invalid user data: username is null");
-      }
-    }
-    
-    if (userData2 == null) {
-      // return ivalid user name if we don't get the profile
-      userData2 = await getInstagramProfile(uname2);
-
-      // Download the profile picture to memory
-      profileUrl2 = userData2.profile_pic_url;
-      const imageResponse = await fetch(profileUrl2);
-
-      // Convert the image response to a Buffer
-      if (!imageResponse.ok) {
-        throw new Error(
-          `Failed to fetch profile picture: ${imageResponse.statusText}`
-        );
-      }
-      const arrayBuffer = await imageResponse.arrayBuffer();
-      const imageBuffer = Buffer.from(arrayBuffer);
-      const fileName = await uploadImage(imageBuffer);
-      userData2.profile_pic_url = fileName;
-
-      if (userData2.username) {
-        await addUser(
-          fileName,
-          userData2.username,
-          userData2.full_name,
-          userData2.follower,
-          userData2.following,
-          userData2.biography,
-          userData2.post
-        );
-      } else {
-        throw new Error("Invalid user data: username is null");
-      }
-    }
-
-    const compatibilityText = await generateAICompatiblityRoast(
-      // remove id and profile_pic_url from the object
-      (() => {
-        const { id, profile_pic_url, ...rest } = userData1;
-        return rest;
-      })(),
-      (() => {
-        const { id, profile_pic_url, ...rest } = userData2;
-        return rest;
-      })(),
-      language
-    );
-
-    await addCompatiblityResponse(uname1, uname2, compatibilityText, language);
-    userData1.profile_pic_url = `https://storage.googleapis.com/${bucketName}/${userData1.profile_pic_url}`;
-    userData2.profile_pic_url = `https://storage.googleapis.com/${bucketName}/${userData2.profile_pic_url}`;
-    return res.status(200).json({
-      userData1: userData1,
-      userData2: userData2,
-      compatibilityText: compatibilityText,
+    // Cache miss on at least one profile or the pairing — needs real
+    // scrape/LLM work, goes through the queue+SSE flow.
+    requeueStaleJobs(); // opportunistic backstop, not awaited on the hot path
+    const job = await createRoastJob({
+      jobType: "compatibility",
+      username: uname1,
+      username2: uname2,
+      language,
     });
+    const streamToken = mintStreamToken(job.id);
+    publishJobUpdate(job.id, job).catch((error) =>
+      logger.error("Failed to publish job update", { error: error.message })
+    );
+    return res.status(202).json({ done: false, jobId: job.id, streamToken });
   } catch (error) {
     logger.error("Error in /compatibilityRoast", { error: error.message, stack: error.stack });
     return res.status(500).json({ error: "Internal Server Error" });

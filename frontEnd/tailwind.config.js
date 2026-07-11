@@ -29,6 +29,7 @@ export default {
         float: "float 6s ease-in-out infinite",
         reveal: "reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) both",
         "pulse-dot": "pulse-dot 1.6s ease-in-out infinite",
+        pop: "pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both",
       },
       keyframes: {
         gradient: {
@@ -78,6 +79,11 @@ export default {
         "pulse-dot": {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.3" },
+        },
+        pop: {
+          "0%": { transform: "scale(0)" },
+          "80%": { transform: "scale(1.2)" },
+          "100%": { transform: "scale(1)" },
         },
       },
       borderRadius: {

@@ -2,12 +2,15 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useLocation, Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { createToken } from "@/lib/utils";
+import { useRoastJobStream } from "@/hooks/useRoastJobStream";
+import { usePacedIndex } from "@/hooks/usePacedIndex";
 import type { ConfettiRef } from "@/components/ui/confetti";
 import Confetti from "@/components/ui/confetti";
 import { ProfileCard } from "./ProfileCard";
 import { RoastCard } from "./RoastCard";
 import { ShareBar } from "./ShareBar";
 import { AdBanner } from "./AdBanner";
+import { RoastProgress } from "./RoastProgress";
 
 interface InstagramData {
   insta_data: {
@@ -22,22 +25,69 @@ interface InstagramData {
   data: string;
 }
 
+// Which loading-ladder step each backend stage belongs to. Unknown stages fall
+// back to step 0 rather than crashing the ladder.
+const STAGE_TO_STEP: Record<string, number> = {
+  queued_for_processing: 0,
+  checking_cache: 0,
+  scraping_profile: 1,
+  uploading_image: 1,
+  saving_profile: 1,
+  profile_ready: 2,
+  generating_roast: 3,
+  saving_roast: 3,
+};
+
+function toProfileCardProps(insta_data: InstagramData["insta_data"]) {
+  return {
+    handle: insta_data.username,
+    displayName: insta_data.full_name,
+    avatarUrl: insta_data.profile_pic_url,
+    posts: insta_data.post,
+    followers: insta_data.follower,
+    following: insta_data.following,
+    bio: insta_data.biography,
+  };
+}
+
 export function Roast() {
   const confettiRef = useRef<ConfettiRef>(null);
 
   const { username } = useParams();
   const searchParams = new URLSearchParams(useLocation().search);
   const ln = searchParams.get("language") || "english";
-  const [userData, setUserData] = useState<InstagramData | null>(null);
-  const [roastData, setRoastData] = useState("");
-  const [received, setReceived] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
+  const { status, stage, stageMessage, partial, result, error, cached, start } = useRoastJobStream<InstagramData>();
 
-  const getData = async () => {
-    try {
-      const apiUrl = import.meta.env.VITE_APP_BASE_URL;
+  const loadingSteps = [
+    { icon: "🔍", label: `finding @${username} on Instagram` },
+    { icon: "📡", label: "fetching the account" },
+    { icon: "🧠", label: "AI reading the vibes" },
+    { icon: "🌶️", label: "roasting mercilessly" },
+    { icon: "🍽️", label: "serving it hot" },
+  ];
+  // Real progress → ladder step; the paced index walks toward it one visible
+  // beat at a time so fast jobs still show every stage.
+  const targetStep = status === "done" ? loadingSteps.length : STAGE_TO_STEP[stage ?? ""] ?? 0;
+  const displayedStep = usePacedIndex(targetStep, username);
+
+  // Hold the loading screen until the ladder finishes its last beat, even if
+  // the result already arrived — the payoff lands harder after the build-up.
+  // Exception: a fully-cached roast skips the animation and loads instantly.
+  const received = status === "done" && (cached || displayedStep >= loadingSteps.length);
+  const userData = result;
+  const roastData = result?.data ?? "";
+  const liveInstaData = partial?.insta_data ?? null;
+  // Reveal the real profile card only once the ladder reaches the "AI reading
+  // the vibes" step, so the card appearing reads as that step's reward.
+  const showLiveProfile = liveInstaData !== null && displayedStep >= 2;
+
+  useEffect(() => {
+    if (username) document.title = `Roast of ${username} 🔥`;
+    const apiUrl = import.meta.env.VITE_APP_BASE_URL;
+    start(async () => {
       const token = await createToken();
-      const result = await fetch(apiUrl + "/api/v1/roastMe", {
+      const response = await fetch(apiUrl + "/api/v1/roastMe", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -46,25 +96,31 @@ export function Roast() {
         },
         body: JSON.stringify({ name: username, language: ln }),
       });
-      if (!result.ok) throw new Error(`HTTP error! status: ${result.status}`);
-      const data: InstagramData = await result.json();
-      setRoastData(data.data);
-      setUserData(data);
-      setIsRunning(true);
-      setTimeout(() => setIsRunning(false), 5000);
-      setReceived(true);
-    } catch (error) {
-      console.error("Error:", error);
-    }
-  };
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return response.json();
+    }, apiUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [username]);
 
   useEffect(() => {
-    if (username) document.title = `Roast of ${username} 🔥`;
-    setUserData(null);
-    setRoastData("");
-    setReceived(false);
-    getData();
-  }, [username]);
+    if (received) {
+      setIsRunning(true);
+      const timeout = setTimeout(() => setIsRunning(false), 5000);
+      return () => clearTimeout(timeout);
+    }
+  }, [received]);
+
+  if (status === "failed") {
+    return (
+      <div className="max-w-3xl mx-auto px-6 py-12 text-center space-y-4">
+        <p className="text-lg font-bold">😬 something went wrong roasting @{username}</p>
+        <p className="text-sm text-muted-foreground">{error}</p>
+        <Link to="/" className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-4 py-2 text-sm font-bold">
+          ← try again
+        </Link>
+      </div>
+    );
+  }
 
   if (!received) {
     const loadingUrl = `https://instaroasts.com/${username}`;
@@ -79,22 +135,31 @@ export function Roast() {
           <meta name="robots" content="index, follow" />
         </Helmet>
         <div className="max-w-3xl mx-auto space-y-10">
-          {/* Profile skeleton */}
-          <div className="bg-card border-2 border-foreground rounded-3xl p-6 md:p-8 shadow-brutal animate-pulse">
-            <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
-              <div className="size-28 rounded-full bg-muted border-2 border-foreground shrink-0" />
-              <div className="flex-1 w-full space-y-3">
-                <div className="h-6 bg-muted rounded-xl w-40" />
-                <div className="h-8 bg-muted rounded-xl w-56" />
-                <div className="flex gap-2 mt-4">
-                  <div className="h-8 bg-muted rounded-full w-20" />
-                  <div className="h-8 bg-muted rounded-full w-24" />
-                  <div className="h-8 bg-muted rounded-full w-22" />
+          {/* Loading ladder: paced through every stage for the build-up */}
+          <RoastProgress steps={loadingSteps} activeIndex={displayedStep} />
+
+          {/* Profile: real card once scraped AND the ladder caught up, skeleton until then */}
+          {showLiveProfile && liveInstaData ? (
+            <div className="animate-reveal">
+              <ProfileCard profile={toProfileCardProps(liveInstaData)} />
+            </div>
+          ) : (
+            <div className="bg-card border-2 border-foreground rounded-3xl p-6 md:p-8 shadow-brutal animate-pulse">
+              <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
+                <div className="size-28 rounded-full bg-muted border-2 border-foreground shrink-0" />
+                <div className="flex-1 w-full space-y-3">
+                  <div className="h-6 bg-muted rounded-xl w-40" />
+                  <div className="h-8 bg-muted rounded-xl w-56" />
+                  <div className="flex gap-2 mt-4">
+                    <div className="h-8 bg-muted rounded-full w-20" />
+                    <div className="h-8 bg-muted rounded-full w-24" />
+                    <div className="h-8 bg-muted rounded-full w-22" />
+                  </div>
+                  <div className="h-4 bg-muted rounded w-full" />
                 </div>
-                <div className="h-4 bg-muted rounded w-full" />
               </div>
             </div>
-          </div>
+          )}
           {/* Roast card skeleton */}
           <div className="bg-card border-2 border-foreground rounded-3xl p-8 shadow-brutal animate-pulse space-y-3">
             <div className="h-6 bg-muted rounded-xl w-32" />
@@ -105,7 +170,7 @@ export function Roast() {
             <div className="h-5 bg-muted rounded w-[75%]" />
           </div>
           <p className="text-center text-sm text-muted-foreground italic">
-            ⏳ crafting your roast… this takes ~10-20 seconds
+            {stageMessage || "⏳ crafting your roast… hang tight"}
           </p>
         </div>
       </div>
@@ -115,15 +180,7 @@ export function Roast() {
   if (!userData) return null;
 
   const { insta_data } = userData;
-  const profile = {
-    handle: insta_data.username,
-    displayName: insta_data.full_name,
-    avatarUrl: insta_data.profile_pic_url,
-    posts: insta_data.post,
-    followers: insta_data.follower,
-    following: insta_data.following,
-    bio: insta_data.biography,
-  };
+  const profile = toProfileCardProps(insta_data);
   const shareTitle = `Here is the roast for ${insta_data.full_name} @${insta_data.username} 🔥`;
 
   const roastSnippet = roastData.substring(0, 200).replace(/[#*_`]/g, "");

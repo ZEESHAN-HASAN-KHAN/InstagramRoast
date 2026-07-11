@@ -13,6 +13,34 @@ const getRapidAPIKeys = () => {
   return [];
 };
 
+// Final fallback: self-hosted Playwright scraper on Cloud Run. Used only when
+// every RapidAPI key has failed. Returns the same shape as getInstagramProfile.
+const getInstagramProfileFromScrapper = async (username) => {
+  const base = process.env.SCRAPPER_FALLBACK_URL;
+  if (!base) throw new Error("SCRAPPER_FALLBACK_URL not configured");
+
+  const url = `${base.replace(/\/$/, "")}/profile/${encodeURIComponent(username)}`;
+  const response = await fetch(url, { method: "GET" });
+
+  logger.info(`[Instagram API] Scrapper fallback responded`, { status: response.status });
+
+  if (!response.ok) {
+    throw new Error(`Scrapper fallback failed with status ${response.status}`);
+  }
+
+  const result = await response.json();
+  return {
+    full_name: result.full_name,
+    username: result.username,
+    follower: result.follower_count,
+    following: result.following_count,
+    isPrivate: result.is_private ?? false,
+    biography: result.biography,
+    post: result.media_count,
+    profile_pic_url: result.profile_pic_url_hd,
+  };
+};
+
 const getInstagramProfile = async (username) => {
   const keys = getRapidAPIKeys();
   if (keys.length === 0) throw new Error("No RapidAPI keys configured");
@@ -65,7 +93,16 @@ const getInstagramProfile = async (username) => {
     }
   }
 
-  throw new Error(`All RapidAPI keys failed: ${JSON.stringify(errors)}`);
+  // All RapidAPI keys exhausted — try the self-hosted scrapper as last resort.
+  logger.warning(`[Instagram API] All RapidAPI keys failed, trying scrapper fallback`, { errors });
+  try {
+    return await getInstagramProfileFromScrapper(username);
+  } catch (err) {
+    logger.error(`[Instagram API] Scrapper fallback threw`, { error: err.message });
+    errors.push({ source: "scrapper", error: err.message });
+  }
+
+  throw new Error(`All profile sources failed: ${JSON.stringify(errors)}`);
 };
 
 const generateAICompatiblityRoast = async (userData1, userData2, language) => {

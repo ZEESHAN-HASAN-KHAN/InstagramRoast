@@ -75,7 +75,7 @@ async function processSingleRoastJob(job, { onProgress }) {
   });
 
   await assertNotCancelled(jobId);
-  let roastText = (await getAIResponse(username, language))?.response_text;
+  let roastText = (await getAIResponse(profile.username, language))?.response_text;
 
   if (!roastText) {
     await onProgress("generating_roast", "asking the AI to roast you...");
@@ -84,7 +84,7 @@ async function processSingleRoastJob(job, { onProgress }) {
 
     await assertNotCancelled(jobId);
     await onProgress("saving_roast", "saving your roast...");
-    await addAIResponse(username, roastText, language);
+    await addAIResponse(profile.username, roastText, language);
   }
 
   return {

@@ -90,7 +90,7 @@ async function processCompatibilityRoastJob(job, { onProgress }) {
 
   await assertNotCancelled(jobId);
   await onProgress("saving_roast", "saving the verdict...");
-  await addCompatiblityResponse(uname1, uname2, compatibilityText, language);
+  await addCompatiblityResponse(userData1.username, userData2.username, compatibilityText, language);
 
   return {
     userData1: withGcsUrl(userData1),

@@ -52,7 +52,26 @@ const PROVIDER_CONFIGS = {
     apiKey: () => process.env.GROQ_API_KEY,
     model: () => process.env.GROQ_MODEL || "meta-llama/llama-4-scout-17b-16e-instruct",
     supportsVision: true,
+    // Groq-only: "hidden" drops the chain-of-thought from the response body.
+    // Only valid for reasoning models, so it stays opt-in via env.
+    extraParams: () =>
+      process.env.GROQ_REASONING_FORMAT
+        ? { reasoning_format: process.env.GROQ_REASONING_FORMAT }
+        : {},
   },
+};
+
+// Reasoning models (qwen3, deepseek-r1, ...) can leak their scratchpad into the
+// message body. Strip it so only the roast survives.
+const stripReasoning = (text) => {
+  if (typeof text !== "string") return text;
+  return text
+    .replace(/<(think|thinking|reasoning)>[\s\S]*?<\/\1>/gi, "")
+    // Unclosed opening tag: model got cut off mid-thought, drop everything after.
+    .replace(/<(think|thinking|reasoning)>[\s\S]*$/gi, "")
+    // Leading orphan close tag when the opening tag was never emitted.
+    .replace(/^[\s\S]*?<\/(think|thinking|reasoning)>/gi, "")
+    .trim();
 };
 
 const getProviderOrder = () => {
@@ -93,6 +112,7 @@ const callOpenAICompat = async (config, prompt, imageUrl) => {
   const completion = await client.chat.completions.create({
     model: config.model(),
     messages: [{ role: "user", content }],
+    ...(config.extraParams ? config.extraParams() : {}),
   });
   return completion.choices[0].message.content;
 };
@@ -131,7 +151,7 @@ const callLLM = async (prompt, imageUrl = null) => {
         result = await callOpenAICompat(config, prompt, imageUrl);
       }
       logger.info(`[LLM] Response from "${name}"`, { provider: name, model: config.model() });
-      return result;
+      return stripReasoning(result);
     } catch (err) {
       logger.error(`[LLM] Provider "${name}" failed`, { provider: name, error: err.message });
       errors.push({ provider: name, error: err.message });

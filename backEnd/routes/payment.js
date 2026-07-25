@@ -111,6 +111,7 @@ paymentRouter.post("/payment/verify", requireMonetization, async (req, res) => {
   }
 });
 
+
 // Lets the frontend show remaining balance without burning a roast. Reports the
 // switched-off state plainly rather than 403ing, so a client can tell "roasts
 // are free here" apart from "something broke".

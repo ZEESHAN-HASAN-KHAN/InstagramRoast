@@ -135,16 +135,13 @@ roastRouter.post("/roastMe", async (req, res) => {
   let jobId = null;
 
   try {
-    credit = await spendRoastCredit(req, { jobType: "single", username: name, language });
-    if (!credit.granted) {
-      return res.status(402).json(credit.payload);
-    }
-
     const bucketName = process.env.BUCKET_NAME;
 
-    // Fully cached (profile + roast for this language already exist): answer
-    // immediately, no queue/SSE round-trip needed for something that costs
-    // nothing to fetch.
+    // Cache lookup happens BEFORE the paywall: a roast that already exists costs
+    // nothing to serve, and charging for it would break shared links and the
+    // SEO landing pages — someone arriving from Google or WhatsApp would be
+    // paywalled out of a roast that's already public. Credits pay for
+    // *generating* roasts, which is where the scrape and LLM spend actually is.
     const profile = await getUserData(name);
     if (profile) {
       const aiResponse = await getAIResponse(name, language);
@@ -163,7 +160,13 @@ roastRouter.post("/roastMe", async (req, res) => {
     }
 
     // Cache miss (new profile, or profile cached but not yet roasted in this
-    // language) — needs real scrape/LLM work, goes through the queue+SSE flow.
+    // language) — this is the part that costs real money, so it's what the
+    // paywall guards.
+    credit = await spendRoastCredit(req, { jobType: "single", username: name, language });
+    if (!credit.granted) {
+      return res.status(402).json(credit.payload);
+    }
+
     requeueStaleJobs(); // opportunistic backstop, not awaited on the hot path
     expireAndRefundAbandonedJobs(); // ditto — returns credits for jobs nobody ever ran
     const job = await createRoastJob({
@@ -216,20 +219,11 @@ roastRouter.post("/compatibilityRoast", async (req, res) => {
       });
     }
 
-    credit = await spendRoastCredit(req, {
-      jobType: "compatibility",
-      username: uname1,
-      username2: uname2,
-      language,
-    });
-    if (!credit.granted) {
-      return res.status(402).json(credit.payload);
-    }
-
     const bucketName = process.env.BUCKET_NAME;
 
-    // Fully cached (both profiles + a compatibility roast for this language
-    // pair already exist): answer immediately, no queue/SSE needed.
+    // Cache lookup before the paywall, same reasoning as /roastMe: an existing
+    // pairing costs nothing to serve, and shared compatibility links should
+    // stay openable.
     const userData1 = await getUserData(uname1);
     const userData2 = await getUserData(uname2);
     if (userData1 && userData2) {
@@ -252,8 +246,18 @@ roastRouter.post("/compatibilityRoast", async (req, res) => {
       }
     }
 
-    // Cache miss on at least one profile or the pairing — needs real
-    // scrape/LLM work, goes through the queue+SSE flow.
+    // Cache miss on at least one profile or the pairing — the part that costs
+    // real money, so it's what the paywall guards.
+    credit = await spendRoastCredit(req, {
+      jobType: "compatibility",
+      username: uname1,
+      username2: uname2,
+      language,
+    });
+    if (!credit.granted) {
+      return res.status(402).json(credit.payload);
+    }
+
     requeueStaleJobs(); // opportunistic backstop, not awaited on the hot path
     expireAndRefundAbandonedJobs(); // ditto — returns credits for jobs nobody ever ran
     const job = await createRoastJob({

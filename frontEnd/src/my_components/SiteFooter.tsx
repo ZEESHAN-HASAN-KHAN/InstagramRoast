@@ -8,6 +8,7 @@ export function SiteFooter() {
         <div className="flex gap-8 text-xs uppercase tracking-widest font-bold">
           <Link to="/terms" className="hover:text-white transition-colors">Terms</Link>
           <Link to="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+          <Link to="/refund-policy" className="hover:text-white transition-colors">Refunds</Link>
           <a href="https://github.com/Arghya721" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a>
         </div>
         <div className="text-[10px] text-right">

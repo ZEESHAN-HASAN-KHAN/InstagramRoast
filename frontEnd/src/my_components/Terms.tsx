@@ -21,7 +21,7 @@ export function Terms() {
       </Link>
 
       <h1 className="text-4xl font-serif font-bold italic mb-2">Terms of Service</h1>
-      <p className="text-sm text-muted-foreground mb-10">Last updated: June 2026</p>
+      <p className="text-sm text-muted-foreground mb-10">Last updated: July 2026</p>
 
       <div className="prose prose-neutral dark:prose-invert max-w-none space-y-8 text-foreground/80 leading-relaxed">
 
@@ -51,37 +51,54 @@ export function Terms() {
         </section>
 
         <section>
-          <h2 className="text-xl font-bold text-foreground mb-2">4. Public Data Only</h2>
+          <h2 className="text-xl font-bold text-foreground mb-2">4. Payments &amp; Pricing</h2>
+          <p>
+            No account or sign-up is required to use InstaRoasts. Each visitor gets <strong>2 free roasts</strong>, tracked via an anonymous browser session (no personal information involved). Once used, unlocking <strong>2 additional roasts</strong> requires a one-time payment:
+          </p>
+          <ul className="list-disc ml-6 space-y-1 mt-2">
+            <li><strong>₹100 (INR)</strong> for customers in India</li>
+            <li><strong>$1.99 (USD)</strong> for customers outside India</li>
+          </ul>
+          <p className="mt-2">
+            Payments are processed securely by <strong>Razorpay</strong> via cards, UPI, or netbanking. This is a single one-time charge per purchase — InstaRoasts does not run subscriptions or store your card, UPI, or bank details; Razorpay handles and secures all payment instrument data.
+          </p>
+          <p className="mt-2">
+            Delivery is instant and fully digital: once payment is confirmed, your unlocked roasts are available immediately in your browser. There is no physical product and nothing is shipped. See our <Link to="/refund-policy" className="underline">Refund &amp; Cancellation Policy</Link> for details on failed or undelivered roasts.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-bold text-foreground mb-2">5. Public Data Only</h2>
           <p>
             InstaRoasts only processes publicly available Instagram profile data. We do not access private accounts, passwords, or any non-public information. By roasting a profile, you confirm the profile is public and you have a legitimate purpose for doing so.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-bold text-foreground mb-2">5. Disclaimer of Warranties</h2>
+          <h2 className="text-xl font-bold text-foreground mb-2">6. Disclaimer of Warranties</h2>
           <p>
             The Service is provided "as is" without warranties of any kind. Roast content is AI-generated and may be inaccurate, offensive, or nonsensical. InstaRoasts makes no guarantees about the accuracy or quality of generated content.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-bold text-foreground mb-2">6. Limitation of Liability</h2>
+          <h2 className="text-xl font-bold text-foreground mb-2">7. Limitation of Liability</h2>
           <p>
             To the maximum extent permitted by law, InstaRoasts and its creators shall not be liable for any indirect, incidental, or consequential damages arising from your use of the Service.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-bold text-foreground mb-2">7. Changes to Terms</h2>
+          <h2 className="text-xl font-bold text-foreground mb-2">8. Changes to Terms</h2>
           <p>
             We may update these Terms at any time. Continued use of the Service after changes constitutes acceptance of the new Terms.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-bold text-foreground mb-2">8. Contact</h2>
+          <h2 className="text-xl font-bold text-foreground mb-2">9. Contact</h2>
           <p>
-            Questions? Reach out via the GitHub repositories linked in the site footer.
+            Questions about these Terms, or about a payment? Reach out via the GitHub repositories linked in the site footer.
           </p>
         </section>
 

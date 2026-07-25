@@ -14,8 +14,9 @@ import { CompatiblityRoast } from "./my_components/CompatibilityRoast";
 import { SiteFooter } from "./my_components/SiteFooter";
 import { Terms } from "./my_components/Terms";
 import { Privacy } from "./my_components/Privacy";
+import { RefundPolicy } from "./my_components/RefundPolicy";
 
-const LEGAL_PATHS = ["/terms", "/privacy"];
+const LEGAL_PATHS = ["/terms", "/privacy", "/refund-policy"];
 
 const RedirectToUsername = () => {
   const navigate = useNavigate();
@@ -66,6 +67,7 @@ function AppLayout() {
           <Route path="/compatibilityRoast" element={<CompatiblityRoast />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/refund-policy" element={<RefundPolicy />} />
           <Route path="/:username" element={<Roast />} />
         </Routes>
 

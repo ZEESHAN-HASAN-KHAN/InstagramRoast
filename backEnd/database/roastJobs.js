@@ -2,13 +2,23 @@ const { v4: uuidv4 } = require("uuid");
 const { pool } = require("./db");
 const logger = require("../helpers/logger");
 
-async function createRoastJob({ jobType, username, username2 = null, language }) {
+// `sessionId`/`creditType` record who paid for this job and from which bucket,
+// so the credit can be handed back if the job never delivers a roast.
+async function createRoastJob({
+  jobType,
+  username,
+  username2 = null,
+  language,
+  sessionId = null,
+  creditType = null,
+  roastKey = null,
+}) {
   const id = uuidv4();
   const result = await pool.query(
-    `INSERT INTO roast_jobs (id, job_type, username, username_2, language, status)
-     VALUES ($1, $2, $3, $4, $5, 'queued')
+    `INSERT INTO roast_jobs (id, job_type, username, username_2, language, status, session_id, credit_type, roast_key)
+     VALUES ($1, $2, $3, $4, $5, 'queued', $6, $7, $8)
      RETURNING *;`,
-    [id, jobType, username, username2, language]
+    [id, jobType, username, username2, language, sessionId, creditType, roastKey]
   );
   return result.rows[0];
 }
@@ -81,6 +91,40 @@ async function cancelRoastJob(jobId) {
   return result.rows[0] || null;
 }
 
+// Cancels a job only while it's still waiting to be picked up. Atomic, so if a
+// worker claimed it a moment ago this matches nothing and the normal
+// cancellation path inside the stream handler deals with it instead.
+async function cancelQueuedRoastJob(jobId) {
+  const result = await pool.query(
+    `UPDATE roast_jobs
+     SET status = 'cancelled', updated_at = now()
+     WHERE id = $1 AND status = 'queued'
+     RETURNING *;`,
+    [jobId]
+  );
+  return result.rows[0] || null;
+}
+
+// Backstop for jobs enqueued by a client that never opened (or lost) its SSE
+// stream: nothing will ever process them, so they'd otherwise sit queued
+// forever holding a spent credit. Returns the ids so the caller can refund.
+async function expireAbandonedJobs() {
+  try {
+    const result = await pool.query(
+      `UPDATE roast_jobs
+       SET status = 'failed',
+           error_message = 'UNAVAILABLE: the roast was never picked up — please try again',
+           updated_at = now()
+       WHERE status = 'queued' AND created_at < now() - interval '10 minutes'
+       RETURNING id;`
+    );
+    return result.rows.map((row) => row.id);
+  } catch (error) {
+    logger.error("Error expiring abandoned roast jobs", { error: error.message });
+    return [];
+  }
+}
+
 async function requestCancelRoastJob(jobId) {
   await pool.query(
     `UPDATE roast_jobs
@@ -120,6 +164,8 @@ module.exports = {
   completeRoastJob,
   failRoastJob,
   cancelRoastJob,
+  cancelQueuedRoastJob,
+  expireAbandonedJobs,
   requestCancelRoastJob,
   isCancellationRequested,
   requeueStaleJobs,

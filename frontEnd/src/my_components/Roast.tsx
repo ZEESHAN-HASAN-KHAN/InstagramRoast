@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useLocation, Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
-import { createToken } from "@/lib/utils";
+import { enqueueRoast, apiUrl } from "@/lib/api";
 import { useRoastJobStream } from "@/hooks/useRoastJobStream";
+import { Paywall } from "./Paywall";
 import { usePacedIndex } from "@/hooks/usePacedIndex";
 import type { ConfettiRef } from "@/components/ui/confetti";
 import Confetti from "@/components/ui/confetti";
@@ -57,7 +58,8 @@ export function Roast() {
   const searchParams = new URLSearchParams(useLocation().search);
   const ln = searchParams.get("language") || "english";
   const [isRunning, setIsRunning] = useState(false);
-  const { status, stage, stageMessage, partial, result, error, cached, start } = useRoastJobStream<InstagramData>();
+  const { status, stage, stageMessage, partial, result, error, cached, paywallInfo, start } =
+    useRoastJobStream<InstagramData>();
 
   const loadingSteps = [
     { icon: "🔍", label: `finding @${username} on Instagram` },
@@ -82,23 +84,16 @@ export function Roast() {
   // the vibes" step, so the card appearing reads as that step's reward.
   const showLiveProfile = liveInstaData !== null && displayedStep >= 2;
 
+  // Shared by the initial run and the post-payment retry.
+  const runRoast = () =>
+    start(
+      () => enqueueRoast<InstagramData>("/api/v1/roastMe", { name: username, language: ln }),
+      apiUrl
+    );
+
   useEffect(() => {
     if (username) document.title = `Roast of ${username} 🔥`;
-    const apiUrl = import.meta.env.VITE_APP_BASE_URL;
-    start(async () => {
-      const token = await createToken();
-      const response = await fetch(apiUrl + "/api/v1/roastMe", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name: username, language: ln }),
-      });
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      return response.json();
-    }, apiUrl);
+    runRoast();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [username]);
 
@@ -109,6 +104,10 @@ export function Roast() {
       return () => clearTimeout(timeout);
     }
   }, [received]);
+
+  if (status === "paywall" && paywallInfo) {
+    return <Paywall info={paywallInfo} onUnlocked={runRoast} />;
+  }
 
   if (status === "failed") {
     const [code, ...rest] = (error ?? "").split(": ");

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type JobStatus = "idle" | "queued" | "progress" | "done" | "failed" | "cancelled";
+import type { PaywallInfo, EnqueueResponse } from "@/lib/api";
+
+type JobStatus = "idle" | "queued" | "progress" | "done" | "failed" | "cancelled" | "paywall";
 
 interface RoastJobState<TResult> {
   status: JobStatus;
@@ -15,14 +17,10 @@ interface RoastJobState<TResult> {
   // True when the enqueue endpoint answered with the full result immediately
   // (already roasted before) — the UI skips the staged loading animation.
   cached: boolean;
+  // Set when the visitor is out of roasts — carries the price/credit details the
+  // paywall modal renders from.
+  paywallInfo: PaywallInfo | null;
 }
-
-// The enqueue endpoint answers one of two ways: `done: true` for a fully
-// cached result (answered synchronously, no queue/SSE needed), or `done: false`
-// with a jobId/streamToken to open the SSE stream against for real work.
-type EnqueueResponse<TResult> =
-  | { done: true; result: TResult }
-  | { done: false; jobId: string; streamToken: string };
 
 const IDLE_STATE = {
   status: "idle" as const,
@@ -32,6 +30,7 @@ const IDLE_STATE = {
   result: null,
   error: null,
   cached: false,
+  paywallInfo: null,
 };
 
 // Shared plumbing for the queue+SSE roast flow: call `start` with a function that
@@ -83,6 +82,13 @@ export function useRoastJobStream<TResult>() {
       try {
         const response = await enqueue();
         if (isStale()) return;
+
+        // Out of roasts — no job was created, so there's no stream to open.
+        // Checked before `done` because the paywall payload carries neither.
+        if ("paywall" in response) {
+          setState((prev) => ({ ...prev, status: "paywall", paywallInfo: response }));
+          return;
+        }
 
         if (response.done) {
           // Fully cached — this person was already roasted. Skip the staged

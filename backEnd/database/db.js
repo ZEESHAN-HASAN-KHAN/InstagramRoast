@@ -104,11 +104,72 @@ async function dbConnect() {
         updated_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    // Added after roast_jobs shipped, so these are ALTERs rather than columns in
+    // the CREATE above — existing deployments already have the table.
+    // A job records which credit bucket paid for it so a failed/cancelled roast
+    // can hand exactly that one back (see refundJobCredit).
+    await pool.query(`
+      ALTER TABLE roast_jobs ADD COLUMN IF NOT EXISTS session_id UUID;
+      ALTER TABLE roast_jobs ADD COLUMN IF NOT EXISTS credit_type VARCHAR(10);
+      ALTER TABLE roast_jobs ADD COLUMN IF NOT EXISTS credit_refunded BOOLEAN NOT NULL DEFAULT false;
+      ALTER TABLE roast_jobs ADD COLUMN IF NOT EXISTS roast_key TEXT;
+    `);
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_roast_jobs_queued ON roast_jobs (created_at) WHERE status = 'queued';
     `);
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_roast_jobs_stale ON roast_jobs (locked_at) WHERE status = 'processing';
+    `);
+
+    // Anonymous per-visitor entitlement: keyed by the `roast_session` cookie, no
+    // accounts involved. `ip_address`/`country_code` are pinned to what was seen
+    // when the row was first created (see getOrCreateSession).
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS roast_sessions (
+        id            UUID PRIMARY KEY,
+        ip_address    VARCHAR(45) NOT NULL,
+        country_code  VARCHAR(4),
+        free_used     INTEGER NOT NULL DEFAULT 0,
+        paid_credits  INTEGER NOT NULL DEFAULT 0,
+        created_at    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    // Supports the cross-session per-IP free-usage sum in consumeCredit().
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_roast_sessions_ip ON roast_sessions (ip_address);
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS payment_orders (
+        id                   SERIAL PRIMARY KEY,
+        session_id           UUID NOT NULL REFERENCES roast_sessions(id) ON DELETE CASCADE,
+        razorpay_order_id    VARCHAR(64) UNIQUE NOT NULL,
+        razorpay_payment_id  VARCHAR(64),
+        amount               INTEGER NOT NULL,
+        currency             VARCHAR(10) NOT NULL,
+        credits_granted      INTEGER NOT NULL DEFAULT 2,
+        status               VARCHAR(20) NOT NULL DEFAULT 'created'
+                               CHECK (status IN ('created','paid','failed')),
+        created_at           TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at           TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_payment_orders_session ON payment_orders (session_id);
+    `);
+
+    // Records which roasts a session has already paid for, so re-opening or
+    // refreshing a roast you've already unlocked doesn't charge you again.
+    // Without this every page load spends a credit — including the automatic
+    // retry that fires right after checkout.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS session_unlocks (
+        session_id  UUID NOT NULL REFERENCES roast_sessions(id) ON DELETE CASCADE,
+        roast_key   TEXT NOT NULL,
+        created_at  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (session_id, roast_key)
+      );
     `);
 
     // Requeue anything left stranded in 'processing' by an instance that died mid-job
@@ -125,10 +186,15 @@ async function dbConnect() {
 async function getAIResponse(username, language) {
   try {
     const result = await pool.query(
+      // A profile can accumulate several roasts per language (re-roasts,
+      // reprocessed jobs) — newest wins, and without the ORDER BY the row
+      // Postgres happens to return first isn't deterministic.
       `SELECT ar.response_text
              FROM ai_responses ar
              JOIN profiles p ON ar.profile_id = p.id
-             WHERE p.username = $1 and ar.language = $2;`,
+             WHERE p.username = $1 and ar.language = $2
+             ORDER BY ar.created_at DESC
+             LIMIT 1;`,
       [username, language]
     );
     return result.rows[0]; // Returns the first matching row
@@ -145,9 +211,10 @@ const checkCompatibilityResponse = async (profileId1, profileId2, language) => {
       `
       SELECT cm.compatibility_text
       FROM compatibility_responses cm
-      WHERE 
+      WHERE
        ( (cm.profile_id_1 = $1 AND cm.profile_id_2 = $2) OR (cm.profile_id_1 = $2 AND cm.profile_id_2 = $1))
         AND cm.language = $3
+      ORDER BY cm.created_at DESC
       LIMIT 1
       `,
       [profileId1, profileId2, language]

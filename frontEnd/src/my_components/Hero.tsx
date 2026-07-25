@@ -23,8 +23,11 @@ export function Hero() {
     try {
       const url = import.meta.env.VITE_APP_BASE_URL;
       const token = await createToken();
+      // credentials: the roast_session cookie is minted on this first call, so
+      // the visitor already has a session before they try to roast anything.
       const result = await fetch(url + "/api/v1/roastCount", {
         headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
       const data = await result.json();
       setRoastCount(data.count);

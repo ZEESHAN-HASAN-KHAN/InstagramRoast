@@ -9,10 +9,12 @@ const {
   completeRoastJob,
   failRoastJob,
   cancelRoastJob,
+  cancelQueuedRoastJob,
   requestCancelRoastJob,
   requeueStaleJobs,
 } = require("../database/roastJobs");
 const { publishJobUpdate, subscribeToJob } = require("../database/pubsub");
+const { refundJobCredit } = require("../database/monetization");
 const { acquire: acquireSlot } = require("../worker/concurrencyLimiter");
 const { processSingleRoastJob } = require("../worker/processSingleRoastJob");
 const { processCompatibilityRoastJob } = require("../worker/processCompatibilityRoastJob");
@@ -163,13 +165,22 @@ roastStreamRouter.get("/roastStream/:jobId", async (req, res) => {
     const doneRow = await completeRoastJob(jobId, result);
     await publishJobUpdate(jobId, doneRow);
   } catch (error) {
+    // Either way the visitor never got a roast, so the credit goes back.
+    // refundJobCredit is idempotent, so a job that somehow lands here twice
+    // (retry, reconnect) still only refunds once.
     if (error.cancelled) {
       const cancelledRow = await cancelRoastJob(jobId);
+      await refundJobCredit(jobId).catch((e) =>
+        logger.error("Failed to refund credit for cancelled job", { jobId, error: e.message })
+      );
       await publishJobUpdate(jobId, cancelledRow);
     } else {
       logger.error("Roast job processing failed", { jobId, error: error.message, stack: error.stack });
       const { message } = toUserFacingFailure(error);
       const failedRow = await failRoastJob(jobId, message);
+      await refundJobCredit(jobId).catch((e) =>
+        logger.error("Failed to refund credit for failed job", { jobId, error: e.message })
+      );
       await publishJobUpdate(jobId, failedRow);
     }
   }
@@ -184,6 +195,17 @@ roastStreamRouter.post("/roastStream/:jobId/cancel", async (req, res) => {
   }
 
   await requestCancelRoastJob(jobId);
+
+  // If it never got picked up, nothing will ever run it — close it out here and
+  // return the credit rather than leaving it queued forever. When a worker did
+  // already claim it, this no-ops and the stream handler's cancel path refunds.
+  const cancelled = await cancelQueuedRoastJob(jobId);
+  if (cancelled) {
+    await refundJobCredit(jobId).catch((e) =>
+      logger.error("Failed to refund credit for abandoned job", { jobId, error: e.message })
+    );
+  }
+
   return res.status(204).end();
 });
 

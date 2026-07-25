@@ -3,11 +3,12 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { createToken } from "@/lib/utils";
+import { enqueueRoast, apiUrl } from "@/lib/api";
 import { useRoastJobStream } from "@/hooks/useRoastJobStream";
 import { usePacedIndex } from "@/hooks/usePacedIndex";
 import InstaCard from "./InstaCard";
 import { RoastProgress } from "./RoastProgress";
+import { Paywall } from "./Paywall";
 
 // Which loading-ladder step each backend stage belongs to. Unknown stages fall
 // back to step 0 rather than crashing the ladder.
@@ -51,7 +52,8 @@ export function CompatiblityRoast() {
   const language = queryParams.get("language");
 
   const [copied, setCopied] = useState(false);
-  const { status, stage, stageMessage, partial, result, error, cached, start } = useRoastJobStream<CompatibilityResult>();
+  const { status, stage, stageMessage, partial, result, error, cached, paywallInfo, start } =
+    useRoastJobStream<CompatibilityResult>();
 
   const loadingSteps = [
     { icon: "🔍", label: "finding both profiles" },
@@ -105,26 +107,24 @@ export function CompatiblityRoast() {
     [compatibilityRoast]
   );
 
+  // Shared by the initial run and the post-payment retry.
+  const runRoast = () =>
+    start(
+      () =>
+        enqueueRoast<CompatibilityResult>("/api/v1/compatibilityRoast", {
+          uname1,
+          uname2,
+          language,
+        }),
+      apiUrl
+    );
+
   useEffect(() => {
     if (uname1 === null || uname2 === null || language === null) {
       navigate("/");
       return;
     }
-    const apiUrl = import.meta.env.VITE_APP_BASE_URL;
-    start(async () => {
-      const token = await createToken();
-      const response = await fetch(apiUrl + "/api/v1/compatibilityRoast", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ uname1, uname2, language }),
-      });
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      return response.json();
-    }, apiUrl);
+    runRoast();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -142,6 +142,10 @@ export function CompatiblityRoast() {
     { name: "LinkedIn", href: shareLinks.linkedin, emoji: "💼", bg: "bg-blue-200 dark:bg-blue-900/40" },
     { name: "Threads", href: shareLinks.threads, emoji: "🧵", bg: "bg-purple-200 dark:bg-purple-900/40" },
   ];
+
+  if (status === "paywall" && paywallInfo) {
+    return <Paywall info={paywallInfo} onUnlocked={runRoast} />;
+  }
 
   if (status === "failed") {
     return (

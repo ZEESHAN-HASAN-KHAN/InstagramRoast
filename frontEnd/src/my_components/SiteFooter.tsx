@@ -9,7 +9,7 @@ export function SiteFooter() {
           <Link to="/terms" className="hover:text-white transition-colors">Terms</Link>
           <Link to="/privacy" className="hover:text-white transition-colors">Privacy</Link>
           <Link to="/refund-policy" className="hover:text-white transition-colors">Refunds</Link>
-          <a href="https://github.com/Arghya721" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a>
+          <a href="https://github.com/ZEESHAN-HASAN-KHAN/InstagramRoast" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a>
         </div>
         <div className="text-[10px] text-right">
           MADE WITH 🔥 BY THE TEAM AT <br />

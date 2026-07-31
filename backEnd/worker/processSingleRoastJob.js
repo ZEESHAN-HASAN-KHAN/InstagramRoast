@@ -4,6 +4,7 @@ const { getUserData, getAIResponse, addUser, addAIResponse } = require("../datab
 const { getInstagramProfile, generateAIRoast } = require("../helpers/apiHelper");
 const { uploadImage } = require("../helpers/storageHelper");
 const { isCancellationRequested } = require("../database/roastJobs");
+const { recordProfileView } = require("../database/engagement");
 
 class JobCancelledError extends Error {
   constructor() {
@@ -21,6 +22,11 @@ async function assertNotCancelled(jobId) {
 async function processSingleRoastJob(job, { onProgress }) {
   const { id: jobId, username, language } = job;
   const bucketName = process.env.BUCKET_NAME;
+  const roasterGeo = {
+    country: job.roaster_country ?? null,
+    region: job.roaster_region ?? null,
+    city: job.roaster_city ?? null,
+  };
 
   await assertNotCancelled(jobId);
   await onProgress("checking_cache", "checking if we've roasted this one before...");
@@ -43,7 +49,7 @@ async function processSingleRoastJob(job, { onProgress }) {
     const fileName = await uploadImage(imageBuffer);
 
     await onProgress("saving_profile", "saving profile data...");
-    await addUser(
+    const saved = await addUser(
       fileName,
       scraped.username,
       scraped.full_name,
@@ -54,6 +60,7 @@ async function processSingleRoastJob(job, { onProgress }) {
     );
 
     profile = {
+      id: saved.id,
       profile_pic_url: fileName,
       username: scraped.username,
       full_name: scraped.full_name,
@@ -67,6 +74,15 @@ async function processSingleRoastJob(job, { onProgress }) {
   const gcsProfileUrl = `https://storage.googleapis.com/${bucketName}/${profile.profile_pic_url}`;
   if (!llmImageUrl) llmImageUrl = gcsProfileUrl;
 
+  // The route counts views on the cached path; this covers the other one, so a
+  // freshly generated roast (and every paid re-roast) lands on the board too.
+  // No client IP reaches the worker, so a session-less job is keyed by its own
+  // id — one generation, one viewer.
+  recordProfileView(profile.id, roasterGeo, {
+    sessionId: job.session_id ?? null,
+    ip: `job:${jobId}`,
+  });
+
   // Profile is fully resolved at this point (cache hit or freshly scraped) —
   // push it to the frontend now so it can render the real profile card while
   // the roast itself is still being generated.
@@ -75,16 +91,24 @@ async function processSingleRoastJob(job, { onProgress }) {
   });
 
   await assertNotCancelled(jobId);
-  let roastText = (await getAIResponse(profile.username, language))?.response_text;
+  // A re-roast is precisely a request NOT to reuse what's cached — it was paid
+  // for, so it always goes to the LLM.
+  let roastText = job.force_regenerate
+    ? null
+    : (await getAIResponse(profile.username, language))?.response_text;
 
   if (!roastText) {
     await onProgress("generating_roast", "asking the AI to roast you...");
     const { profile_pic_url, ...profileForPrompt } = profile;
-    roastText = await generateAIRoast(profileForPrompt, llmImageUrl, language);
+    roastText = await generateAIRoast(profileForPrompt, llmImageUrl, language, {
+      freshAngle: !!job.force_regenerate,
+    });
 
     await assertNotCancelled(jobId);
     await onProgress("saving_roast", "saving your roast...");
-    await addAIResponse(profile.username, roastText, language);
+    // Appends a new row rather than replacing: getAIResponse serves newest-first,
+    // so this becomes the roast everyone sees while the old one stays for history.
+    await addAIResponse(profile.username, roastText, language, roasterGeo);
   }
 
   return {

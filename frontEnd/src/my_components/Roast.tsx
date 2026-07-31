@@ -12,6 +12,7 @@ import { RoastCard } from "./RoastCard";
 import { ShareBar } from "./ShareBar";
 import { AdBanner } from "./AdBanner";
 import { RoastProgress } from "./RoastProgress";
+import { BurnRating } from "./BurnRating";
 
 interface InstagramData {
   insta_data: {
@@ -58,6 +59,9 @@ export function Roast() {
   const searchParams = new URLSearchParams(useLocation().search);
   const ln = searchParams.get("language") || "english";
   const [isRunning, setIsRunning] = useState(false);
+  // Bumped on every roast attempt so the loading ladder restarts even when the
+  // username stays the same (re-roast, post-checkout retry).
+  const [runId, setRunId] = useState(0);
   const { status, stage, stageMessage, partial, result, error, cached, paywallInfo, start } =
     useRoastJobStream<InstagramData>();
 
@@ -71,7 +75,10 @@ export function Roast() {
   // Real progress → ladder step; the paced index walks toward it one visible
   // beat at a time so fast jobs still show every stage.
   const targetStep = status === "done" ? loadingSteps.length : STAGE_TO_STEP[stage ?? ""] ?? 0;
-  const displayedStep = usePacedIndex(targetStep, username);
+  // Keyed on the run, not just the username: a re-roast stays on the same
+  // username, and without the counter the ladder would still be parked at its
+  // final step and skip the whole build-up.
+  const displayedStep = usePacedIndex(targetStep, `${username}:${runId}`);
 
   // Hold the loading screen until the ladder finishes its last beat, even if
   // the result already arrived — the payoff lands harder after the build-up.
@@ -84,15 +91,28 @@ export function Roast() {
   // the vibes" step, so the card appearing reads as that step's reward.
   const showLiveProfile = liveInstaData !== null && displayedStep >= 2;
 
-  // Shared by the initial run and the post-payment retry.
-  const runRoast = () =>
-    start(
-      () => enqueueRoast<InstagramData>("/api/v1/roastMe", { name: username, language: ln }),
+  // Shared by the initial run and the post-payment retry. `reroll` pays a credit
+  // to regenerate a roast that already exists rather than serving the cached one.
+  const runRoast = (reroll = false) => {
+    setRunId((n) => n + 1);
+    return start(
+      () =>
+        enqueueRoast<InstagramData>("/api/v1/roastMe", { name: username, language: ln, reroll }),
       apiUrl
     );
+  };
+
+  // Remembered so the post-payment retry regenerates rather than handing back
+  // the cached roast they just paid to replace.
+  const wasReroll = useRef(false);
+  const rerollRoast = () => {
+    wasReroll.current = true;
+    runRoast(true);
+  };
 
   useEffect(() => {
     if (username) document.title = `Roast of ${username} 🔥`;
+    wasReroll.current = false;
     runRoast();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [username]);
@@ -106,7 +126,7 @@ export function Roast() {
   }, [received]);
 
   if (status === "paywall" && paywallInfo) {
-    return <Paywall info={paywallInfo} onUnlocked={runRoast} />;
+    return <Paywall info={paywallInfo} onUnlocked={() => runRoast(wasReroll.current)} />;
   }
 
   if (status === "failed") {
@@ -220,16 +240,20 @@ export function Roast() {
 
       <div className="max-w-3xl mx-auto space-y-10">
         {/* Back button */}
-        <div className="animate-reveal flex items-center justify-between">
+        <div className="animate-reveal flex flex-wrap items-center justify-between gap-2">
           <Link
             to="/"
             className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-4 py-2 text-sm font-bold hover:-translate-y-0.5 hover:rotate-[-2deg] transition-all shadow-[3px_3px_0_0_hsl(0_0%_8%)]"
           >
             ← roast someone else
           </Link>
-          <span className="hidden sm:inline-flex items-center gap-1 text-xs font-bold bg-yellow-200 dark:bg-yellow-900/40 border-2 border-foreground rounded-full px-3 py-1 rotate-2">
-            🍿 grab popcorn
-          </span>
+          <button
+            type="button"
+            onClick={rerollRoast}
+            className="inline-flex items-center gap-2 bg-primary text-primary-foreground border-2 border-foreground rounded-full px-4 py-2 text-sm font-black hover:-translate-y-0.5 hover:rotate-2 transition-all shadow-[3px_3px_0_0_hsl(0_0%_8%)]"
+          >
+            🔁 roast them again
+          </button>
         </div>
 
         {/* Heading */}
@@ -258,6 +282,11 @@ export function Roast() {
         {/* Roast Card */}
         <div className="animate-reveal [animation-delay:300ms] pt-4">
           <RoastCard roast={roastData} />
+        </div>
+
+        {/* Community verdict */}
+        <div className="animate-reveal [animation-delay:350ms]">
+          <BurnRating username={insta_data.username} />
         </div>
 
         {/* Share */}

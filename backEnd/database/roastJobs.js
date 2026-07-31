@@ -4,6 +4,9 @@ const logger = require("../helpers/logger");
 
 // `sessionId`/`creditType` record who paid for this job and from which bucket,
 // so the credit can be handed back if the job never delivers a roast.
+// `roasterGeo` follows the job through to the saved roast, which is what the
+// geo-scoped discovery feeds read. `forceRegenerate` marks a paid re-roast:
+// the worker then ignores any cached roast for this profile.
 async function createRoastJob({
   jobType,
   username,
@@ -12,13 +15,19 @@ async function createRoastJob({
   sessionId = null,
   creditType = null,
   roastKey = null,
+  roasterGeo = {},
+  forceRegenerate = false,
 }) {
   const id = uuidv4();
+  const { country = null, region = null, city = null } = roasterGeo || {};
   const result = await pool.query(
-    `INSERT INTO roast_jobs (id, job_type, username, username_2, language, status, session_id, credit_type, roast_key)
-     VALUES ($1, $2, $3, $4, $5, 'queued', $6, $7, $8)
+    `INSERT INTO roast_jobs (
+       id, job_type, username, username_2, language, status, session_id, credit_type, roast_key,
+       roaster_country, roaster_region, roaster_city, force_regenerate
+     )
+     VALUES ($1, $2, $3, $4, $5, 'queued', $6, $7, $8, $9, $10, $11, $12)
      RETURNING *;`,
-    [id, jobType, username, username2, language, sessionId, creditType, roastKey]
+    [id, jobType, username, username2, language, sessionId, creditType, roastKey, country, region, city, forceRegenerate]
   );
   return result.rows[0];
 }

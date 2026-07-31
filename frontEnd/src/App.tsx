@@ -10,6 +10,9 @@ import { AvatarCirclesDemo } from "./my_components/Contributors";
 import { ModeToggle } from "@/components/ui/ModeToggle";
 import React from "react";
 import { Compatibility } from "./my_components/Compatibility";
+import { RoastTicker } from "./my_components/RoastTicker";
+import { NearbyRoasts } from "./my_components/NearbyRoasts";
+import { Leaderboard } from "./my_components/Leaderboard";
 import { CompatiblityRoast } from "./my_components/CompatibilityRoast";
 import { SiteFooter } from "./my_components/SiteFooter";
 import { Terms } from "./my_components/Terms";
@@ -60,6 +63,9 @@ function AppLayout() {
             element={
               <>
                 <Hero />
+                <RoastTicker />
+                <NearbyRoasts />
+                <Leaderboard />
                 <Compatibility />
               </>
             }

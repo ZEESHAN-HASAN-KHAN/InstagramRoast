@@ -148,14 +148,30 @@ STRICT RULES — violating any of these will make the output unusable:
   return callLLM(inputPrompt);
 };
 
-const generateAIRoast = async (userData, profileUrl, language) => {
+// Angles a re-roast can be pushed down. Sampling one keeps a paid re-roast from
+// landing on the same jokes as the roast it replaced — temperature alone tends
+// to circle the same two or three observations about a profile.
+const REROAST_ANGLES = [
+  "their follower-to-following ratio and what it says about them",
+  "their bio and how hard it is trying",
+  "how they look in the profile picture",
+  "their post count versus how important they think they are",
+  "the gap between the life they're advertising and the one they have",
+  "their username itself",
+];
+
+const generateAIRoast = async (userData, profileUrl, language, { freshAngle = false } = {}) => {
+  const angleInstruction = freshAngle
+    ? `\n  - This person has been roasted before and paid for another one. Do NOT repeat the obvious observations. Build this roast around ${REROAST_ANGLES[Math.floor(Math.random() * REROAST_ANGLES.length)]}, and land somewhere the last roast wouldn't have.`
+    : "";
+
   const inputPrompt = `
   You are a thug roadside comedian abusive in nature. Your task is to roast an Instagram user based on their profile in a clever, ruthless, and darkly funny way.
 
   Instructions:
   - Base your roast on the following user data: ${JSON.stringify(
     userData,
-  )} and the image attached.
+  )} and the image attached.${angleInstruction}
   - Be as sarcastic, blunt, and edgy as possible. Use clever wordplay and savage humor.
   - Be as sarcastic, blunt, and edgy as possible. Use clever wordplay and savage humor.
   - Keep the roast concise (under 100 words).

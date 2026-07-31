@@ -1,6 +1,6 @@
 const { v4: uuidv4, validate: isUuid } = require("uuid");
 const { getOrCreateSession } = require("../database/monetization");
-const { lookupCountryCached } = require("../helpers/geolocation");
+const { lookupGeoCached } = require("../helpers/geolocation");
 const {
   isMonetizationEnabledForCountry,
   isMonetizationEnabledAnywhere,
@@ -47,21 +47,17 @@ function getClientIp(req) {
 async function sessionMiddleware(req, res, next) {
   try {
     req.clientIp = getClientIp(req);
-
-    // Both regions off: nothing to classify, so skip the geo lookup too.
-    if (!isMonetizationEnabledAnywhere()) {
-      req.monetizationEnabled = false;
-      return next();
-    }
-
     const ip = req.clientIp;
-    // Resolved before any session work, because the country is what decides
-    // whether this visitor should have a session at all. Cached per IP so the
-    // gating check doesn't hammer ip-api for unmonetized visitors.
-    const countryCode = await lookupCountryCached(ip);
-    req.visitorCountry = countryCode;
 
-    if (!isMonetizationEnabledForCountry(countryCode)) {
+    // Resolved before any monetization work — the country decides whether this
+    // visitor should have a session at all, and region/city scope the discovery
+    // feeds and leaderboards, which every visitor sees regardless of whether
+    // their region is monetized. Cached per IP so this doesn't hammer ip-api.
+    const geo = await lookupGeoCached(ip);
+    req.visitorGeo = geo;
+    req.visitorCountry = geo.country;
+
+    if (!isMonetizationEnabledAnywhere() || !isMonetizationEnabledForCountry(geo.country)) {
       req.monetizationEnabled = false;
       return next();
     }
@@ -85,7 +81,7 @@ async function sessionMiddleware(req, res, next) {
       });
     }
 
-    req.roastSession = await getOrCreateSession(sessionId, ip, countryCode);
+    req.roastSession = await getOrCreateSession(sessionId, ip, geo);
     next();
   } catch (error) {
     logger.error("Failed to establish roast session", { error: error.message });

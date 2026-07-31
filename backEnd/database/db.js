@@ -139,6 +139,121 @@ async function dbConnect() {
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_roast_sessions_ip ON roast_sessions (ip_address);
     `);
+    // Finer-grained location than the country code the pricing bracket needs,
+    // added for the "people near you" discovery feeds and the regional
+    // leaderboards. Pinned at session creation like ip_address/country_code.
+    await pool.query(`
+      ALTER TABLE roast_sessions ADD COLUMN IF NOT EXISTS region VARCHAR(80);
+      ALTER TABLE roast_sessions ADD COLUMN IF NOT EXISTS city VARCHAR(80);
+    `);
+
+    // Where the *roaster* was when they generated this roast — this is what
+    // scopes the discovery feeds ("people roasted near you"), not where the
+    // roasted profile lives, which we have no way of knowing.
+    await pool.query(`
+      ALTER TABLE ai_responses ADD COLUMN IF NOT EXISTS roaster_country VARCHAR(4);
+      ALTER TABLE ai_responses ADD COLUMN IF NOT EXISTS roaster_region  VARCHAR(80);
+      ALTER TABLE ai_responses ADD COLUMN IF NOT EXISTS roaster_city    VARCHAR(80);
+    `);
+    await pool.query(`
+      ALTER TABLE roast_jobs ADD COLUMN IF NOT EXISTS roaster_country VARCHAR(4);
+      ALTER TABLE roast_jobs ADD COLUMN IF NOT EXISTS roaster_region  VARCHAR(80);
+      ALTER TABLE roast_jobs ADD COLUMN IF NOT EXISTS roaster_city    VARCHAR(80);
+    `);
+    // A re-roast deliberately ignores the cached roast for this profile and
+    // generates a fresh one; without this flag the worker would just hand back
+    // the roast that already exists.
+    await pool.query(`
+      ALTER TABLE roast_jobs ADD COLUMN IF NOT EXISTS force_regenerate BOOLEAN NOT NULL DEFAULT false;
+    `);
+    // Drives the recent-roasts ticker (newest first) and its geo-scoped variants.
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_ai_responses_created ON ai_responses (created_at DESC);
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_ai_responses_geo
+        ON ai_responses (roaster_country, roaster_region, roaster_city);
+    `);
+
+    // Community rating of a profile's roast — one vote per person per profile,
+    // updatable. `voter_key` is the session id where one exists and 'ip:<addr>'
+    // otherwise, because visitors in unmonetized regions never get a session row
+    // but still get to vote.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS roast_ratings (
+        id             SERIAL PRIMARY KEY,
+        profile_id     INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+        ai_response_id INTEGER REFERENCES ai_responses(id) ON DELETE SET NULL,
+        session_id     UUID,
+        ip_address     VARCHAR(45) NOT NULL,
+        voter_key      TEXT NOT NULL,
+        rating         SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+        voter_country  VARCHAR(4),
+        voter_region   VARCHAR(80),
+        voter_city     VARCHAR(80),
+        created_at     TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at     TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (profile_id, voter_key)
+      );
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_roast_ratings_profile ON roast_ratings (profile_id);
+    `);
+
+    // Who looked at a roast, for the "most roasted today" board. Counting
+    // ai_responses instead wouldn't work: roasts are cached, so a profile only
+    // ever gets one row no matter how many people read it.
+    //
+    // Deliberately one row per (profile, viewer, hour) rather than per request —
+    // the page re-requests its roast on every load, so a per-request row would
+    // let anyone rank themselves #1 by holding refresh. Rows are pruned after
+    // PROFILE_VIEW_RETENTION_DAYS; only the recent window is ever queried.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS profile_views (
+        id             BIGSERIAL PRIMARY KEY,
+        profile_id     INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+        viewer_country VARCHAR(4),
+        viewer_region  VARCHAR(80),
+        viewer_city    VARCHAR(80),
+        created_at     TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    // Added after the table shipped counting raw requests. `view_hour` is stored
+    // rather than derived because date_trunc over a timestamptz depends on the
+    // session TimeZone and so can't be indexed.
+    await pool.query(`
+      ALTER TABLE profile_views ADD COLUMN IF NOT EXISTS viewer_key TEXT;
+      ALTER TABLE profile_views ADD COLUMN IF NOT EXISTS view_hour TIMESTAMP WITH TIME ZONE;
+    `);
+    // Rows written before those columns existed carry no viewer identity. They
+    // collapse into a single 'legacy' viewer per profile per hour rather than
+    // each counting as its own person, which is what inflated the early counts.
+    await pool.query(`
+      UPDATE profile_views
+      SET viewer_key = COALESCE(viewer_key, 'legacy'),
+          view_hour  = COALESCE(view_hour, date_trunc('hour', created_at))
+      WHERE viewer_key IS NULL OR view_hour IS NULL;
+    `);
+    // The unique index below can't be created while duplicates exist.
+    await pool.query(`
+      DELETE FROM profile_views a
+      USING profile_views b
+      WHERE a.id > b.id
+        AND a.profile_id = b.profile_id
+        AND a.viewer_key = b.viewer_key
+        AND a.view_hour  = b.view_hour;
+    `);
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_profile_views_unique
+        ON profile_views (profile_id, viewer_key, view_hour);
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_profile_views_recent ON profile_views (created_at DESC);
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_profile_views_geo
+        ON profile_views (viewer_country, viewer_region, viewer_city);
+    `);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS payment_orders (
@@ -319,7 +434,9 @@ async function checkUserExists(username) {
     throw error;
   }
 }
-async function addAIResponse(username, responseText, language) {
+// `roasterGeo` records where the person who asked for this roast was, so the
+// discovery feeds can scope to a visitor's city/region/country later.
+async function addAIResponse(username, responseText, language, roasterGeo = {}) {
   try {
     // Step 1: Get the profile ID for the given username
     const profileResult = await pool.query(
@@ -332,13 +449,14 @@ async function addAIResponse(username, responseText, language) {
     }
 
     const profileId = profileResult.rows[0].id;
+    const { country = null, region = null, city = null } = roasterGeo || {};
 
     // Step 2: Insert AI response into the ai_responses table
     const insertResult = await pool.query(
-      `INSERT INTO ai_responses (profile_id, response_text, language)
-             VALUES ($1, $2, $3)
+      `INSERT INTO ai_responses (profile_id, response_text, language, roaster_country, roaster_region, roaster_city)
+             VALUES ($1, $2, $3, $4, $5, $6)
              RETURNING *;`,
-      [profileId, responseText, language]
+      [profileId, responseText, language, country, region, city]
     );
 
     logger.info("AI response added successfully");

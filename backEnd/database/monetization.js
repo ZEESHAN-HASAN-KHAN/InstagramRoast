@@ -4,17 +4,18 @@ const logger = require("../helpers/logger");
 const FREE_ROAST_LIMIT = Number(process.env.FREE_ROAST_LIMIT) || 2;
 const IP_FREE_ROAST_LIMIT = Number(process.env.IP_FREE_ROAST_LIMIT) || 5;
 
-// `ipAddress`/`countryCode` are only ever written on the INSERT branch — a
+// `ipAddress` and the geo columns are only ever written on the INSERT branch — a
 // returning visitor keeps whatever was recorded when their session was created,
 // so a session's IP can't be re-pointed by roaming onto another network (which
 // would otherwise reset its contribution to the per-IP free-usage sum below).
-async function getOrCreateSession(id, ipAddress, countryCode = null) {
+async function getOrCreateSession(id, ipAddress, geo = {}) {
+  const { country = null, region = null, city = null } = geo || {};
   const result = await pool.query(
-    `INSERT INTO roast_sessions (id, ip_address, country_code)
-     VALUES ($1, $2, $3)
+    `INSERT INTO roast_sessions (id, ip_address, country_code, region, city)
+     VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (id) DO UPDATE SET updated_at = now()
      RETURNING *;`,
-    [id, ipAddress, countryCode]
+    [id, ipAddress, country, region, city]
   );
   return result.rows[0];
 }
@@ -73,6 +74,35 @@ async function consumeCredit({ sessionId, ipAddress }) {
     type: creditType === "none" ? null : creditType,
     session,
   };
+}
+
+// Spends one PAID credit and nothing else. Re-roasts never draw on the free
+// bucket: the free roasts exist to get someone their first roast, while a
+// re-roast is an extra LLM run on a profile they've already seen. Same atomic
+// UPDATE ... RETURNING shape as consumeCredit so concurrent re-roast clicks
+// can't both spend the same credit.
+async function consumePaidCredit(sessionId) {
+  const result = await pool.query(
+    `WITH locked AS (
+       SELECT id, paid_credits
+       FROM roast_sessions
+       WHERE id = $1
+       FOR UPDATE
+     )
+     UPDATE roast_sessions rs
+     SET paid_credits = rs.paid_credits - (CASE WHEN l.paid_credits > 0 THEN 1 ELSE 0 END),
+         updated_at   = now()
+     FROM locked l
+     WHERE rs.id = l.id
+     RETURNING rs.*, (l.paid_credits > 0) AS granted;`,
+    [sessionId]
+  );
+
+  const row = result.rows[0];
+  if (!row) return { granted: false, session: null };
+
+  const { granted, ...session } = row;
+  return { granted, session };
 }
 
 // Identifies a specific roast so a session is only ever charged once for it.
@@ -265,6 +295,7 @@ module.exports = {
   getOrCreateSession,
   getSession,
   consumeCredit,
+  consumePaidCredit,
   buildRoastKey,
   claimRoastUnlock,
   releaseRoastUnlock,

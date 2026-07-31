@@ -12,6 +12,7 @@ const jwt = require("./middleware/jwt");
 const session = require("./middleware/session");
 
 const roastRouter = require("./routes/roast");
+const engagementRouter = require("./routes/engagement");
 const roastStreamRouter = require("./routes/roastStream");
 const paymentRouter = require("./routes/payment");
 const paymentWebhookRouter = require("./routes/paymentWebhook");
@@ -51,6 +52,9 @@ app.use(jwt);
 app.use(session);
 
 app.use("/api/v1", roastRouter);
+// After `session` — ratings key off req.roastSession / req.clientIp, and the
+// geo-scoped feeds off req.visitorGeo, all of which that middleware establishes.
+app.use("/api/v1", engagementRouter);
 app.use("/api/v1", paymentRouter);
 
 app.listen(PORT, () => {

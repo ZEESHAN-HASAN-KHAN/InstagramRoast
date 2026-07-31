@@ -13,6 +13,7 @@ const { mintStreamToken } = require("../helpers/streamToken");
 const { publishJobUpdate } = require("../database/pubsub");
 const {
   consumeCredit,
+  consumePaidCredit,
   buildRoastKey,
   claimRoastUnlock,
   releaseRoastUnlock,
@@ -22,6 +23,25 @@ const {
   FREE_ROAST_LIMIT,
 } = require("../database/monetization");
 const { getPriceForCountry, PAID_CREDITS_PER_PURCHASE } = require("../helpers/pricing");
+const { recordProfileView } = require("../database/engagement");
+
+// The 402 body the frontend's checkout modal renders from. `extra` carries
+// context that changes the modal's copy (e.g. the re-roast variant, which can't
+// be paid for with free roasts).
+function buildPaywallPayload(req, session, extra = {}) {
+  const { amount, currency } = getPriceForCountry(req.visitorCountry ?? session.country_code);
+  return {
+    paywall: true,
+    message: "You've used your free roasts — unlock more to keep going.",
+    credits: {
+      freeUsed: session.free_used,
+      freeLimit: FREE_ROAST_LIMIT,
+      paidCredits: session.paid_credits,
+    },
+    price: { amount, currency, credits: PAID_CREDITS_PER_PURCHASE },
+    ...extra,
+  };
+}
 
 // Spends one roast for this visitor, or builds the 402 paywall payload the
 // frontend renders its checkout modal from. A delivered roast costs a credit
@@ -58,20 +78,38 @@ async function spendRoastCredit(req, target) {
   // unlock for a roast they never got.
   await releaseRoastUnlock(sessionId, roastKey);
 
-  const current = session || req.roastSession;
-  const { amount, currency } = getPriceForCountry(req.visitorCountry ?? current.country_code);
   return {
     granted: false,
-    payload: {
-      paywall: true,
-      message: "You've used your free roasts — unlock more to keep going.",
-      credits: {
-        freeUsed: current.free_used,
-        freeLimit: FREE_ROAST_LIMIT,
-        paidCredits: current.paid_credits,
-      },
-      price: { amount, currency, credits: PAID_CREDITS_PER_PURCHASE },
-    },
+    payload: buildPaywallPayload(req, session || req.roastSession),
+  };
+}
+
+// Spends a paid credit for a re-roast. Deliberately does NOT go through
+// claimRoastUnlock: the whole point of a re-roast is to pay for another LLM run
+// on a profile you've already unlocked, so every one of them charges.
+//
+// Free roast credits can't pay for it either — see consumePaidCredit. Those
+// exist to get someone their first roast; a re-roast is an extra LLM run on a
+// profile they've already read.
+//
+// Where monetization is switched off there's no session to charge, so this is
+// free like everything else in that region — visitors there can already roast
+// unlimited distinct profiles, each costing a scrape and an LLM call, so a
+// re-roast opens no new hole. The per-IP rate limiter caps the spam ceiling.
+async function spendRerollCredit(req) {
+  if (!req.monetizationEnabled || !req.roastSession) {
+    return { granted: true, type: null };
+  }
+
+  const { granted, session } = await consumePaidCredit(req.roastSession.id);
+  if (granted) return { granted: true, type: "paid" };
+
+  return {
+    granted: false,
+    payload: buildPaywallPayload(req, session || req.roastSession, {
+      reroll: true,
+      message: "Re-roasts need a paid credit — grab a pack to keep cooking.",
+    }),
   };
 }
 
@@ -120,6 +158,9 @@ roastRouter.get("/roastCount", async (req, res) => {
 roastRouter.post("/roastMe", async (req, res) => {
   const name = req.body.name;
   const language = req.body.language;
+  // A re-roast pays to regenerate a roast that already exists, so it skips both
+  // the cache shortcut and the once-per-roast unlock.
+  const reroll = req.body.reroll === true;
 
   if (!name) {
     return res.status(400).json({ message: "Username is required" });
@@ -142,10 +183,18 @@ roastRouter.post("/roastMe", async (req, res) => {
     // SEO landing pages — someone arriving from Google or WhatsApp would be
     // paywalled out of a roast that's already public. Credits pay for
     // *generating* roasts, which is where the scrape and LLM spend actually is.
+    // A re-roast skips this entirely — regenerating is exactly what it bought.
     const profile = await getUserData(name);
-    if (profile) {
+    if (profile && !reroll) {
       const aiResponse = await getAIResponse(name, language);
       if (aiResponse) {
+        // Counted here rather than at generation time: a roast is generated once
+        // and then read by everyone who opens the link, and it's the reading
+        // that the "most roasted today" board is about.
+        recordProfileView(profile.id, req.visitorGeo, {
+          sessionId: req.roastSession?.id ?? null,
+          ip: req.clientIp,
+        });
         return res.status(200).json({
           done: true,
           result: {
@@ -162,7 +211,9 @@ roastRouter.post("/roastMe", async (req, res) => {
     // Cache miss (new profile, or profile cached but not yet roasted in this
     // language) — this is the part that costs real money, so it's what the
     // paywall guards.
-    credit = await spendRoastCredit(req, { jobType: "single", username: name, language });
+    credit = reroll
+      ? await spendRerollCredit(req)
+      : await spendRoastCredit(req, { jobType: "single", username: name, language });
     if (!credit.granted) {
       return res.status(402).json(credit.payload);
     }
@@ -176,6 +227,8 @@ roastRouter.post("/roastMe", async (req, res) => {
       sessionId: req.roastSession?.id ?? null,
       creditType: credit.type,
       roastKey: credit.roastKey ?? null,
+      roasterGeo: req.visitorGeo,
+      forceRegenerate: reroll,
     });
     jobId = job.id;
     const streamToken = mintStreamToken(job.id);
@@ -268,6 +321,7 @@ roastRouter.post("/compatibilityRoast", async (req, res) => {
       sessionId: req.roastSession?.id ?? null,
       creditType: credit.type,
       roastKey: credit.roastKey ?? null,
+      roasterGeo: req.visitorGeo,
     });
     jobId = job.id;
     const streamToken = mintStreamToken(job.id);

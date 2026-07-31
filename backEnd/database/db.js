@@ -158,6 +158,30 @@ async function dbConnect() {
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_payment_orders_session ON payment_orders (session_id);
     `);
+    // Added when PayPal joined Razorpay: which gateway an order belongs to,
+    // with each gateway's ids in its own columns. `razorpay_order_id` loses its
+    // NOT NULL (PayPal rows leave it empty); its UNIQUE constraint is fine with
+    // multiple NULLs.
+    await pool.query(`
+      ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS gateway VARCHAR(16) NOT NULL DEFAULT 'razorpay';
+      ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS paypal_order_id VARCHAR(64);
+      ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS paypal_capture_id VARCHAR(64);
+      ALTER TABLE payment_orders ALTER COLUMN razorpay_order_id DROP NOT NULL;
+    `);
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_payment_orders_paypal_order ON payment_orders (paypal_order_id);
+    `);
+    // One-time backfill for PayPal rows created before the dedicated columns
+    // existed (their order id landed in razorpay_order_id). Idempotent — after
+    // the first run no row matches.
+    await pool.query(`
+      UPDATE payment_orders
+      SET paypal_order_id = razorpay_order_id,
+          paypal_capture_id = razorpay_payment_id,
+          razorpay_order_id = NULL,
+          razorpay_payment_id = NULL
+      WHERE gateway = 'paypal' AND paypal_order_id IS NULL AND razorpay_order_id IS NOT NULL;
+    `);
 
     // Records which roasts a session has already paid for, so re-opening or
     // refreshing a roast you've already unlocked doesn't charge you again.

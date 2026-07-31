@@ -90,6 +90,34 @@ export async function verifyPayment(payload: RazorpayCheckoutResult) {
   return response.json() as Promise<{ success: boolean; paidCredits: number }>;
 }
 
+// --- PayPal (international visitors only — the backend refuses INR here) ---
+
+export interface PaypalConfig {
+  clientId: string;
+  currency: string;
+}
+
+export async function getPaypalConfig(): Promise<PaypalConfig> {
+  const response = await authedFetch("/api/v1/payment/paypal/config");
+  if (!response.ok) throw new Error("PayPal is not available");
+  return response.json();
+}
+
+export async function createPaypalOrder(): Promise<{ orderId: string }> {
+  const response = await authedFetch("/api/v1/payment/paypal/createOrder", { method: "POST" });
+  if (!response.ok) throw new Error("Could not start checkout");
+  return response.json();
+}
+
+export async function capturePaypalOrder(orderId: string) {
+  const response = await authedFetch("/api/v1/payment/paypal/capture", {
+    method: "POST",
+    body: JSON.stringify({ orderId }),
+  });
+  if (!response.ok) throw new Error("We couldn't confirm that payment");
+  return response.json() as Promise<{ success: boolean; paidCredits: number }>;
+}
+
 // Formats a smallest-unit amount (paise/cents) for display.
 export function formatPrice(amount: number, currency: string) {
   return new Intl.NumberFormat(currency === "INR" ? "en-IN" : "en-US", {

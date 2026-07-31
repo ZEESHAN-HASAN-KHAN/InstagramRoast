@@ -23,10 +23,11 @@ const logger = require("./helpers/logger");
 // deployment (1 = a single reverse proxy in front of this process).
 app.set("trust proxy", Number(process.env.TRUST_PROXY_HOPS) || 1);
 
-// Razorpay signs the raw webhook bytes, so this route must keep its unparsed
-// body. Mounted ahead of express.json(), which then skips it (body-parser won't
-// re-read a request an earlier parser already consumed).
+// Razorpay and PayPal both sign the raw webhook bytes, so these routes must
+// keep their unparsed bodies. Mounted ahead of express.json(), which then skips
+// them (body-parser won't re-read a request an earlier parser already consumed).
 app.use("/api/v1/payment/webhook", express.raw({ type: "application/json" }));
+app.use("/api/v1/payment/paypal/webhook", express.raw({ type: "application/json" }));
 
 app.use(express.json());
 app.use(cookieParser());

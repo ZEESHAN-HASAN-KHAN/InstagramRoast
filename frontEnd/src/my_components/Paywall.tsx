@@ -1,17 +1,50 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
+  capturePaypalOrder,
   createPaymentOrder,
+  createPaypalOrder,
+  getPaypalConfig,
   verifyPayment,
   formatPrice,
   type PaywallInfo,
   type RazorpayCheckoutResult,
 } from "@/lib/api";
 
+interface PaypalButtonsInstance {
+  render: (container: HTMLElement) => Promise<void>;
+  close: () => Promise<void>;
+}
+
 declare global {
   interface Window {
     Razorpay: new (options: Record<string, unknown>) => { open: () => void };
+    paypal?: {
+      Buttons: (options: Record<string, unknown>) => PaypalButtonsInstance;
+    };
   }
+}
+
+// Loads the PayPal JS SDK once and dedupes concurrent callers — a second mount
+// (e.g. StrictMode) reuses the same script tag instead of double-injecting.
+let paypalSdkPromise: Promise<void> | null = null;
+function loadPaypalSdk(clientId: string, currency: string): Promise<void> {
+  if (window.paypal) return Promise.resolve();
+  if (!paypalSdkPromise) {
+    paypalSdkPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(
+        clientId
+      )}&currency=${encodeURIComponent(currency)}&intent=capture`;
+      script.onload = () => resolve();
+      script.onerror = () => {
+        paypalSdkPromise = null;
+        reject(new Error("PayPal SDK failed to load"));
+      };
+      document.head.appendChild(script);
+    });
+  }
+  return paypalSdkPromise;
 }
 
 interface PaywallProps {
@@ -23,10 +56,72 @@ interface PaywallProps {
 export function Paywall({ info, onUnlocked }: PaywallProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paypalReady, setPaypalReady] = useState(false);
+  const paypalContainerRef = useRef<HTMLDivElement>(null);
 
   const { amount, currency, credits } = info.price;
 
-  async function handleUnlock() {
+  // India pays through Razorpay (UPI/cards/netbanking); everyone else through
+  // PayPal — RBI bars PayPal from processing domestic Indian payments, so the
+  // split mirrors the backend's requireInternational guard.
+  const usePaypal = currency !== "INR";
+
+  useEffect(() => {
+    if (!usePaypal) return;
+
+    let cancelled = false;
+    let buttons: PaypalButtonsInstance | null = null;
+
+    (async () => {
+      try {
+        const config = await getPaypalConfig();
+        await loadPaypalSdk(config.clientId, config.currency);
+        if (cancelled || !window.paypal || !paypalContainerRef.current) return;
+
+        buttons = window.paypal.Buttons({
+          style: { layout: "vertical", shape: "pill", label: "pay" },
+          createOrder: async () => {
+            setError(null);
+            const order = await createPaypalOrder();
+            return order.orderId;
+          },
+          onApprove: async (data: { orderID: string }) => {
+            setBusy(true);
+            try {
+              await capturePaypalOrder(data.orderID);
+              onUnlocked();
+            } catch {
+              // The webhook is the backstop: the capture may have landed
+              // server-side even though this confirmation call failed.
+              setError("Payment went through but we couldn't confirm it yet — refresh in a moment.");
+            } finally {
+              setBusy(false);
+            }
+          },
+          onError: () => {
+            setBusy(false);
+            setError("Couldn't start checkout. Try again in a moment.");
+          },
+          onCancel: () => setBusy(false),
+        });
+
+        await buttons.render(paypalContainerRef.current);
+        if (!cancelled) setPaypalReady(true);
+      } catch {
+        if (!cancelled) setError("Checkout didn't load — check your connection and refresh.");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      buttons?.close().catch(() => {});
+    };
+    // onUnlocked is stable for the lifetime of the paywall screen; re-running
+    // this effect would tear down and re-render the PayPal buttons mid-checkout.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usePaypal]);
+
+  async function handleRazorpayUnlock() {
     setError(null);
 
     if (typeof window.Razorpay !== "function") {
@@ -93,18 +188,32 @@ export function Paywall({ info, onUnlocked }: PaywallProps) {
           </div>
         </div>
 
-        <button
-          onClick={handleUnlock}
-          disabled={busy}
-          className="w-full bg-primary text-primary-foreground border-2 border-foreground rounded-full px-6 py-3 font-bold hover:-translate-y-0.5 transition-all shadow-[3px_3px_0_0_hsl(0_0%_8%)] disabled:opacity-60 disabled:hover:translate-y-0 disabled:cursor-not-allowed"
-        >
-          {busy ? "opening checkout…" : `unlock ${credits} more roasts`}
-        </button>
+        {usePaypal ? (
+          <>
+            {!paypalReady && !error && (
+              <p className="text-sm text-muted-foreground">loading checkout…</p>
+            )}
+            <div
+              ref={paypalContainerRef}
+              className={busy ? "pointer-events-none opacity-60" : ""}
+            />
+          </>
+        ) : (
+          <button
+            onClick={handleRazorpayUnlock}
+            disabled={busy}
+            className="w-full bg-primary text-primary-foreground border-2 border-foreground rounded-full px-6 py-3 font-bold hover:-translate-y-0.5 transition-all shadow-[3px_3px_0_0_hsl(0_0%_8%)] disabled:opacity-60 disabled:hover:translate-y-0 disabled:cursor-not-allowed"
+          >
+            {busy ? "opening checkout…" : `unlock ${credits} more roasts`}
+          </button>
+        )}
 
         {error && <p className="text-sm text-destructive font-medium">{error}</p>}
 
         <p className="text-xs text-muted-foreground">
-          secure payment via Razorpay · cards, UPI, netbanking
+          {usePaypal
+            ? "secure payment via PayPal · cards accepted"
+            : "secure payment via Razorpay · cards, UPI, netbanking"}
         </p>
       </div>
 

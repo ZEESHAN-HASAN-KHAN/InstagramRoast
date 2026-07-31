@@ -187,40 +187,60 @@ async function refundSessionCredit(sessionId, creditType) {
   return result.rows[0] || null;
 }
 
+// Each gateway keeps its ids in its own columns. Column names are looked up
+// from this table — never from caller input — so the string-built queries below
+// can't be steered anywhere else.
+const GATEWAY_COLUMNS = {
+  razorpay: { orderId: "razorpay_order_id", paymentId: "razorpay_payment_id" },
+  paypal: { orderId: "paypal_order_id", paymentId: "paypal_capture_id" },
+};
+
+function gatewayColumns(gateway) {
+  const columns = GATEWAY_COLUMNS[gateway];
+  if (!columns) throw new Error(`Unknown payment gateway: ${gateway}`);
+  return columns;
+}
+
+// `orderId` is the gateway's own order id (Razorpay order_… / PayPal token).
 async function createPaymentOrder({
   sessionId,
-  razorpayOrderId,
+  orderId,
   amount,
   currency,
   creditsGranted,
+  gateway = "razorpay",
 }) {
+  const columns = gatewayColumns(gateway);
   const result = await pool.query(
-    `INSERT INTO payment_orders (session_id, razorpay_order_id, amount, currency, credits_granted, status)
-     VALUES ($1, $2, $3, $4, $5, 'created')
+    `INSERT INTO payment_orders (session_id, ${columns.orderId}, amount, currency, credits_granted, status, gateway)
+     VALUES ($1, $2, $3, $4, $5, 'created', $6)
      RETURNING *;`,
-    [sessionId, razorpayOrderId, amount, currency, creditsGranted]
+    [sessionId, orderId, amount, currency, creditsGranted, gateway]
   );
   return result.rows[0];
 }
 
-async function getPaymentOrder(razorpayOrderId) {
+async function getPaymentOrder(orderId, gateway = "razorpay") {
+  const columns = gatewayColumns(gateway);
   const result = await pool.query(
-    `SELECT * FROM payment_orders WHERE razorpay_order_id = $1;`,
-    [razorpayOrderId]
+    `SELECT * FROM payment_orders WHERE ${columns.orderId} = $1;`,
+    [orderId]
   );
   return result.rows[0] || null;
 }
 
 // Idempotent by construction: the `status = 'created'` guard means a replayed
-// webhook (or the webhook racing the client-driven /verify call) matches zero
+// webhook (or the webhook racing the client-driven confirm call) matches zero
 // rows, the outer UPDATE then matches nothing, and the whole thing is a no-op
-// returning null. Both callers can fire this unconditionally.
-async function markOrderPaidAndGrantCredits({ razorpayOrderId, razorpayPaymentId }) {
+// returning null. Both callers can fire this unconditionally. `paymentId` is
+// the Razorpay payment id or the PayPal capture id.
+async function markOrderPaidAndGrantCredits({ orderId, paymentId, gateway = "razorpay" }) {
+  const columns = gatewayColumns(gateway);
   const result = await pool.query(
     `WITH updated_order AS (
        UPDATE payment_orders
-       SET status = 'paid', razorpay_payment_id = $2, updated_at = now()
-       WHERE razorpay_order_id = $1 AND status = 'created'
+       SET status = 'paid', ${columns.paymentId} = $2, updated_at = now()
+       WHERE ${columns.orderId} = $1 AND status = 'created'
        RETURNING session_id, credits_granted
      )
      UPDATE roast_sessions rs
@@ -229,7 +249,7 @@ async function markOrderPaidAndGrantCredits({ razorpayOrderId, razorpayPaymentId
      FROM updated_order uo
      WHERE rs.id = uo.session_id
      RETURNING rs.*;`,
-    [razorpayOrderId, razorpayPaymentId]
+    [orderId, paymentId]
   );
   return result.rows[0] || null;
 }

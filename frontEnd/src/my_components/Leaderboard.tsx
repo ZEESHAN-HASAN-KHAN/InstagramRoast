@@ -47,29 +47,31 @@ function ChampionPoster({ entry }: { entry: LeaderboardEntry }) {
     <Link
       to={profileHref(entry)}
       onClick={() => trackBoardClick("most_roasted", 1)}
-      className="relative block bg-card border-2 border-foreground rounded-3xl p-6 shadow-brutal rotate-[-0.6deg] hover:rotate-0 hover:-translate-y-1 transition-all overflow-hidden"
+      className="relative block bg-card border-2 border-foreground rounded-3xl p-4 sm:p-6 shadow-brutal sm:rotate-[-0.6deg] hover:rotate-0 hover:-translate-y-1 transition-all overflow-hidden"
     >
       <span
         aria-hidden="true"
-        className="absolute -right-2 -bottom-8 font-black text-[9rem] leading-none opacity-[0.07] select-none tabular-nums"
+        className="absolute -right-3 -bottom-5 sm:-bottom-8 font-black text-[4rem] sm:text-[9rem] leading-none opacity-[0.06] select-none tabular-nums"
       >
         01
       </span>
-      <span className="absolute -top-0.5 right-4 bg-primary text-primary-foreground border-2 border-foreground rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest rotate-[4deg] shadow-[2px_2px_0_0_hsl(0_0%_8%)]">
+      {/* In flow on mobile: the card is clipped and rounded, so an absolutely
+          positioned badge loses its corner on narrow screens. */}
+      <span className="relative mb-3 inline-block max-w-full bg-primary text-primary-foreground border-2 border-foreground rounded-full px-2.5 sm:px-3 py-1 text-[9px] sm:text-[10px] font-black uppercase tracking-widest -rotate-1 sm:rotate-[4deg] shadow-[2px_2px_0_0_hsl(0_0%_8%)] sm:absolute sm:-top-0.5 sm:right-4 sm:mb-0">
         public enemy no.1
       </span>
 
-      <div className="relative flex items-center gap-5 pt-3">
-        <Avatar entry={entry} className="size-20 md:size-24" />
+      <div className="relative flex items-center gap-3 sm:gap-5 sm:pt-3">
+        <Avatar entry={entry} className="size-16 sm:size-20 md:size-24" />
         <div className="min-w-0 flex-1">
-          <span className="block font-serif italic font-bold text-xl md:text-2xl truncate">
+          <span className="block font-serif italic font-bold text-lg sm:text-xl md:text-2xl truncate">
             @{entry.username}
           </span>
           {entry.full_name && (
             <span className="block text-sm text-muted-foreground truncate">{entry.full_name}</span>
           )}
-          <span className="mt-2 inline-flex items-baseline gap-2">
-            <span className="font-black text-3xl tabular-nums">{count}</span>
+          <span className="mt-2 flex flex-wrap items-baseline gap-2">
+            <span className="font-black text-2xl sm:text-3xl tabular-nums">{count}</span>
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               {count === 1 ? "person" : "people"} watched the burn
             </span>
@@ -267,7 +269,7 @@ function SavageBoard({
 
   return (
     <div
-      className="bg-foreground text-background border-2 border-foreground rounded-3xl p-5 md:p-6 shadow-brutal rotate-[0.4deg] animate-reveal"
+      className="bg-foreground text-background border-2 border-foreground rounded-3xl p-4 sm:p-5 md:p-6 shadow-brutal sm:rotate-[0.4deg] animate-reveal"
       style={{ animationDelay: "150ms" }}
     >
       <div className="flex items-baseline justify-between gap-2 mb-1">
@@ -399,12 +401,12 @@ export function Leaderboard({ standalone = false }: { standalone?: boolean }) {
   return (
     <section
       id="leaderboard"
-      className="py-20 px-6 border-t-2 border-foreground bg-background relative overflow-hidden"
+      className="py-20 px-4 sm:px-6 border-t-2 border-foreground bg-background relative overflow-hidden"
     >
       <div className="pointer-events-none absolute top-10 -left-20 size-60 rounded-full bg-yellow-300/10 blur-3xl" />
       <div className="pointer-events-none absolute bottom-10 -right-20 size-60 rounded-full bg-primary/10 blur-3xl" />
 
-      <div className="max-w-5xl mx-auto relative">
+      <div className="w-full max-w-5xl mx-auto relative">
         {/* Left-aligned header with the controls on the right — the boards below
             are asymmetric, so a centered header would fight the composition. */}
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-10">
@@ -453,13 +455,13 @@ export function Leaderboard({ standalone = false }: { standalone?: boolean }) {
           <BoardSkeleton />
         ) : (
           <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-            <div className="lg:col-span-7">
+            <div className="min-w-0 lg:col-span-7">
               <MostRoastedBoard
                 section={boards?.mostRoasted ?? null}
                 limit={standalone ? undefined : 5}
               />
             </div>
-            <div className="lg:col-span-5">
+            <div className="min-w-0 lg:col-span-5">
               <SavageBoard
                 section={boards?.topRated ?? null}
                 limit={standalone ? undefined : 5}

@@ -4,6 +4,7 @@ import { Helmet } from "react-helmet";
 import { SelectDemo } from "./SelectDemo";
 import { createToken } from "@/lib/utils";
 import NumberTicker from "@/components/ui/number-ticker";
+import { CreditMeter } from "./CreditMeter";
 
 export function Hero() {
   const [uname, setUname] = useState("");
@@ -86,7 +87,7 @@ export function Hero() {
         </h1>
 
         <p className="animate-reveal [animation-delay:200ms] mt-8 text-lg md:text-xl text-foreground/80 max-w-xl mx-auto">
-          drop your @handle. our judgmentally-challenged AI will read you to filth in 10 seconds. it's mean, it's accurate, it's <em>free</em>. 💸
+          drop your @handle. our judgmentally-challenged AI will read you to filth in 10 seconds. it's mean, it's accurate, first ones are <em>on the house</em>. 💸
         </p>
 
         {/* Input form */}
@@ -120,6 +121,7 @@ export function Hero() {
               <p className="text-xs text-muted-foreground italic">
                 ⚠️ by clicking you accept your ego may not survive.
               </p>
+              <CreditMeter className="mt-1" />
             </div>
           </form>
         </div>

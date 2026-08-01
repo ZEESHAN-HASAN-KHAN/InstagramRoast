@@ -58,8 +58,9 @@ async function withScopeCascade(geo, requestedScope, minRows, queryFn) {
 // --- ratings -----------------------------------------------------------------
 
 // A profile needs this many rated peers in a scope before a percentile means
-// anything — "top 50% of 2 profiles" is noise dressed up as a statistic.
-const MIN_RANKED_PROFILES = 3;
+// anything. Two is the lowest honest floor: with only one rated profile there's
+// nothing to rank against and everyone would read "top 1%".
+const MIN_RANKED_PROFILES = 2;
 // And a profile needs this many votes of its own before it can appear on the
 // most-savage board.
 const MIN_VOTES_FOR_BOARD = 2;

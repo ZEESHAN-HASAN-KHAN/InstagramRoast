@@ -36,12 +36,9 @@ export function Navbar() {
           >
             features
           </a>
-          <a
-            onClick={() => scrollToSection("about")}
-            className="hover:text-primary transition-colors cursor-pointer"
-          >
-            trending
-          </a>
+          <Link to="/leaderboard" className="hover:text-primary transition-colors">
+            🏆 leaderboard
+          </Link>
           <a
             onClick={() => scrollToSection("faq")}
             className="hover:text-primary transition-colors cursor-pointer"
@@ -89,12 +86,13 @@ export function Navbar() {
             >
               features
             </a>
-            <a
-              onClick={() => scrollToSection("about")}
-              className="cursor-pointer hover:text-primary py-1"
+            <Link
+              to="/leaderboard"
+              onClick={() => setIsMenuOpen(false)}
+              className="hover:text-primary py-1"
             >
-              trending
-            </a>
+              🏆 leaderboard
+            </Link>
             <a
               onClick={() => scrollToSection("faq")}
               className="cursor-pointer hover:text-primary py-1"

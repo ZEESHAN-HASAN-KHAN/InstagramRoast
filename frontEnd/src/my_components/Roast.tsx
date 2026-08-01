@@ -13,6 +13,7 @@ import { ShareBar } from "./ShareBar";
 import { AdBanner } from "./AdBanner";
 import { RoastProgress } from "./RoastProgress";
 import { BurnRating } from "./BurnRating";
+import { CreditMeter, useCredits } from "./CreditMeter";
 
 interface InstagramData {
   insta_data: {
@@ -64,6 +65,10 @@ export function Roast() {
   const [runId, setRunId] = useState(0);
   const { status, stage, stageMessage, partial, result, error, cached, paywallInfo, start } =
     useRoastJobStream<InstagramData>();
+  // Re-rolls always cost a paid credit where monetization is on — say so on the
+  // button instead of springing the paywall on the most-engaged click.
+  const credits = useCredits();
+  const rerollCostsCredit = credits?.monetizationEnabled === true;
 
   const loadingSteps = [
     { icon: "🔍", label: `finding @${username} on Instagram` },
@@ -247,13 +252,16 @@ export function Roast() {
           >
             ← roast someone else
           </Link>
-          <button
-            type="button"
-            onClick={rerollRoast}
-            className="inline-flex items-center gap-2 bg-primary text-primary-foreground border-2 border-foreground rounded-full px-4 py-2 text-sm font-black hover:-translate-y-0.5 hover:rotate-2 transition-all shadow-[3px_3px_0_0_hsl(0_0%_8%)]"
-          >
-            🔁 roast them again
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <CreditMeter />
+            <button
+              type="button"
+              onClick={rerollRoast}
+              className="inline-flex items-center gap-2 bg-primary text-primary-foreground border-2 border-foreground rounded-full px-4 py-2 text-sm font-black hover:-translate-y-0.5 hover:rotate-2 transition-all shadow-[3px_3px_0_0_hsl(0_0%_8%)]"
+            >
+              🔁 roast them again{rerollCostsCredit ? " · 1 credit" : ""}
+            </button>
+          </div>
         </div>
 
         {/* Heading */}

@@ -43,6 +43,25 @@ function buildPaywallPayload(req, session, extra = {}) {
   };
 }
 
+// Public profile facts for the paywall's teaser card, so the wall can show WHAT
+// is being unlocked instead of a bare price. Only ever data already in our
+// cache — a visitor who hasn't paid never triggers a scrape.
+function buildProfilePreview(username, profile, bucketName) {
+  if (!profile) return { username, profile: null };
+  return {
+    username,
+    profile: {
+      username: profile.username,
+      full_name: profile.full_name,
+      profile_pic_url: `https://storage.googleapis.com/${bucketName}/${profile.profile_pic_url}`,
+      follower: profile.follower,
+      following: profile.following,
+      post: profile.post,
+      biography: profile.biography,
+    },
+  };
+}
+
 // Spends one roast for this visitor, or builds the 402 paywall payload the
 // frontend renders its checkout modal from. A delivered roast costs a credit
 // whether it came from cache or from a fresh scrape+LLM run, so this runs
@@ -215,7 +234,12 @@ roastRouter.post("/roastMe", async (req, res) => {
       ? await spendRerollCredit(req)
       : await spendRoastCredit(req, { jobType: "single", username: name, language });
     if (!credit.granted) {
-      return res.status(402).json(credit.payload);
+      // `profile` is whatever the cache lookup above found (always present on a
+      // re-roast, sometimes on a first roast in a new language) — free teaser data.
+      return res.status(402).json({
+        ...credit.payload,
+        preview: buildProfilePreview(name, profile, bucketName),
+      });
     }
 
     requeueStaleJobs(); // opportunistic backstop, not awaited on the hot path
@@ -308,7 +332,13 @@ roastRouter.post("/compatibilityRoast", async (req, res) => {
       language,
     });
     if (!credit.granted) {
-      return res.status(402).json(credit.payload);
+      return res.status(402).json({
+        ...credit.payload,
+        preview: {
+          ...buildProfilePreview(uname1, userData1, bucketName),
+          username2: uname2,
+        },
+      });
     }
 
     requeueStaleJobs(); // opportunistic backstop, not awaited on the hot path

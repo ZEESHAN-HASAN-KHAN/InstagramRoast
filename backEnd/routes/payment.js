@@ -16,6 +16,7 @@ const {
   getPaymentOrder,
   markOrderPaidAndGrantCredits,
   getSession,
+  FREE_ROAST_LIMIT,
 } = require("../database/monetization");
 
 // Refuses anything payment-related when this visitor's region has monetization
@@ -254,6 +255,7 @@ paymentRouter.get("/payment/credits", async (req, res) => {
   return res.status(200).json({
     monetizationEnabled: true,
     freeUsed: session.free_used,
+    freeLimit: FREE_ROAST_LIMIT,
     paidCredits: session.paid_credits,
     price: { amount, currency, credits: PAID_CREDITS_PER_PURCHASE },
   });

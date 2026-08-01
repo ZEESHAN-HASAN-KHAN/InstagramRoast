@@ -13,6 +13,7 @@ import { Compatibility } from "./my_components/Compatibility";
 import { RoastTicker } from "./my_components/RoastTicker";
 import { NearbyRoasts } from "./my_components/NearbyRoasts";
 import { Leaderboard } from "./my_components/Leaderboard";
+import { LeaderboardPage } from "./my_components/LeaderboardPage";
 import { CompatiblityRoast } from "./my_components/CompatibilityRoast";
 import { SiteFooter } from "./my_components/SiteFooter";
 import { Terms } from "./my_components/Terms";
@@ -71,6 +72,7 @@ function AppLayout() {
             }
           />
           <Route path="/compatibilityRoast" element={<CompatiblityRoast />} />
+          <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/refund-policy" element={<RefundPolicy />} />

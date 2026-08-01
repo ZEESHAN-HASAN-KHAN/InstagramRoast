@@ -1,8 +1,29 @@
 import { createToken } from "@/lib/utils";
 
+// Cached public facts about the profile behind the wall — lets the paywall show
+// what's being unlocked. Null when we've never scraped this profile (the
+// backend never scrapes for an unpaid request).
+export interface PaywallPreviewProfile {
+  username: string;
+  full_name: string;
+  profile_pic_url: string;
+  follower: number;
+  following: number;
+  post: number;
+  biography: string;
+}
+
 export interface PaywallInfo {
   paywall: true;
   message: string;
+  // Set on the re-roast variant, which can only be paid with paid credits.
+  reroll?: boolean;
+  preview?: {
+    username: string;
+    // Present for compatibility roasts — the second handle of the pair.
+    username2?: string;
+    profile: PaywallPreviewProfile | null;
+  };
   credits: {
     freeUsed: number;
     freeLimit: number;
@@ -13,6 +34,17 @@ export interface PaywallInfo {
     currency: string;
     credits: number;
   };
+}
+
+// GET /payment/credits — balance check that never spends anything. The
+// switched-off regions report unlimited instead of 403ing.
+export interface CreditsInfo {
+  monetizationEnabled: boolean;
+  unlimited?: boolean;
+  freeUsed?: number;
+  freeLimit?: number;
+  paidCredits?: number;
+  price?: { amount: number; currency: string; credits: number };
 }
 
 // The enqueue endpoints answer one of three ways: a fully cached result
@@ -67,6 +99,12 @@ export async function enqueueRoast<TResult>(
   }
   if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
   return (await response.json()) as EnqueueResponse<TResult>;
+}
+
+export async function getCredits(): Promise<CreditsInfo> {
+  const response = await authedFetch("/api/v1/payment/credits");
+  if (!response.ok) throw new Error("Could not load credit balance");
+  return response.json();
 }
 
 export async function createPaymentOrder(): Promise<CreateOrderResponse> {

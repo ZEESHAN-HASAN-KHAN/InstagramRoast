@@ -10,6 +10,7 @@ import {
   type PaywallInfo,
   type RazorpayCheckoutResult,
 } from "@/lib/api";
+import { ProfileCard } from "./ProfileCard";
 
 interface PaypalButtonsInstance {
   render: (container: HTMLElement) => Promise<void>;
@@ -166,17 +167,81 @@ export function Paywall({ info, onUnlocked }: PaywallProps) {
     }
   }
 
-  return (
-    <div className="max-w-lg mx-auto px-6 py-16 text-center space-y-6">
-      <div className="text-7xl animate-bounce">🔥</div>
+  const preview = info.preview;
+  const targetHandle = preview?.username ?? null;
+  const isPair = !!preview?.username2;
+  const perRoast = credits > 1 ? formatPrice(Math.round(amount / credits), currency) : null;
+  const { freeUsed, freeLimit } = info.credits;
 
-      <h1 className="text-2xl md:text-3xl font-serif font-bold italic text-balance">
-        you're out of free roasts
-      </h1>
+  const headline = !targetHandle ? (
+    <>you're out of free roasts</>
+  ) : info.reroll ? (
+    <>another round for <span className="text-primary">@{targetHandle}</span>? 🔁</>
+  ) : isPair ? (
+    <>
+      <span className="text-primary">@{targetHandle}</span> ×{" "}
+      <span className="text-primary">@{preview!.username2}</span> — verdict's ready to cook
+    </>
+  ) : (
+    <>
+      <span className="text-primary">@{targetHandle}</span>'s roast is ready to cook 🍳
+    </>
+  );
+
+  return (
+    <div className="max-w-2xl mx-auto px-6 py-12 text-center space-y-6">
+      <div className="inline-block bg-foreground text-background px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest rotate-[-2deg]">
+        🔒 one step from the burn
+      </div>
+
+      <h1 className="text-2xl md:text-4xl font-serif font-bold italic text-balance">{headline}</h1>
 
       <p className="text-sm text-muted-foreground max-w-md mx-auto">{info.message}</p>
 
-      <div className="bg-card border-2 border-foreground rounded-3xl p-8 shadow-brutal space-y-5">
+      {/* The goods, on display: real profile card when we have it cached. */}
+      {preview?.profile && (
+        <div className="text-left animate-reveal">
+          <ProfileCard
+            profile={{
+              handle: preview.profile.username,
+              displayName: preview.profile.full_name,
+              avatarUrl: preview.profile.profile_pic_url,
+              posts: preview.profile.post,
+              followers: preview.profile.follower,
+              following: preview.profile.following,
+              bio: preview.profile.biography,
+            }}
+          />
+        </div>
+      )}
+
+      {/* Blurred roast teaser — unreadable placeholder lines, not the real text,
+          so nothing paid leaks. The lock overlay carries the actual CTA copy. */}
+      {targetHandle && (
+        <div className="relative bg-card border-2 border-foreground rounded-3xl p-8 shadow-brutal overflow-hidden text-left">
+          <div className="space-y-3 blur-[6px] select-none" aria-hidden="true">
+            <p className="font-serif italic text-lg">
+              okay @{targetHandle}, let's talk about that grid, because somebody has to.
+            </p>
+            <p>
+              the bio alone reads like a group project where everyone left early. and the
+              posting schedule? bold choice to treat followers like a landlord treats repairs.
+            </p>
+            <p>
+              we counted the selfie angles. all two of them. the algorithm is not your friend,
+              it's your enabler.
+            </p>
+          </div>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/50">
+            <span className="text-4xl">🔒</span>
+            <p className="font-serif italic font-bold text-lg">
+              {isPair ? "unlock the compatibility verdict" : `unlock @${targetHandle}'s roast`}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-lg mx-auto bg-card border-2 border-foreground rounded-3xl p-8 shadow-brutal space-y-5">
         <div className="inline-block bg-foreground text-background px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest rotate-[-2deg]">
           🍿 keep the roasts coming
         </div>
@@ -184,8 +249,14 @@ export function Paywall({ info, onUnlocked }: PaywallProps) {
         <div className="space-y-1">
           <div className="text-5xl font-black">{formatPrice(amount, currency)}</div>
           <div className="text-sm text-muted-foreground">
-            for {credits} more roast{credits === 1 ? "" : "s"} — no account needed
+            for {credits} more roast{credits === 1 ? "" : "s"}
+            {perRoast ? ` — that's ${perRoast} a roast` : ""} · no account needed
           </div>
+          {freeLimit > 0 && (
+            <div className="text-xs text-muted-foreground">
+              you burned through {Math.min(freeUsed, freeLimit)}/{freeLimit} free roasts 🔥
+            </div>
+          )}
         </div>
 
         {usePaypal ? (
@@ -210,19 +281,38 @@ export function Paywall({ info, onUnlocked }: PaywallProps) {
 
         {error && <p className="text-sm text-destructive font-medium">{error}</p>}
 
-        <p className="text-xs text-muted-foreground">
-          {usePaypal
-            ? "secure payment via PayPal · cards accepted"
-            : "secure payment via Razorpay · cards, UPI, netbanking"}
-        </p>
+        <div className="space-y-2 pt-1 border-t-2 border-dashed border-foreground/20">
+          <p className="text-xs text-muted-foreground pt-2">
+            {usePaypal
+              ? "🔒 secure payment via PayPal · cards accepted · buyer protection"
+              : "🔒 secure payment via Razorpay · UPI, cards, netbanking"}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            <Link to="/refund-policy" className="underline underline-offset-2 hover:text-foreground">
+              refund policy
+            </Link>{" "}
+            ·{" "}
+            <Link to="/terms" className="underline underline-offset-2 hover:text-foreground">
+              terms
+            </Link>
+          </p>
+        </div>
       </div>
 
-      <Link
-        to="/"
-        className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-4 py-2 text-sm font-bold hover:-translate-y-0.5 transition-all shadow-[3px_3px_0_0_hsl(0_0%_8%)]"
-      >
-        ← back home
-      </Link>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-4 py-2 text-sm font-bold hover:-translate-y-0.5 transition-all shadow-[3px_3px_0_0_hsl(0_0%_8%)]"
+        >
+          ← back home
+        </Link>
+        <Link
+          to="/leaderboard"
+          className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-4 py-2 text-sm font-bold hover:-translate-y-0.5 transition-all shadow-[3px_3px_0_0_hsl(0_0%_8%)]"
+        >
+          or judge the hall of shame 🏆
+        </Link>
+      </div>
     </div>
   );
 }

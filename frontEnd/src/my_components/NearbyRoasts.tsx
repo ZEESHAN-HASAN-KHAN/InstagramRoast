@@ -107,7 +107,7 @@ export function NearbyRoasts() {
   if (!loading && active === "global" && (!roasts || roasts.length === 0)) return null;
 
   return (
-    <section className="py-20 px-6 border-t-2 border-foreground bg-background relative overflow-hidden">
+    <section id="recent-roasts" className="py-20 px-6 border-t-2 border-foreground bg-background relative overflow-hidden">
       <div className="pointer-events-none absolute top-10 -right-20 size-60 rounded-full bg-sky-300/10 blur-3xl" />
       <div className="pointer-events-none absolute bottom-10 -left-20 size-60 rounded-full bg-accent/10 blur-3xl" />
 

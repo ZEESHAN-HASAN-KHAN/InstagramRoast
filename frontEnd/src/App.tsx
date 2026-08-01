@@ -36,6 +36,20 @@ function RouteTracker() {
   return null;
 }
 
+// A client-side route change keeps the old scroll offset, so following a link
+// from halfway down one page drops you halfway down the next one. Hash links
+// are left alone — those are asking for a specific spot on purpose.
+function ScrollToTop() {
+  const { pathname, hash } = useLocation();
+  React.useEffect(() => {
+    if (hash) return;
+    // "instant" beats the global `html { scroll-behavior: smooth }`, which would
+    // otherwise animate a full-page scroll on every navigation.
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [pathname, hash]);
+  return null;
+}
+
 const LEGAL_PATHS = ["/terms", "/privacy", "/refund-policy"];
 
 const RedirectToUsername = () => {
@@ -71,6 +85,7 @@ function AppLayout() {
   return (
     <div className="min-h-screen flex flex-col">
       <RouteTracker />
+      <ScrollToTop />
       <RedirectToUsername />
       <Navbar />
 

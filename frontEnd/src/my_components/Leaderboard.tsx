@@ -8,6 +8,10 @@ import {
   type LeaderboardSection,
   type Leaderboards,
 } from "@/lib/api";
+import { track } from "@/lib/analytics";
+
+const trackBoardClick = (board: "most_roasted" | "most_savage", rank: number) =>
+  track("leaderboard_profile_clicked", { board, rank });
 
 type Tab = { scope: FeedScope; label: string };
 
@@ -42,6 +46,7 @@ function ChampionPoster({ entry }: { entry: LeaderboardEntry }) {
   return (
     <Link
       to={profileHref(entry)}
+      onClick={() => trackBoardClick("most_roasted", 1)}
       className="relative block bg-card border-2 border-foreground rounded-3xl p-6 shadow-brutal rotate-[-0.6deg] hover:rotate-0 hover:-translate-y-1 transition-all overflow-hidden"
     >
       <span
@@ -79,6 +84,7 @@ function RunnerTile({ entry, rank }: { entry: LeaderboardEntry; rank: number }) 
   return (
     <Link
       to={profileHref(entry)}
+      onClick={() => trackBoardClick("most_roasted", rank)}
       className="relative bg-card border-2 border-foreground rounded-2xl p-4 shadow-[3px_3px_0_0_hsl(0_0%_8%)] hover:-translate-y-1 transition-all flex items-center gap-3"
     >
       <span className="font-mono font-bold text-sm text-muted-foreground tabular-nums shrink-0">
@@ -99,6 +105,7 @@ function LedgerRow({ entry, rank }: { entry: LeaderboardEntry; rank: number }) {
   return (
     <Link
       to={profileHref(entry)}
+      onClick={() => trackBoardClick("most_roasted", rank)}
       className="flex items-center gap-3 py-2.5 px-1 hover:bg-background hover:px-3 rounded-xl transition-all"
     >
       <span className="font-mono text-sm text-muted-foreground tabular-nums shrink-0 w-6">
@@ -207,6 +214,7 @@ function SavageRow({
   return (
     <Link
       to={profileHref(entry)}
+      onClick={() => trackBoardClick("most_savage", rank)}
       className={`flex items-center gap-3 rounded-xl transition-all hover:bg-background/15 ${
         featured ? "bg-background/10 p-3" : "py-2 px-1 hover:px-3"
       }`}
@@ -373,6 +381,13 @@ export function Leaderboard({ standalone = false }: { standalone?: boolean }) {
     };
   }, [active]);
 
+  // Section-impression once per mount — page_view alone can't tell whether the
+  // homepage embed was ever the thing people actually engaged with.
+  useEffect(() => {
+    track("leaderboard_viewed", { standalone });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const hasAnything =
     boards && (boards.mostRoasted.entries.length > 0 || boards.topRated.entries.length > 0);
 
@@ -417,7 +432,10 @@ export function Leaderboard({ standalone = false }: { standalone?: boolean }) {
                 <button
                   key={tab.scope}
                   type="button"
-                  onClick={() => setActive(tab.scope)}
+                  onClick={() => {
+                    track("leaderboard_tab_changed", { scope: tab.scope });
+                    setActive(tab.scope);
+                  }}
                   className={`border-2 border-foreground rounded-full px-4 py-1.5 text-xs font-black uppercase tracking-wider transition-all hover:-translate-y-0.5 ${
                     active === tab.scope
                       ? "bg-primary text-primary-foreground shadow-[3px_3px_0_0_hsl(0_0%_8%)]"
@@ -454,6 +472,7 @@ export function Leaderboard({ standalone = false }: { standalone?: boolean }) {
           <div className="text-center mt-10">
             <Link
               to="/leaderboard"
+              onClick={() => track("leaderboard_open_full")}
               className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-5 py-2.5 text-sm font-black hover:-translate-y-0.5 hover:rotate-[-1deg] transition-all shadow-[3px_3px_0_0_hsl(0_0%_8%)]"
             >
               open the full hall of shame 🏆

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { SelectDemo } from "./SelectDemo";
+import { track } from "@/lib/analytics";
 
 export function Compatibility() {
   const [uname1, setUname1] = useState("");
@@ -11,6 +12,7 @@ export function Compatibility() {
   const handleValueChange = (value: string) => setLanguage(value);
 
   function discover(): void {
+    track("compatibility_submitted", { language });
     navigate(`/compatibilityRoast?uname1=${uname1}&uname2=${uname2}&language=${language}`);
   }
 

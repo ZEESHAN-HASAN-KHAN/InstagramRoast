@@ -10,7 +10,7 @@ import { AvatarCirclesDemo } from "./my_components/Contributors";
 import { ModeToggle } from "@/components/ui/ModeToggle";
 import React from "react";
 import { Compatibility } from "./my_components/Compatibility";
-import { RoastTicker } from "./my_components/RoastTicker";
+import { RoastToast } from "./my_components/RoastToast";
 import { NearbyRoasts } from "./my_components/NearbyRoasts";
 import { Leaderboard } from "./my_components/Leaderboard";
 import { LeaderboardPage } from "./my_components/LeaderboardPage";
@@ -19,6 +19,22 @@ import { SiteFooter } from "./my_components/SiteFooter";
 import { Terms } from "./my_components/Terms";
 import { Privacy } from "./my_components/Privacy";
 import { RefundPolicy } from "./my_components/RefundPolicy";
+import { trackPageView } from "./lib/analytics";
+
+// gtag only sees the first full page load; every client-side navigation after
+// that has to be reported by hand or the funnel data stops at the front door.
+function RouteTracker() {
+  const { pathname, search } = useLocation();
+  const isFirstRender = React.useRef(true);
+  React.useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false; // initial load already tracked by gtag config
+      return;
+    }
+    trackPageView(pathname + search);
+  }, [pathname, search]);
+  return null;
+}
 
 const LEGAL_PATHS = ["/terms", "/privacy", "/refund-policy"];
 
@@ -54,6 +70,7 @@ function AppLayout() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <RouteTracker />
       <RedirectToUsername />
       <Navbar />
 
@@ -64,7 +81,7 @@ function AppLayout() {
             element={
               <>
                 <Hero />
-                <RoastTicker />
+                <RoastToast />
                 <NearbyRoasts />
                 <Leaderboard />
                 <Compatibility />

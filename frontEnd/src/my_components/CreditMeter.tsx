@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getCredits, type CreditsInfo } from "@/lib/api";
+import { track } from "@/lib/analytics";
 
 // Balance snapshot for the current visitor. Null while loading or on failure —
 // callers should render nothing in that case rather than guessing.
@@ -28,12 +29,22 @@ export function useCredits() {
 // primes the purchase decision one step early.
 export function CreditMeter({ className = "" }: { className?: string }) {
   const credits = useCredits();
+  const warned = useRef(false);
+
+  const freeLeft = Math.max(0, (credits?.freeLimit ?? 0) - (credits?.freeUsed ?? 0));
+  const paid = credits?.paidCredits ?? 0;
+
+  // The scarcity moment is the one worth measuring — did seeing "last free
+  // roast" precede a purchase, or a bounce?
+  useEffect(() => {
+    if (!warned.current && credits?.monetizationEnabled && freeLeft <= 1 && paid === 0) {
+      warned.current = true;
+      track("credit_warning_shown", { free_left: freeLeft });
+    }
+  }, [credits, freeLeft, paid]);
 
   // Loading, failed, or a region where roasts are free — show nothing.
   if (!credits || !credits.monetizationEnabled) return null;
-
-  const freeLeft = Math.max(0, (credits.freeLimit ?? 0) - (credits.freeUsed ?? 0));
-  const paid = credits.paidCredits ?? 0;
 
   let label: string;
   let tone = "bg-card";

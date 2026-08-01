@@ -10,10 +10,10 @@ import Confetti from "@/components/ui/confetti";
 import { ProfileCard } from "./ProfileCard";
 import { RoastCard } from "./RoastCard";
 import { ShareBar } from "./ShareBar";
-import { AdBanner } from "./AdBanner";
 import { RoastProgress } from "./RoastProgress";
 import { BurnRating } from "./BurnRating";
 import { CreditMeter, useCredits } from "./CreditMeter";
+import { track } from "@/lib/analytics";
 
 interface InstagramData {
   insta_data: {
@@ -111,6 +111,7 @@ export function Roast() {
   // the cached roast they just paid to replace.
   const wasReroll = useRef(false);
   const rerollRoast = () => {
+    track("reroll_clicked");
     wasReroll.current = true;
     runRoast(true);
   };
@@ -124,11 +125,22 @@ export function Roast() {
 
   useEffect(() => {
     if (received) {
+      // The moment the product actually delivered — pair with paywall_shown and
+      // roast_failed to see where the funnel leaks.
+      track("roast_delivered", { cached: !!cached, reroll: wasReroll.current });
       setIsRunning(true);
       const timeout = setTimeout(() => setIsRunning(false), 5000);
       return () => clearTimeout(timeout);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [received]);
+
+  useEffect(() => {
+    if (status === "failed") {
+      track("roast_failed", { reason: (error ?? "").split(": ")[0] || "unknown" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
 
   if (status === "paywall" && paywallInfo) {
     return <Paywall info={paywallInfo} onUnlocked={() => runRoast(wasReroll.current)} />;
@@ -283,9 +295,6 @@ export function Roast() {
         <div className="animate-reveal [animation-delay:200ms]">
           <ProfileCard profile={profile} />
         </div>
-
-        {/* Ad between profile and roast */}
-        <AdBanner slot="5114214544" />
 
         {/* Roast Card */}
         <div className="animate-reveal [animation-delay:300ms] pt-4">

@@ -11,6 +11,7 @@ import {
   type RazorpayCheckoutResult,
 } from "@/lib/api";
 import { ProfileCard } from "./ProfileCard";
+import { track } from "@/lib/analytics";
 
 interface PaypalButtonsInstance {
   render: (container: HTMLElement) => Promise<void>;
@@ -67,6 +68,19 @@ export function Paywall({ info, onUnlocked }: PaywallProps) {
   // split mirrors the backend's requireInternational guard.
   const usePaypal = currency !== "INR";
 
+  // Top of the conversion funnel — everything downstream (checkout_opened,
+  // purchase, paywall_abandoned) is measured against this event.
+  useEffect(() => {
+    track("paywall_shown", {
+      variant: info.reroll ? "reroll" : "out_of_credits",
+      has_preview: !!info.preview?.profile,
+      gateway: usePaypal ? "paypal" : "razorpay",
+      currency,
+      value: amount / 100,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (!usePaypal) return;
 
@@ -83,6 +97,7 @@ export function Paywall({ info, onUnlocked }: PaywallProps) {
           style: { layout: "vertical", shape: "pill", label: "pay" },
           createOrder: async () => {
             setError(null);
+            track("checkout_opened", { gateway: "paypal" });
             const order = await createPaypalOrder();
             return order.orderId;
           },
@@ -90,10 +105,17 @@ export function Paywall({ info, onUnlocked }: PaywallProps) {
             setBusy(true);
             try {
               await capturePaypalOrder(data.orderID);
+              track("purchase", {
+                transaction_id: data.orderID,
+                gateway: "paypal",
+                currency,
+                value: amount / 100,
+              });
               onUnlocked();
             } catch {
               // The webhook is the backstop: the capture may have landed
               // server-side even though this confirmation call failed.
+              track("purchase_failed", { gateway: "paypal", stage: "capture" });
               setError("Payment went through but we couldn't confirm it yet — refresh in a moment.");
             } finally {
               setBusy(false);
@@ -101,15 +123,22 @@ export function Paywall({ info, onUnlocked }: PaywallProps) {
           },
           onError: () => {
             setBusy(false);
+            track("purchase_failed", { gateway: "paypal", stage: "paypal_error" });
             setError("Couldn't start checkout. Try again in a moment.");
           },
-          onCancel: () => setBusy(false),
+          onCancel: () => {
+            setBusy(false);
+            track("checkout_dismissed", { gateway: "paypal" });
+          },
         });
 
         await buttons.render(paypalContainerRef.current);
         if (!cancelled) setPaypalReady(true);
       } catch {
-        if (!cancelled) setError("Checkout didn't load — check your connection and refresh.");
+        if (!cancelled) {
+          track("purchase_failed", { gateway: "paypal", stage: "sdk_load" });
+          setError("Checkout didn't load — check your connection and refresh.");
+        }
       }
     })();
 
@@ -145,10 +174,17 @@ export function Paywall({ info, onUnlocked }: PaywallProps) {
         handler: async (response: RazorpayCheckoutResult) => {
           try {
             await verifyPayment(response);
+            track("purchase", {
+              transaction_id: order.orderId,
+              gateway: "razorpay",
+              currency: order.currency,
+              value: order.amount / 100,
+            });
             onUnlocked();
           } catch {
             // The webhook is the backstop here: the payment did go through, so
             // credits land server-side even though this confirmation failed.
+            track("purchase_failed", { gateway: "razorpay", stage: "verify" });
             setError("Payment went through but we couldn't confirm it yet — refresh in a moment.");
           } finally {
             setBusy(false);
@@ -156,12 +192,17 @@ export function Paywall({ info, onUnlocked }: PaywallProps) {
         },
         modal: {
           // Fires when the user dismisses Checkout without paying.
-          ondismiss: () => setBusy(false),
+          ondismiss: () => {
+            setBusy(false);
+            track("checkout_dismissed", { gateway: "razorpay" });
+          },
         },
       });
 
+      track("checkout_opened", { gateway: "razorpay" });
       checkout.open();
     } catch {
+      track("purchase_failed", { gateway: "razorpay", stage: "create_order" });
       setError("Couldn't start checkout. Try again in a moment.");
       setBusy(false);
     }
@@ -302,12 +343,14 @@ export function Paywall({ info, onUnlocked }: PaywallProps) {
       <div className="flex flex-wrap items-center justify-center gap-3">
         <Link
           to="/"
+          onClick={() => track("paywall_abandoned", { to: "home" })}
           className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-4 py-2 text-sm font-bold hover:-translate-y-0.5 transition-all shadow-[3px_3px_0_0_hsl(0_0%_8%)]"
         >
           ← back home
         </Link>
         <Link
           to="/leaderboard"
+          onClick={() => track("paywall_abandoned", { to: "leaderboard" })}
           className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-4 py-2 text-sm font-bold hover:-translate-y-0.5 transition-all shadow-[3px_3px_0_0_hsl(0_0%_8%)]"
         >
           or judge the hall of shame 🏆

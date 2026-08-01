@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { track } from "@/lib/analytics";
 
 type ShareBarProps = {
   title: string;
@@ -39,6 +40,7 @@ export function ShareBar({ title, text }: ShareBarProps) {
   ];
 
   async function copyLink() {
+    track("share_clicked", { channel: "copy_link" });
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
@@ -57,6 +59,7 @@ export function ShareBar({ title, text }: ShareBarProps) {
           href={t.href}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => track("share_clicked", { channel: t.name })}
           className={`${t.bg} ${i % 2 ? "rotate-2" : "-rotate-2"} inline-flex items-center gap-2 border-2 border-foreground hover:-translate-y-1 hover:rotate-0 transition-all px-3 py-2 rounded-full text-sm font-bold shadow-[3px_3px_0_0_hsl(0_0%_8%)]`}
         >
           <span className="text-lg">{t.emoji}</span>

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getRatingStats, rateProfile, type RatingStats } from "@/lib/api";
 import NumberTicker from "@/components/ui/number-ticker";
+import { track } from "@/lib/analytics";
 
 const FLAMES = [1, 2, 3, 4, 5];
 
@@ -39,6 +40,7 @@ export function BurnRating({ username }: { username: string }) {
 
   async function vote(rating: number) {
     if (saving) return;
+    track("burn_rating_voted", { rating, revote: hasVoted });
     setSaving(true);
     setError(null);
     // Optimistic: the flames fill instantly, then the real averages land.
@@ -108,6 +110,7 @@ export function BurnRating({ username }: { username: string }) {
             // ranks on, which is the leaderboard's main discovery path.
             <Link
               to="/leaderboard"
+              onClick={() => track("rank_badge_clicked", { has_percentile: true })}
               className="inline-flex items-center gap-2 bg-yellow-200 dark:bg-yellow-900/40 border-2 border-foreground rounded-full px-4 py-1.5 text-xs font-black rotate-[-1deg] shadow-[3px_3px_0_0_hsl(0_0%_8%)] hover:-translate-y-0.5 hover:rotate-0 transition-all"
             >
               💀 top {percentile.topPercent}% most savage in {percentileLabel} → see the board
@@ -115,6 +118,7 @@ export function BurnRating({ username }: { username: string }) {
           ) : (
             <Link
               to="/leaderboard"
+              onClick={() => track("rank_badge_clicked", { has_percentile: false })}
               className="inline-block text-xs font-bold underline decoration-wavy underline-offset-4 hover:text-primary transition-colors"
             >
               where do they rank? see the hall of shame →

@@ -79,11 +79,24 @@ async function fetchMeta(username, language) {
   }
 }
 
+// Static files are matched first so that whether a path is an asset is decided
+// by whether the file actually exists, not by guessing from its shape. A
+// heuristic here is actively dangerous: Instagram handles routinely contain
+// dots (virat.kohli, john.doe), and any "looks like it has an extension" rule
+// silently strips the card preview from a large slice of real profiles.
+app.use(
+  express.static(DIST, {
+    // The shell must never be cached alongside the hashed assets — it carries
+    // the per-roast tags injected below.
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith("index.html")) res.setHeader("Cache-Control", "no-cache");
+    },
+  })
+);
+
 app.get("/:username", async (req, res, next) => {
   const { username } = req.params;
   if (RESERVED.has(username) || !HANDLE.test(username)) return next();
-  // Anything with a file extension is an asset, not a profile.
-  if (username.includes(".") && /\.[a-z0-9]{2,5}$/i.test(username)) return next();
 
   const language = typeof req.query.language === "string" ? req.query.language : undefined;
   const meta = await fetchMeta(username, language);
@@ -118,18 +131,17 @@ app.get("/:username", async (req, res, next) => {
   return res.type("html").send(html);
 });
 
-app.use(
-  express.static(DIST, {
-    // The shell must never be cached with the hashed assets — it carries the
-    // per-roast tags above.
-    setHeaders: (res, filePath) => {
-      if (filePath.endsWith("index.html")) res.setHeader("Cache-Control", "no-cache");
-    },
-  })
-);
-
 // SPA fallback for client-side routes. Written as middleware rather than
 // app.get("*") because Express 5 rejects a bare "*" path pattern.
-app.use((_req, res) => res.type("html").send(template));
+//
+// A request that looks like a file and got this far does not exist on disk, so
+// it 404s instead of being handed the HTML shell. Answering 200 text/html to a
+// missing .png is how og-image.png stayed broken without anyone noticing — the
+// crawler fetched it, got a page, and silently showed no image. Handles reach
+// the route above and never arrive here, so this cannot swallow a profile.
+app.use((req, res) => {
+  if (/\.[a-z0-9]+$/i.test(req.path)) return res.status(404).type("txt").send("Not found");
+  return res.type("html").send(template);
+});
 
 app.listen(PORT, () => console.log(`frontend listening on ${PORT}`));

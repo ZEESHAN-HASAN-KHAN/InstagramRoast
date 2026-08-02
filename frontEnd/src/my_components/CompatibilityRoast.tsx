@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import ReactMarkdown from "react-markdown";
@@ -8,6 +8,7 @@ import { useRoastJobStream } from "@/hooks/useRoastJobStream";
 import { usePacedIndex } from "@/hooks/usePacedIndex";
 import InstaCard from "./InstaCard";
 import { RoastProgress } from "./RoastProgress";
+import { ShareBar } from "./ShareBar";
 import { Paywall } from "./Paywall";
 
 // Which loading-ladder step each backend stage belongs to. Unknown stages fall
@@ -51,7 +52,6 @@ export function CompatiblityRoast() {
   const uname2 = queryParams.get("uname2");
   const language = queryParams.get("language");
 
-  const [copied, setCopied] = useState(false);
   const { status, stage, stageMessage, partial, result, error, cached, paywallInfo, start } =
     useRoastJobStream<CompatibilityResult>();
 
@@ -80,23 +80,6 @@ export function CompatiblityRoast() {
   const showLiveProfile1 = userData1 !== null && (received || displayedStep >= 2);
   const showLiveProfile2 = userData2 !== null && (received || displayedStep >= 3);
   const compatibilityRoast = result?.compatibilityText ?? "";
-
-  const url = typeof window !== "undefined" ? window.location.href : "";
-
-  const shareLinks = {
-    whatsapp:
-      "https://api.whatsapp.com/send?text=Hey!%20Check%20out%20this%20AI%20roast%20I%20got%20from%20https%3A%2F%2Finstaroasts.com%2FcompatibilityRoast%3Funame1%3D" +
-      uname1 + "%26uname2%3D" + uname2 + "%26language%3D" + language,
-    linkedin:
-      "https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Finstaroasts.com%2FcompatibilityRoast%3Funame1%3D" +
-      uname1 + "%26uname2%3D" + uname2 + "%26language%3D" + language,
-    threads:
-      "https://threads.net/intent/post?text=Hey!%20Check%20out%20this%20AI%20roast%20I%20got%20from%20https%3A%2F%2Finstaroasts.com%2FcompatibilityRoast%3Funame1%3D" +
-      uname1 + "%26uname2%3D" + uname2 + "%26language%3D" + language,
-    twitter:
-      "https://x.com/intent/post?text=Hey!%21+Check+out+this+AI+roast+I+got+from+https%3A%2F%2Finstaroasts.com%2FcompatibilityRoast%3Funame1%3D" +
-      uname1 + "%26uname2%3D" + uname2 + "%26language%3D" + language,
-  };
 
   const renderedMarkdown = useMemo(
     () => (
@@ -127,21 +110,6 @@ export function CompatiblityRoast() {
     runRoast();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch { /* ignore */ }
-  }
-
-  const shareTargets = [
-    { name: "Tweet it", href: shareLinks.twitter, emoji: "🐦", bg: "bg-sky-200 dark:bg-sky-900/40" },
-    { name: "WhatsApp", href: shareLinks.whatsapp, emoji: "💬", bg: "bg-green-200 dark:bg-green-900/40" },
-    { name: "LinkedIn", href: shareLinks.linkedin, emoji: "💼", bg: "bg-blue-200 dark:bg-blue-900/40" },
-    { name: "Threads", href: shareLinks.threads, emoji: "🧵", bg: "bg-purple-200 dark:bg-purple-900/40" },
-  ];
 
   if (status === "paywall" && paywallInfo) {
     return <Paywall info={paywallInfo} onUnlocked={runRoast} />;
@@ -233,29 +201,12 @@ export function CompatiblityRoast() {
         {userData2 && <InstaCard insta_data={userData2} />}
       </div>
 
-      {/* Share bar */}
-      <div className="flex flex-wrap items-center justify-center gap-3">
-        <span className="font-serif italic text-base">share the burn →</span>
-        {shareTargets.map((t, i) => (
-          <a
-            key={t.name}
-            href={t.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`${t.bg} ${i % 2 ? "rotate-2" : "-rotate-2"} inline-flex items-center gap-2 border-2 border-foreground hover:-translate-y-1 hover:rotate-0 transition-all px-3 py-2 rounded-full text-sm font-bold shadow-[3px_3px_0_0_hsl(0_0%_8%)]`}
-          >
-            <span className="text-lg">{t.emoji}</span>
-            {t.name}
-          </a>
-        ))}
-        <button
-          type="button"
-          onClick={copyLink}
-          className="inline-flex items-center gap-2 bg-primary text-primary-foreground border-2 border-foreground hover:-translate-y-1 transition-all px-4 py-2 rounded-full text-sm font-black shadow-[3px_3px_0_0_hsl(0_0%_8%)]"
-        >
-          {copied ? "✅ copied!" : "🔗 copy link"}
-        </button>
-      </div>
+      {/* Share bar — same component the single-roast page uses, so Instagram,
+          the copy fallback and the share analytics stay in one place */}
+      <ShareBar
+        title={`@${uname1} vs @${uname2} — the compatibility verdict is in 💀`}
+        text={compatibilityRoast}
+      />
 
       {/* Compatibility roast card */}
       <div className="relative">

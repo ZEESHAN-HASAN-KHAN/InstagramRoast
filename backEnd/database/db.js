@@ -1,5 +1,6 @@
 const { Pool } = require("pg");
 const logger = require("../helpers/logger");
+const { mintCard } = require("../helpers/cardIdentity");
 
 const pool = new Pool({
   connectionString: process.env.DB,
@@ -34,6 +35,30 @@ async function getUserData(username) {
     return result.rows[0]; // Return the user data
   } catch (error) {
     logger.error("Error fetching user data", { error: error.message });
+    throw error;
+  }
+}
+
+/**
+ * How many cards of each tier have ever been minted.
+ *
+ * Counts every roast ever generated, including ones later replaced by a
+ * re-roast — a card that was pulled still happened, and the scarcity claim on
+ * the card is about pulls, not about who currently holds what.
+ *
+ * @returns {Promise<Record<string, number>>} tier id -> count
+ */
+async function getCardTierCounts() {
+  try {
+    const result = await pool.query(
+      `SELECT card_tier, COUNT(*)::int AS n
+         FROM ai_responses
+        WHERE card_tier IS NOT NULL
+        GROUP BY card_tier;`
+    );
+    return Object.fromEntries(result.rows.map((r) => [r.card_tier, r.n]));
+  } catch (error) {
+    logger.error("Error fetching card tier counts", { error: error.message });
     throw error;
   }
 }
@@ -165,6 +190,23 @@ async function dbConnect() {
     // the roast that already exists.
     await pool.query(`
       ALTER TABLE roast_jobs ADD COLUMN IF NOT EXISTS force_regenerate BOOLEAN NOT NULL DEFAULT false;
+    `);
+    // The collectible card minted from this roast. Both values are derived
+    // deterministically from (username, response_text) by helpers/cardIdentity,
+    // so they are a cache of a pure function, not a source of truth — a wrong
+    // or missing row can always be recomputed by scripts/backfillCards.js.
+    //
+    // They are stored anyway because a derived value cannot be counted: the
+    // scarcity the card advertises ("95 of these exist") needs an indexed
+    // column, and recomputing the mint across every row per request would not
+    // survive any traffic at all.
+    await pool.query(`
+      ALTER TABLE ai_responses ADD COLUMN IF NOT EXISTS card_tier   VARCHAR(16);
+      ALTER TABLE ai_responses ADD COLUMN IF NOT EXISTS card_serial VARCHAR(8);
+    `);
+    // Serves the per-tier counts behind the scarcity line on the card.
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_ai_responses_card_tier ON ai_responses (card_tier);
     `);
     // Drives the recent-roasts ticker (newest first) and its geo-scoped variants.
     await pool.query(`
@@ -451,12 +493,17 @@ async function addAIResponse(username, responseText, language, roasterGeo = {}) 
     const profileId = profileResult.rows[0].id;
     const { country = null, region = null, city = null } = roasterGeo || {};
 
+    // Recorded at insert so the tier counts stay a plain indexed query. The
+    // mint is the same pure function the browser runs, so this only ever
+    // agrees with what the roast page shows.
+    const { rarity, serial } = mintCard(username, responseText);
+
     // Step 2: Insert AI response into the ai_responses table
     const insertResult = await pool.query(
-      `INSERT INTO ai_responses (profile_id, response_text, language, roaster_country, roaster_region, roaster_city)
-             VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO ai_responses (profile_id, response_text, language, roaster_country, roaster_region, roaster_city, card_tier, card_serial)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
              RETURNING *;`,
-      [profileId, responseText, language, country, region, city]
+      [profileId, responseText, language, country, region, city, rarity.id, serial]
     );
 
     logger.info("AI response added successfully");
@@ -531,4 +578,5 @@ module.exports = {
   profilesRoasted,
   addCompatiblityResponse,
   checkCompatibilityResponse,
+  getCardTierCounts,
 };

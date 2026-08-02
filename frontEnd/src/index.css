@@ -110,6 +110,58 @@ html {
   scroll-behavior: smooth;
 }
 
+/* ── Roast card foils ──────────────────────────────────────────────────────
+   Live-only decoration for the collectible card. The exported PNG freezes
+   animation, so every skin still has to read correctly at a standstill —
+   these only add motion on top of gradients that already carry the look. */
+@keyframes card-shimmer {
+  0% { transform: translateX(-120%) rotate(8deg); }
+  100% { transform: translateX(320%) rotate(8deg); }
+}
+@keyframes card-holo {
+  0% { background-position: 0% 50%; filter: hue-rotate(0deg); }
+  50% { background-position: 100% 50%; filter: hue-rotate(45deg); }
+  100% { background-position: 0% 50%; filter: hue-rotate(0deg); }
+}
+@keyframes card-ember {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.06); }
+}
+@keyframes card-frame-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Pre-flip suspense. Rarer pulls run this longer — the length of the stall is
+   the tell, so the shake has to escalate rather than just loop flatly. */
+@keyframes card-suspense {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  10% { transform: translateX(-3px) rotate(-1deg); }
+  20% { transform: translateX(3px) rotate(1deg); }
+  30% { transform: translateX(-5px) rotate(-1.5deg); }
+  40% { transform: translateX(5px) rotate(1.5deg); }
+  50% { transform: translateX(-7px) rotate(-2deg); }
+  60% { transform: translateX(7px) rotate(2deg); }
+  70% { transform: translateX(-9px) rotate(-2.5deg); }
+  80% { transform: translateX(9px) rotate(2.5deg); }
+  90% { transform: translateX(-11px) rotate(-3deg); }
+}
+@keyframes card-idle-bob {
+  0%, 100% { transform: translateY(0) rotate(-1.5deg); }
+  50% { transform: translateY(-9px) rotate(1.5deg); }
+}
+
+.card-suspense { animation: card-suspense 0.45s ease-in-out infinite; }
+.card-idle-bob { animation: card-idle-bob 3.5s ease-in-out infinite; }
+.card-shimmer { animation: card-shimmer 3.2s ease-in-out infinite; }
+.card-holo { animation: card-holo 6s ease-in-out infinite; }
+.card-ember { animation: card-ember 2.8s ease-in-out infinite; }
+.card-frame-spin { animation: card-frame-spin 8s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .card-shimmer, .card-holo, .card-ember, .card-frame-spin,
+  .card-suspense, .card-idle-bob { animation: none; }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

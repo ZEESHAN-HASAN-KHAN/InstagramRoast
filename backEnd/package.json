@@ -12,6 +12,7 @@
   "dependencies": {
     "@google-cloud/storage": "^7.14.0",
     "@google/generative-ai": "^0.24.1",
+    "@napi-rs/canvas": "^1.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

@@ -9,6 +9,7 @@ import type { ConfettiRef } from "@/components/ui/confetti";
 import Confetti from "@/components/ui/confetti";
 import { ProfileCard } from "./ProfileCard";
 import { RoastCard } from "./RoastCard";
+import { RoastCardPull } from "./RoastCardPull";
 import { ShareBar } from "./ShareBar";
 import { RoastProgress } from "./RoastProgress";
 import { BurnRating } from "./BurnRating";
@@ -299,6 +300,18 @@ export function Roast() {
         {/* Roast Card */}
         <div className="animate-reveal [animation-delay:300ms] pt-4">
           <RoastCard roast={roastData} />
+        </div>
+
+        {/* Collectible card: the pull is the share hook, so it sits directly
+            under the roast rather than below the fold */}
+        <div className="animate-reveal [animation-delay:320ms] pt-4">
+          <RoastCardPull
+            username={insta_data.username}
+            roast={roastData}
+            profile={profile}
+            onReroll={rerollRoast}
+            rerollCostsCredit={rerollCostsCredit}
+          />
         </div>
 
         {/* Community verdict */}

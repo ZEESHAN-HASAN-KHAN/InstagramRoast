@@ -224,6 +224,20 @@ export async function getRatingStats(username: string): Promise<RatingStats> {
   return response.json();
 }
 
+// How many of each card tier have ever been pulled, site-wide. This is the
+// observed number, not the design probability — "13 of these exist" is what
+// makes a rare pull worth screenshotting.
+export interface CardCounts {
+  counts: Partial<Record<string, number>>;
+  total: number;
+}
+
+export async function getCardCounts(): Promise<CardCounts> {
+  const response = await authedFetch("/api/v1/cards/counts");
+  if (!response.ok) throw new Error("Could not load card counts");
+  return response.json();
+}
+
 export async function rateProfile(username: string, rating: number): Promise<RatingStats> {
   const response = await authedFetch(`/api/v1/profiles/${encodeURIComponent(username)}/rating`, {
     method: "POST",

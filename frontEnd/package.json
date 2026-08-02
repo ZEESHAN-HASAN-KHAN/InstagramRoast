@@ -21,6 +21,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
+    "express": "^5.2.1",
     "framer-motion": "^11.12.0",
     "html-to-image": "^1.11.11",
     "jose": "^5.9.6",

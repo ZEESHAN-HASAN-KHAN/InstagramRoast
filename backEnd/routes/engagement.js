@@ -1,7 +1,7 @@
 const express = require("express");
 const engagementRouter = express.Router();
 const logger = require("../helpers/logger");
-const { getUserData } = require("../database/db");
+const { getUserData, getCardTierCounts } = require("../database/db");
 const {
   upsertRating,
   getLatestResponseId,
@@ -134,6 +134,20 @@ engagementRouter.get("/feed/recent", async (req, res) => {
     });
   } catch (error) {
     logger.error("Error reading recent roasts", { error: error.message });
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// How many of each card tier have ever been pulled. This is what lets the card
+// claim real scarcity ("95 of these exist") instead of only quoting its design
+// probability — the observed number is the part worth screenshotting.
+engagementRouter.get("/cards/counts", async (_req, res) => {
+  try {
+    const counts = await cached("cards:counts", () => getCardTierCounts());
+    const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
+    return res.status(200).json({ counts, total });
+  } catch (error) {
+    logger.error("Error reading card tier counts", { error: error.message });
     return res.status(500).json({ message: "Internal Server Error" });
   }
 });

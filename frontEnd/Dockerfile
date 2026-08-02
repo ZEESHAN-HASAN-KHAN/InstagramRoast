@@ -19,11 +19,9 @@ COPY . .
 # Build the Vite app for production
 RUN npm run build
 
-# Use a lightweight web server for serving static files
-RUN npm install -g serve
-
-# Expose the desired port (default for Vite builds is often 5173)
+# Served by server.js rather than a static file server: /:username needs its
+# Open Graph tags rewritten per roast, because link-preview crawlers don't run
+# the JavaScript that would otherwise set them.
 ENV PORT 5173
 
-# Serve the Vite build directory
-CMD ["serve", "-s", "dist", "-l", "5173"]
+CMD ["node", "server.js"]

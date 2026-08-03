@@ -277,6 +277,44 @@ async function getLeaderboard(geo, scope = "global") {
   return { mostRoasted, topRated };
 }
 
+// --- card reveals ------------------------------------------------------------
+
+/**
+ * Has this viewer already flipped this specific card face-up?
+ *
+ * @param {number} aiResponseId the roast the card was minted from
+ * @param {string} viewerKey    from viewerKeyFor()
+ */
+async function hasRevealedCard(aiResponseId, viewerKey) {
+  if (!aiResponseId || !viewerKey) return false;
+  const result = await pool.query(
+    `SELECT 1 FROM card_reveals
+      WHERE ai_response_id = $1 AND viewer_key = $2
+      LIMIT 1;`,
+    [aiResponseId, viewerKey]
+  );
+  return result.rowCount > 0;
+}
+
+/**
+ * Records that a viewer flipped a card.
+ *
+ * Idempotent by constraint: a second tap (double click, reload mid-animation,
+ * a retry after a dropped response) collides on the unique pair and is a no-op,
+ * so revealed_at keeps the moment of the *first* pull.
+ */
+async function recordCardReveal({ aiResponseId, profileId, sessionId, ip, viewerKey }) {
+  const result = await pool.query(
+    `INSERT INTO card_reveals (ai_response_id, profile_id, session_id, ip_address, viewer_key)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (ai_response_id, viewer_key) DO NOTHING
+     RETURNING id;`,
+    [aiResponseId, profileId, sessionId ?? null, ip ?? null, viewerKey]
+  );
+  // rowCount 0 means it was already revealed, which is success, not failure.
+  return { firstReveal: result.rowCount > 0 };
+}
+
 // --- view tracking -----------------------------------------------------------
 
 // Identifies a viewer/voter across the engagement features. Sessions only exist
@@ -333,5 +371,7 @@ module.exports = {
   recordProfileView,
   pruneOldViews,
   viewerKeyFor,
+  hasRevealedCard,
+  recordCardReveal,
   SCOPES,
 };

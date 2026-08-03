@@ -17,16 +17,27 @@ import {
   type ExportFormat,
 } from "@/lib/cardExport";
 import { track } from "@/lib/analytics";
-import { getCardCounts } from "@/lib/api";
+import { getCardCounts, getCardState, revealCard } from "@/lib/api";
 
 // The story canvas exports at 1080x1920; like the card it's laid out at half
 // that and rasterized at 2x.
 const STORY_W = 540;
 const STORY_H = 960;
 
+// A card is only pulled once. Having flipped it, coming back to the page —
+// reloading, following a shared link back, opening it again tomorrow — finds it
+// face-up instead of asking for the same tap again.
+//
+// The record lives in the database against the roast itself (see the
+// card_reveals table), keyed by the same viewer identity the ratings use. A
+// re-roast is a different roast and therefore a genuinely new card, so it comes
+// back face-down and has to be earned.
+
 type RoastCardPullProps = {
   username: string;
   roast: string;
+  /** Which roast is on screen — the card is per language, like the roast. */
+  language: string;
   profile: CardProfile;
   /** Re-roll is the paid path out of a bad pull, so the card offers it directly. */
   onReroll: () => void;
@@ -36,6 +47,7 @@ type RoastCardPullProps = {
 export function RoastCardPull({
   username,
   roast,
+  language,
   profile,
   onReroll,
   rerollCostsCredit,
@@ -88,16 +100,36 @@ export function RoastCardPull({
     };
   }, [rarity.id]);
 
-  // A new roast (re-roll) is a new pull — put the card face-down again so the
-  // reveal is earned rather than spoiled. Any suspense timer still pending
-  // belongs to the card that was just replaced; letting it fire would flip the
-  // new one open on its own and report a reveal nobody watched.
+  // A new roast (re-roll) is a new pull — put the card face-down so the reveal
+  // is earned rather than spoiled. Any suspense timer still pending belongs to
+  // the card that was just replaced; letting it fire would flip the new one
+  // open on its own and report a reveal nobody watched.
   useEffect(() => {
     timers.current.forEach(clearTimeout);
     timers.current = [];
     setPhase("back");
     setNote(null);
-  }, [identity.serial]);
+  }, [username, identity.serial]);
+
+  // Then ask the server whether this viewer already opened this card. Only
+  // promotes a card that's still face-down: if they tapped while this was in
+  // flight, the suspense they're watching must be allowed to finish rather than
+  // being cut short by a late answer.
+  useEffect(() => {
+    let cancelled = false;
+    getCardState(username, language)
+      .then(({ revealed }) => {
+        if (cancelled || !revealed) return;
+        setPhase((current) => (current === "back" ? "front" : current));
+      })
+      .catch(() => {
+        // Unreachable API just means they tap again — strictly better than a
+        // card stuck face-down or a page that fails to render.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [username, language, identity.serial]);
 
   useEffect(
     () => () => {
@@ -135,7 +167,12 @@ export function RoastCardPull({
     timers.current.push(
       window.setTimeout(() => {
         setPhase("front");
+        // Not awaited: the flip is the payoff and must not wait on a round
+        // trip. A failed write only costs them the tap on a later visit.
+        revealCard(username, language).catch(() => {});
         celebrate();
+        // Only a live flip counts as a reveal. Restoring a recorded one on a
+        // later visit is not a second pull and must not inflate the funnel.
         track("card_revealed", { tier: rarity.id, pull_rate: rarity.pullRate });
       }, rarity.suspenseMs)
     );

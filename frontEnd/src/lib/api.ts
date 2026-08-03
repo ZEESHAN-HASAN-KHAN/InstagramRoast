@@ -238,6 +238,32 @@ export async function getCardCounts(): Promise<CardCounts> {
   return response.json();
 }
 
+// Whether this visitor has already flipped the card for the roast they're
+// looking at. Server-side and keyed to the roast itself, so it survives a
+// reload, a different tab, and a cleared browser cache — and a re-roast, which
+// mints a different card, correctly comes back unrevealed.
+export interface CardState {
+  revealed: boolean;
+  tier: string | null;
+  serial: string | null;
+}
+
+export async function getCardState(username: string, language: string): Promise<CardState> {
+  const response = await authedFetch(
+    `/api/v1/profiles/${encodeURIComponent(username)}/card?language=${encodeURIComponent(language)}`
+  );
+  if (!response.ok) throw new Error("Could not load card state");
+  return response.json();
+}
+
+export async function revealCard(username: string, language: string): Promise<void> {
+  const response = await authedFetch(
+    `/api/v1/profiles/${encodeURIComponent(username)}/card/reveal`,
+    { method: "POST", body: JSON.stringify({ language }) }
+  );
+  if (!response.ok) throw new Error("Could not save the reveal");
+}
+
 export async function rateProfile(username: string, rating: number): Promise<RatingStats> {
   const response = await authedFetch(`/api/v1/profiles/${encodeURIComponent(username)}/rating`, {
     method: "POST",

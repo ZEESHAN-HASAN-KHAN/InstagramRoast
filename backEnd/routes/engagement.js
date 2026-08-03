@@ -1,7 +1,7 @@
 const express = require("express");
 const engagementRouter = express.Router();
 const logger = require("../helpers/logger");
-const { getUserData, getCardTierCounts } = require("../database/db");
+const { getUserData, getCardTierCounts, getAIResponse } = require("../database/db");
 const {
   upsertRating,
   getLatestResponseId,
@@ -10,6 +10,8 @@ const {
   getLeaderboard,
   pruneOldViews,
   viewerKeyFor,
+  hasRevealedCard,
+  recordCardReveal,
   SCOPES,
 } = require("../database/engagement");
 
@@ -64,6 +66,64 @@ const bucketUrl = (fileName) =>
 const toProfileRow = (row) => ({
   ...row,
   profile_pic_url: bucketUrl(row.profile_pic_url),
+});
+
+// --- card reveals ------------------------------------------------------------
+
+// The page defaults to english when no ?language= is given, so the card state
+// has to be looked up against the same roast the visitor is actually reading.
+const ALLOWED_LANGUAGES = (process.env.ALLOWED_LANGUAGE || "english")
+  .split(",")
+  .map((l) => l.trim())
+  .filter(Boolean);
+
+const parseLanguage = (value) =>
+  ALLOWED_LANGUAGES.includes(value) ? value : "english";
+
+// Resolves the roast currently on screen for this profile+language, which is
+// the thing a card reveal is actually attached to.
+async function currentCard(username, language) {
+  const roast = await getAIResponse(username, language);
+  if (!roast) return null;
+  return {
+    responseId: roast.id,
+    profileId: roast.profile_id,
+    tier: roast.card_tier,
+    serial: roast.card_serial,
+  };
+}
+
+engagementRouter.get("/profiles/:username/card", async (req, res) => {
+  try {
+    const card = await currentCard(req.params.username, parseLanguage(req.query.language));
+    if (!card) return res.status(404).json({ message: "No roast for this profile" });
+
+    const revealed = await hasRevealedCard(card.responseId, voterKeyFor(req));
+    return res.status(200).json({ revealed, tier: card.tier, serial: card.serial });
+  } catch (error) {
+    logger.error("Error reading card reveal state", { error: error.message });
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+engagementRouter.post("/profiles/:username/card/reveal", async (req, res) => {
+  try {
+    const card = await currentCard(req.params.username, parseLanguage(req.body?.language));
+    if (!card) return res.status(404).json({ message: "No roast for this profile" });
+
+    const { firstReveal } = await recordCardReveal({
+      aiResponseId: card.responseId,
+      profileId: card.profileId,
+      sessionId: req.roastSession?.id ?? null,
+      ip: req.clientIp,
+      viewerKey: voterKeyFor(req),
+    });
+
+    return res.status(200).json({ revealed: true, firstReveal });
+  } catch (error) {
+    logger.error("Error recording card reveal", { error: error.message });
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
 });
 
 // --- ratings -----------------------------------------------------------------

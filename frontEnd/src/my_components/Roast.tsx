@@ -308,6 +308,7 @@ export function Roast() {
           <RoastCardPull
             username={insta_data.username}
             roast={roastData}
+            language={ln}
             profile={profile}
             onReroll={rerollRoast}
             rerollCostsCredit={rerollCostsCredit}

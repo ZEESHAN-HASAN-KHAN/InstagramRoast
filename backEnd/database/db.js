@@ -238,6 +238,36 @@ async function dbConnect() {
         UNIQUE (profile_id, voter_key)
       );
     `);
+    // Which cards a given visitor has already flipped face-up. A pull only
+    // happens once, so returning to a roast — reloading, following a shared
+    // link back, opening it on the same session tomorrow — finds the card open
+    // instead of asking for the same tap again.
+    //
+    // Keyed on ai_response_id rather than profile_id: a re-roast mints a
+    // genuinely different card, and that one has to be earned with its own tap.
+    // `viewer_key` follows roast_ratings — the session id where one exists and
+    // 'ip:<addr>' otherwise, so visitors in unmonetized regions (who never get
+    // a session row) still keep their reveals.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS card_reveals (
+        id             SERIAL PRIMARY KEY,
+        ai_response_id INTEGER NOT NULL REFERENCES ai_responses(id) ON DELETE CASCADE,
+        profile_id     INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+        session_id     UUID,
+        ip_address     VARCHAR(45),
+        viewer_key     TEXT NOT NULL,
+        revealed_at    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (ai_response_id, viewer_key)
+      );
+    `);
+    // The read on every card render is "has this viewer opened this card", and
+    // the UNIQUE constraint above already indexes exactly that pair. This one
+    // serves the reverse question — everything one viewer has opened — which is
+    // what a collection page would ask.
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_card_reveals_viewer ON card_reveals (viewer_key);
+    `);
+
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_roast_ratings_profile ON roast_ratings (profile_id);
     `);
@@ -370,7 +400,10 @@ async function getAIResponse(username, language) {
       // A profile can accumulate several roasts per language (re-roasts,
       // reprocessed jobs) — newest wins, and without the ORDER BY the row
       // Postgres happens to return first isn't deterministic.
-      `SELECT ar.response_text
+      // id and the card columns ride along so callers that need to identify
+      // *which* roast this is (the card reveal, the link preview) don't have to
+      // run the same newest-wins query again to find out.
+      `SELECT ar.id, ar.response_text, ar.card_tier, ar.card_serial, ar.profile_id
              FROM ai_responses ar
              JOIN profiles p ON ar.profile_id = p.id
              WHERE p.username = $1 and ar.language = $2

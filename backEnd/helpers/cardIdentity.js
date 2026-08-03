@@ -54,7 +54,44 @@ function dropHeadingLines(md) {
 const MIN_HEADLINE = 40;
 const MAX_HEADLINE = 165;
 
+const EMOJI =
+  /[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{1F3FB}-\u{1F3FF}️⃣‍]/gu;
+
+function stripEmoji(line) {
+  const cleaned = line
+    .replace(EMOJI, "")
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,.!?…;:])/g, "$1")
+    .trim();
+  return cleaned || line;
+}
+
+const WRAPPING_QUOTES = /^["“”'‘’]+(.*?)["“”'‘’]+$/s;
+
+function unquote(line) {
+  const m = line.match(WRAPPING_QUOTES);
+  if (!m) return line;
+  const inner = m[1].trim();
+  // Only when nothing quoted remains inside, so a line that legitimately quotes
+  // the person's own bio keeps its inner quotes.
+  return inner && !/["“”]/.test(inner) ? inner : line;
+}
+
+function extractLeadLine(roast) {
+  const lines = dropHeadingLines(roast).split(/\r?\n/).map(stripMarkdown);
+  const start = lines.findIndex(Boolean);
+  if (start === -1) return "";
+
+  const lead = unquote(stripEmoji(lines[start]));
+  if (lead.length < MIN_HEADLINE || lead.length > MAX_HEADLINE) return "";
+  if (!lines.slice(start + 1).some(Boolean)) return "";
+  return lead;
+}
+
 function extractBestLine(roast) {
+  const lead = extractLeadLine(roast);
+  if (lead) return lead;
+
   const text = stripMarkdown(dropHeadingLines(roast));
   if (!text) return "";
 
@@ -67,14 +104,14 @@ function extractBestLine(roast) {
     (s) => s.length >= MIN_HEADLINE && s.length <= MAX_HEADLINE
   );
   if (inBand.length) {
-    return inBand.reduce((best, s) => (s.length > best.length ? s : best));
+    return stripEmoji(inBand.reduce((best, s) => (s.length > best.length ? s : best)));
   }
 
   const first = sentences[0] ?? text;
-  if (first.length <= MAX_HEADLINE) return first;
+  if (first.length <= MAX_HEADLINE) return stripEmoji(first);
   const cut = first.slice(0, MAX_HEADLINE);
   const lastSpace = cut.lastIndexOf(" ");
-  return (lastSpace > MIN_HEADLINE ? cut.slice(0, lastSpace) : cut).trim() + "…";
+  return stripEmoji((lastSpace > MIN_HEADLINE ? cut.slice(0, lastSpace) : cut).trim()) + "…";
 }
 
 function rollRarity(hash) {
@@ -108,4 +145,4 @@ function mintCard(username, roast) {
   };
 }
 
-module.exports = { mintCard, extractBestLine, stripMarkdown, RARITIES, RARITY_ORDER };
+module.exports = { mintCard, extractBestLine, stripMarkdown, stripEmoji, RARITIES, RARITY_ORDER };

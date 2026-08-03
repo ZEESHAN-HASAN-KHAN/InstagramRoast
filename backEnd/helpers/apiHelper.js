@@ -133,7 +133,7 @@ ${JSON.stringify(userData2)}
 - Be as sarcastic, blunt, and edgy as possible. Use clever wordplay and savage humor.
 - Keep the roast concise (under 100 words).
 - Add a compatibility score with humor out of 10.
-- Use emojis for emphasis.
+- Use emojis for emphasis in the body only — never on line 1.
 - Write strictly in ${JSON.stringify(language)} and output in **markdown format**.
 
 STRICT RULES — violating any of these will make the output unusable:
@@ -143,6 +143,19 @@ STRICT RULES — violating any of these will make the output unusable:
 - NO meta-commentary like "Here is your roast:" or "Sure! Here's a roast:"
 - Start the roast IMMEDIATELY. The very first word must be part of the roast itself.
 - The response must contain ONLY the roast text in markdown. Nothing else.
+
+OUTPUT SHAPE — the last and most important rule. Get this wrong and the whole roast is discarded:
+- LINE 1 is ONE short sentence: the most quotable, screenshot-worthy line of the whole roast. It gets printed alone on a shareable card, so it has to land with no context around it.
+- Line 1 is 40 to 130 characters. Count them before you answer. Over 130 and it is thrown away.
+- Line 1 has ZERO emoji, no markdown, no surrounding quotation marks, no name prefix like "Dave:".
+- Line 1 is the opening of the roast, not a title and not a summary of what follows. Aim it at these two specifically — a line that would fit any couple is a failure.
+- Then a blank line.
+- Then the rest of the roast, which must NOT repeat line 1. The compatibility score goes in the body, never on line 1.
+
+The shape, illustrated — never reuse these words, only this layout:
+One of you peaked in a group photo and the other one cropped it.
+
+Two personalities, one shared brain cell, and it is off duty. Compatibility: 3/10. 💀
 `;
   logger.debug("LLM input prompt", { prompt: inputPrompt });
   return callLLM(inputPrompt);
@@ -175,7 +188,7 @@ const generateAIRoast = async (userData, profileUrl, language, { freshAngle = fa
   - Be as sarcastic, blunt, and edgy as possible. Use clever wordplay and savage humor.
   - Be as sarcastic, blunt, and edgy as possible. Use clever wordplay and savage humor.
   - Keep the roast concise (under 100 words).
-  - Use emojis for emphasis.
+  - Use emojis for emphasis in the body only — never on line 1.
   - Write strictly in ${language} and output in **markdown format**.
 
   STRICT RULES — violating any of these will make the output unusable:
@@ -185,6 +198,19 @@ const generateAIRoast = async (userData, profileUrl, language, { freshAngle = fa
   - NO meta-commentary like "Here is your roast:" or "Sure! Here's a roast:"
   - Start the roast IMMEDIATELY. The very first word must be part of the roast itself.
   - The response must contain ONLY the roast text in markdown. Nothing else.
+
+  OUTPUT SHAPE — the last and most important rule. Get this wrong and the whole roast is discarded:
+  - LINE 1 is ONE short sentence: the most quotable, screenshot-worthy line of the whole roast. It gets printed alone on a shareable card, so it has to land with no context around it.
+  - Line 1 is 40 to 130 characters. Count them before you answer. Over 130 and it is thrown away.
+  - Line 1 has ZERO emoji, no markdown, no surrounding quotation marks, no name prefix like "Dave:".
+  - Line 1 is the opening of the roast, not a title and not a summary of what follows. Aim it at this person — a line that would fit any profile is a failure.
+  - Then a blank line.
+  - Then the rest of the roast, which must NOT repeat line 1.
+
+  The shape, illustrated — never reuse these words, only this layout:
+  Your bio is a personality test you failed twice and still framed it.
+
+  Three hundred followers, four hundred following, and not one of them would help you move. 📉
 `;
 
   logger.debug("LLM input prompt", { prompt: inputPrompt });

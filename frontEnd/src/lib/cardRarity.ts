@@ -115,6 +115,37 @@ export function stripMarkdown(md: string): string {
 const MIN_HEADLINE = 40;
 const MAX_HEADLINE = 165;
 
+// Emoji carry the roast body but ruin the headline: it renders in a serif
+// display face on a canvas that has no colour-emoji font loaded, so they come
+// out as tofu boxes on the share image. The prompt bans them from the quotable
+// line; models comply about two thirds of the time, so strip them anyway.
+const EMOJI =
+  /[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{1F3FB}-\u{1F3FF}️⃣‍]/gu;
+
+// Falls back to the original when stripping would leave nothing — an all-emoji
+// roast should still print something rather than an empty card face.
+function stripEmoji(line: string): string {
+  const cleaned = line
+    .replace(EMOJI, "")
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,.!?…;:])/g, "$1")
+    .trim();
+  return cleaned || line;
+}
+
+const WRAPPING_QUOTES = /^["“”'‘’]+(.*?)["“”'‘’]+$/s;
+
+// The card prints the headline inside its own typographic quotes, so a line the
+// model already wrapped would render as ““like this””.
+function unquote(line: string): string {
+  const m = line.match(WRAPPING_QUOTES);
+  if (!m) return line;
+  const inner = m[1].trim();
+  // Only when nothing quoted remains inside, so a line that legitimately quotes
+  // the person's own bio keeps its inner quotes.
+  return inner && !/["“”]/.test(inner) ? inner : line;
+}
+
 // The roast prompt forbids headings, so any that slip through are label junk
 // ("Roast", "Hot Take") that would otherwise be glued onto the front of the
 // punchline. Dropped only when there's real content left without them.
@@ -123,10 +154,30 @@ function dropHeadingLines(md: string): string {
   return kept.join("\n").trim() ? kept.join("\n") : md;
 }
 
+// The roast prompt asks the model to open with one standalone quotable line and
+// put the body underneath, so when it complies that line is the money quote and
+// no heuristic here can beat it. It only counts when a body actually follows: a
+// model that ignored the shape returns a single blob whose first line is the
+// entire roast, and that has to fall through to the heuristic below.
+function extractLeadLine(roast: string): string {
+  const lines = dropHeadingLines(roast).split(/\r?\n/).map(stripMarkdown);
+  const start = lines.findIndex(Boolean);
+  if (start === -1) return "";
+
+  const lead = unquote(stripEmoji(lines[start]));
+  if (lead.length < MIN_HEADLINE || lead.length > MAX_HEADLINE) return "";
+  if (!lines.slice(start + 1).some(Boolean)) return "";
+  return lead;
+}
+
 // Picks the one line worth printing three times larger than everything else.
-// Prefers a whole sentence in a readable length band; falls back to a clean
-// word-boundary truncation so the card is never empty or mid-word.
+// Takes the model's own opening line when it gave one; otherwise prefers a whole
+// sentence in a readable length band, and falls back to a clean word-boundary
+// truncation so the card is never empty or mid-word.
 export function extractBestLine(roast: string): string {
+  const lead = extractLeadLine(roast);
+  if (lead) return lead;
+
   const text = stripMarkdown(dropHeadingLines(roast));
   if (!text) return "";
 
@@ -140,14 +191,14 @@ export function extractBestLine(roast: string): string {
   );
   // Among candidates, the longest one in the band carries the most punchline.
   if (inBand.length) {
-    return inBand.reduce((best, s) => (s.length > best.length ? s : best));
+    return stripEmoji(inBand.reduce((best, s) => (s.length > best.length ? s : best)));
   }
 
   const first = sentences[0] ?? text;
-  if (first.length <= MAX_HEADLINE) return first;
+  if (first.length <= MAX_HEADLINE) return stripEmoji(first);
   const cut = first.slice(0, MAX_HEADLINE);
   const lastSpace = cut.lastIndexOf(" ");
-  return (lastSpace > MIN_HEADLINE ? cut.slice(0, lastSpace) : cut).trim() + "…";
+  return stripEmoji((lastSpace > MIN_HEADLINE ? cut.slice(0, lastSpace) : cut).trim()) + "…";
 }
 
 function rollRarity(hash: number): Rarity {

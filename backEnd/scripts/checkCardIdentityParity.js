@@ -60,6 +60,19 @@ const ROASTS = [
   "आपकी प्रोफ़ाइल देखकर लगता है कि आपने कैमरा तो खरीदा लेकिन व्यक्तित्व किराए पर भी नहीं लिया।",
   "Wow. Nice. Cool. Your entire personality is a reposted gym mirror selfie with a quote about grinding.",
   "",
+  // The money-quote shape the roast prompt now asks for, plus every way a model
+  // gets it wrong: lead too short to print, lead too long to fit, lead wrapped
+  // in markdown, lead with no body under it, and a heading glued on top.
+  "Your bio is a personality test you failed twice and still framed.\n\nThree hundred followers, four hundred following, and a caption budget that ran out in 2019. 🔥",
+  "Nope.\n\nEverything about this profile is a cry for help that even the algorithm ignored, and it shows in every single post.",
+  "You have somehow turned having a camera into a personality, a career plan, and a very public apology to everyone who follows you for reasons nobody has ever managed to explain out loud.\n\nAnd the bio is worse.",
+  "**Your entire feed is one long apology to a personality you never developed.**\n\n_Genuinely_ impressive commitment to the bit. 🥴",
+  "Your bio is a personality test you failed twice and still framed.",
+  "## Roast\n\nYour bio is a personality test you failed twice and still framed.\n\nThree hundred followers and not one of them would help you move.",
+  "Your bio is a personality test you failed twice and still framed.\r\n\r\nThree hundred followers and not one of them would help you move.",
+  "\"Your bio is a personality test you failed twice and still framed.\"\n\nThree hundred followers and not one would help you move.",
+  "“Your bio says ‘entrepreneur’ but your feed says otherwise entirely.”\n\nAnd the follower count agrees with the feed.",
+  "Line one with emoji 🔥 and a 👨🏽‍💻 family sequence to strip out cleanly.\n\nBody under it. 📉",
 ];
 const HANDLES = ["cristiano", "arghya721", "a", "user.name_123", "日本語ユーザー"];
 
@@ -83,9 +96,15 @@ for (const handle of HANDLES) {
 
 // Also sweep a wide synthetic range so a subtle hash difference (sign, overflow,
 // rounding at a tier boundary) cannot hide in a handful of hand-picked cases.
+// Every third vector uses the lead-line shape so the sweep exercises both
+// extraction paths, with lengths that straddle the headline band on each.
 for (let i = 0; i < 20000; i++) {
   const handle = `user_${i}`;
-  const roast = `roast ${i} with trailing words ${i * 31} and a sentence that ends here.`;
+  const filler = "word ".repeat(i % 40);
+  const roast =
+    i % 3 === 0
+      ? `Lead line ${i} ${filler}ends here.\n\nBody sentence ${i * 31} carries the rest of it.`
+      : `roast ${i} with trailing words ${i * 31} and a sentence that ends here.`;
   const a = backend.mintCard(handle, roast);
   const b = frontend.mintCard(handle, roast);
   checked++;

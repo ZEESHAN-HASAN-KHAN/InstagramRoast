@@ -280,18 +280,20 @@ async function getLeaderboard(geo, scope = "global") {
 // --- card reveals ------------------------------------------------------------
 
 /**
- * Has this viewer already flipped this specific card face-up?
+ * Has this card been flipped face-up by anyone yet?
+ *
+ * Deliberately global rather than per-viewer: a card is pulled once, and after
+ * that it stays open for everybody who lands on that roast. Rows are still
+ * written per viewer (see recordCardReveal) so we keep who opened it and when —
+ * that history is what a per-viewer check would need if this is ever reverted.
  *
  * @param {number} aiResponseId the roast the card was minted from
- * @param {string} viewerKey    from viewerKeyFor()
  */
-async function hasRevealedCard(aiResponseId, viewerKey) {
-  if (!aiResponseId || !viewerKey) return false;
+async function hasRevealedCard(aiResponseId) {
+  if (!aiResponseId) return false;
   const result = await pool.query(
-    `SELECT 1 FROM card_reveals
-      WHERE ai_response_id = $1 AND viewer_key = $2
-      LIMIT 1;`,
-    [aiResponseId, viewerKey]
+    `SELECT 1 FROM card_reveals WHERE ai_response_id = $1 LIMIT 1;`,
+    [aiResponseId]
   );
   return result.rowCount > 0;
 }

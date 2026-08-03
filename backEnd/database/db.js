@@ -238,16 +238,20 @@ async function dbConnect() {
         UNIQUE (profile_id, voter_key)
       );
     `);
-    // Which cards a given visitor has already flipped face-up. A pull only
-    // happens once, so returning to a roast — reloading, following a shared
-    // link back, opening it on the same session tomorrow — finds the card open
-    // instead of asking for the same tap again.
+    // Who has flipped which card face-up, and when.
+    //
+    // The reveal itself is global: once anyone opens a card it stays open for
+    // everyone who lands on that roast, so the check only asks whether any row
+    // exists for the roast (see hasRevealedCard). Rows are still written per
+    // viewer, which keeps the audit trail — who opened it first, how many
+    // distinct people opened it — and is what a per-viewer check would need if
+    // that decision is ever revisited.
     //
     // Keyed on ai_response_id rather than profile_id: a re-roast mints a
-    // genuinely different card, and that one has to be earned with its own tap.
+    // genuinely different card, and that one starts face-down again.
     // `viewer_key` follows roast_ratings — the session id where one exists and
     // 'ip:<addr>' otherwise, so visitors in unmonetized regions (who never get
-    // a session row) still keep their reveals.
+    // a session row) are still recorded.
     await pool.query(`
       CREATE TABLE IF NOT EXISTS card_reveals (
         id             SERIAL PRIMARY KEY,

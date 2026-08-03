@@ -98,7 +98,7 @@ engagementRouter.get("/profiles/:username/card", async (req, res) => {
     const card = await currentCard(req.params.username, parseLanguage(req.query.language));
     if (!card) return res.status(404).json({ message: "No roast for this profile" });
 
-    const revealed = await hasRevealedCard(card.responseId, voterKeyFor(req));
+    const revealed = await hasRevealedCard(card.responseId);
     return res.status(200).json({ revealed, tier: card.tier, serial: card.serial });
   } catch (error) {
     logger.error("Error reading card reveal state", { error: error.message });

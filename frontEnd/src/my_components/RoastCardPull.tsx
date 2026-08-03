@@ -24,14 +24,14 @@ import { getCardCounts, getCardState, revealCard } from "@/lib/api";
 const STORY_W = 540;
 const STORY_H = 960;
 
-// A card is only pulled once. Having flipped it, coming back to the page —
-// reloading, following a shared link back, opening it again tomorrow — finds it
-// face-up instead of asking for the same tap again.
+// A card is only pulled once, by anyone. Once it has been flipped, everybody
+// who lands on that roast — the person who pulled it, someone following a
+// shared link, a reload tomorrow — finds it face-up rather than being asked to
+// tap again.
 //
 // The record lives in the database against the roast itself (see the
-// card_reveals table), keyed by the same viewer identity the ratings use. A
-// re-roast is a different roast and therefore a genuinely new card, so it comes
-// back face-down and has to be earned.
+// card_reveals table). A re-roast is a different roast and therefore a
+// genuinely new card, so it comes back face-down and has to be earned.
 
 type RoastCardPullProps = {
   username: string;

@@ -25,7 +25,7 @@ function RoastCardLink({ roast }: { roast: RoastedProfile }) {
   return (
     <Link
       to={`/${roast.username}?language=english`}
-      className="group bg-card border-2 border-foreground rounded-2xl p-4 shadow-[3px_3px_0_0_hsl(0_0%_8%)] hover:-translate-y-1 hover:rotate-1 transition-all flex flex-col items-center text-center gap-2"
+      className="group bg-card border-2 border-foreground rounded-2xl p-4 shadow-[3px_3px_0_0_hsl(var(--brutal))] hover:-translate-y-1 hover:rotate-1 transition-all flex flex-col items-center text-center gap-2"
     >
       {roast.profile_pic_url ? (
         <img
@@ -136,7 +136,7 @@ export function NearbyRoasts() {
                 onClick={() => setActive(tab.scope)}
                 className={`border-2 border-foreground rounded-full px-4 py-1.5 text-xs font-black uppercase tracking-wider transition-all hover:-translate-y-0.5 ${
                   active === tab.scope
-                    ? "bg-primary text-primary-foreground shadow-[3px_3px_0_0_hsl(0_0%_8%)]"
+                    ? "bg-primary text-primary-foreground shadow-[3px_3px_0_0_hsl(var(--brutal))]"
                     : "bg-card"
                 }`}
               >

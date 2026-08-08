@@ -164,7 +164,7 @@ export function Roast() {
             ? "double-check the username — it might be misspelled, deactivated, or private."
             : detail || "give it a minute and try again."}
         </p>
-        <Link to="/" className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-4 py-2 text-sm font-bold hover:-translate-y-0.5 transition-all shadow-[3px_3px_0_0_hsl(0_0%_8%)]">
+        <Link to="/" className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-4 py-2 text-sm font-bold hover:-translate-y-0.5 transition-all shadow-[3px_3px_0_0_hsl(var(--brutal))]">
           ← try another username
         </Link>
       </div>
@@ -262,7 +262,7 @@ export function Roast() {
         <div className="animate-reveal flex flex-wrap items-center justify-between gap-2">
           <Link
             to="/"
-            className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-4 py-2 text-sm font-bold hover:-translate-y-0.5 hover:rotate-[-2deg] transition-all shadow-[3px_3px_0_0_hsl(0_0%_8%)]"
+            className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-4 py-2 text-sm font-bold hover:-translate-y-0.5 hover:rotate-[-2deg] transition-all shadow-[3px_3px_0_0_hsl(var(--brutal))]"
           >
             ← roast someone else
           </Link>
@@ -271,7 +271,7 @@ export function Roast() {
             <button
               type="button"
               onClick={rerollRoast}
-              className="inline-flex items-center gap-2 bg-primary text-primary-foreground border-2 border-foreground rounded-full px-4 py-2 text-sm font-black hover:-translate-y-0.5 hover:rotate-2 transition-all shadow-[3px_3px_0_0_hsl(0_0%_8%)]"
+              className="inline-flex items-center gap-2 bg-primary text-primary-foreground border-2 border-foreground rounded-full px-4 py-2 text-sm font-black hover:-translate-y-0.5 hover:rotate-2 transition-all shadow-[3px_3px_0_0_hsl(var(--brutal))]"
             >
               🔁 roast them again{rerollCostsCredit ? " · 1 credit" : ""}
             </button>
@@ -324,7 +324,7 @@ export function Roast() {
         {/* Share */}
         <div className="animate-reveal [animation-delay:400ms] space-y-4 text-center">
           <p className="font-serif italic text-lg">too good not to share 👇</p>
-          <ShareBar title={shareTitle} text={roastData} />
+          <ShareBar title={shareTitle} text={roastData} source="roast" />
         </div>
 
         {/* Compatibility upsell: last block on the page, so it catches everyone

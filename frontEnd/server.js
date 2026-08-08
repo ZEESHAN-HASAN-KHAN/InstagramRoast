@@ -62,6 +62,64 @@ function setMeta(html, selector, value) {
   return html.replace(pattern, `$1${escapeHtml(value)}$2`);
 }
 
+// Rewrites the whole preview block in one pass. Both the per-roast route and
+// the static pages below go through this, so a tag added to one is never
+// silently missing from the other.
+function applyMeta(html, { title, description, image, imageAlt, url, type }) {
+  let out = html;
+  out = out.replace(/<title>[^<]*<\/title>/i, `<title>${escapeHtml(title)}</title>`);
+  out = setMeta(out, "description", description);
+  out = setMeta(out, "og:title", title);
+  out = setMeta(out, "og:description", description);
+  out = setMeta(out, "og:image", image);
+  out = setMeta(out, "og:image:alt", imageAlt ?? title);
+  out = setMeta(out, "og:url", url);
+  if (type) out = setMeta(out, "og:type", type);
+  out = setMeta(out, "twitter:title", title);
+  out = setMeta(out, "twitter:description", description);
+  out = setMeta(out, "twitter:image", image);
+  out = setMeta(out, "twitter:url", url);
+  out = out.replace(
+    /<link\s+rel=["']canonical["']\s+href=["'][^"']*["']\s*\/?>/i,
+    `<link rel="canonical" href="${escapeHtml(url)}" />`
+  );
+  return out;
+}
+
+// Per-page previews for the routes that aren't an Instagram handle. Without
+// this every one of them unfurled as the homepage: react-helmet sets these tags
+// in the browser and no link-preview crawler runs JavaScript, so WhatsApp,
+// Facebook, Twitter and Slack all saw the shell's home copy no matter which
+// page was shared. Keep in sync with the <Route> table in src/App.tsx.
+//
+// The home shell already carries its own tags, so "/" is deliberately absent.
+const PAGE_META = {
+  "/leaderboard": {
+    title: "Hall of Shame 🏆 — InstaRoasts Leaderboard",
+    description:
+      "Today's most roasted and most savage Instagram profiles — see who got cooked hardest in the last 24 hours, worldwide and near you.",
+    image: `${SITE}/og-leaderboard.png`,
+    imageAlt: "InstaRoasts leaderboard — who got cooked hardest today",
+  },
+  "/compatibilityRoast": {
+    title: "Couple Roast 💔 — InstaRoasts",
+    description:
+      "Drop two Instagram handles and let the AI judge whether you two make sense. Brutally.",
+  },
+  "/terms": {
+    title: "Terms — InstaRoasts",
+    description: "The terms of service for InstaRoasts.",
+  },
+  "/privacy": {
+    title: "Privacy — InstaRoasts",
+    description: "What InstaRoasts collects, what it doesn't, and how to get it deleted.",
+  },
+  "/refund-policy": {
+    title: "Refund Policy — InstaRoasts",
+    description: "When an InstaRoasts credit purchase can be refunded, and how to ask.",
+  },
+};
+
 async function fetchMeta(username, language) {
   const url = new URL(`${API}/api/v1/og-meta/${encodeURIComponent(username)}`);
   if (language) url.searchParams.set("language", language);
@@ -106,26 +164,16 @@ app.get("/:username", async (req, res, next) => {
   if (!meta) return res.type("html").send(template);
 
   const pageUrl = `${SITE}/${username}${language ? `?language=${encodeURIComponent(language)}` : ""}`;
-  let html = template;
-  html = html.replace(/<title>[^<]*<\/title>/i, `<title>${escapeHtml(meta.title)}</title>`);
-  html = setMeta(html, "description", meta.description);
-  html = setMeta(html, "og:title", meta.title);
-  html = setMeta(html, "og:description", meta.description);
-  html = setMeta(html, "og:image", meta.image);
   // The shell ships 1200x630 for the generic image and the renderer emits the
-  // same dimensions, so width/height stay correct; only the alt text needs to
-  // stop describing the house image.
-  html = setMeta(html, "og:image:alt", meta.title);
-  html = setMeta(html, "og:url", pageUrl);
-  html = setMeta(html, "og:type", "article");
-  html = setMeta(html, "twitter:title", meta.title);
-  html = setMeta(html, "twitter:description", meta.description);
-  html = setMeta(html, "twitter:image", meta.image);
-  html = setMeta(html, "twitter:url", pageUrl);
-  html = html.replace(
-    /<link\s+rel=["']canonical["']\s+href=["'][^"']*["']\s*\/?>/i,
-    `<link rel="canonical" href="${escapeHtml(pageUrl)}" />`
-  );
+  // same dimensions, so the width/height tags stay correct as-is.
+  const html = applyMeta(template, {
+    title: meta.title,
+    description: meta.description,
+    image: meta.image,
+    imageAlt: meta.title,
+    url: pageUrl,
+    type: "article",
+  });
 
   res.set("Cache-Control", "public, max-age=300");
   return res.type("html").send(html);
@@ -141,6 +189,22 @@ app.get("/:username", async (req, res, next) => {
 // the route above and never arrive here, so this cannot swallow a profile.
 app.use((req, res) => {
   if (/\.[a-z0-9]+$/i.test(req.path)) return res.status(404).type("txt").send("Not found");
+
+  // Trailing slashes and casing both reach here as distinct paths, and a shared
+  // "/leaderboard/" that missed the table would silently unfurl as the homepage
+  // again — the exact bug this table exists to kill.
+  const key = req.path.replace(/\/+$/, "") || "/";
+  const page = PAGE_META[key];
+  if (page) {
+    const html = applyMeta(template, {
+      ...page,
+      image: page.image ?? `${SITE}/og-image.png`,
+      url: `${SITE}${key}`,
+    });
+    res.set("Cache-Control", "public, max-age=300");
+    return res.type("html").send(html);
+  }
+
   return res.type("html").send(template);
 });
 

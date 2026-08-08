@@ -111,7 +111,7 @@ export function Hero() {
               </div>
               <button
                 type="submit"
-                className="bg-primary text-primary-foreground px-6 py-3 rounded-2xl font-black uppercase tracking-wider hover:-translate-y-0.5 hover:rotate-1 transition-all cursor-pointer border-2 border-foreground shadow-[3px_3px_0_0_hsl(0_0%_8%)]"
+                className="bg-primary text-primary-foreground px-6 py-3 rounded-2xl font-black uppercase tracking-wider hover:-translate-y-0.5 hover:rotate-1 transition-all cursor-pointer border-2 border-foreground shadow-[3px_3px_0_0_hsl(var(--brutal))]"
               >
                 roast me 🔥
               </button>
@@ -128,10 +128,10 @@ export function Hero() {
 
         {/* Social proof */}
         <div className="mt-12 animate-reveal [animation-delay:400ms] flex flex-wrap items-center justify-center gap-3">
-          <span className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-3 py-1.5 text-xs font-bold rotate-[-2deg] shadow-[3px_3px_0_0_hsl(0_0%_8%)] hover:-translate-y-1 hover:rotate-0 transition-all cursor-default">
+          <span className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-3 py-1.5 text-xs font-bold rotate-[-2deg] shadow-[3px_3px_0_0_hsl(var(--brutal))] hover:-translate-y-1 hover:rotate-0 transition-all cursor-default">
             ⭐⭐⭐⭐⭐ <span className="text-muted-foreground">"hurt my feelings"</span>
           </span>
-          <span className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-3 py-1.5 text-xs font-bold rotate-[2deg] shadow-[3px_3px_0_0_hsl(0_0%_8%)] hover:-translate-y-1 hover:rotate-0 transition-all cursor-default">
+          <span className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-3 py-1.5 text-xs font-bold rotate-[2deg] shadow-[3px_3px_0_0_hsl(var(--brutal))] hover:-translate-y-1 hover:rotate-0 transition-all cursor-default">
             🏆 #1 on product hunt
           </span>
         </div>

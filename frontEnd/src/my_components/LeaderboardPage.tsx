@@ -6,6 +6,10 @@ import { NearbyRoasts } from "./NearbyRoasts";
 // same sections as a teaser; this page is the shareable destination.
 export function LeaderboardPage() {
   const pageUrl = "https://instaroasts.com/leaderboard";
+  // Crawlers never see these — server.js injects the real ones into the shell.
+  // These keep the tab title and any in-app share correct after a client-side
+  // navigation, and must stay in step with PAGE_META["/leaderboard"].
+  const image = "https://instaroasts.com/og-leaderboard.png";
   const description =
     "Today's most roasted and most savage Instagram profiles — see who got cooked hardest in the last 24 hours, worldwide and near you.";
 
@@ -18,6 +22,9 @@ export function LeaderboardPage() {
         <meta property="og:url" content={pageUrl} />
         <meta property="og:title" content="Hall of Shame 🏆 — InstaRoasts Leaderboard" />
         <meta property="og:description" content={description} />
+        <meta property="og:image" content={image} />
+        <meta property="og:image:alt" content="InstaRoasts leaderboard — who got cooked hardest today" />
+        <meta name="twitter:image" content={image} />
         <meta name="twitter:url" content={pageUrl} />
         <meta name="twitter:title" content="Hall of Shame 🏆 — InstaRoasts Leaderboard" />
         <meta name="twitter:description" content={description} />

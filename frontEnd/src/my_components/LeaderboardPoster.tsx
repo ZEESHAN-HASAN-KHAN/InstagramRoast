@@ -770,6 +770,12 @@ export function LeaderboardPosterButton({
       else if (outcome === "shared") {
         track("poster_shared", { board, scope, method: "web_share" });
         setNote("shared 🔥");
+      } else if (outcome === "blocked") {
+        // iOS dropped the gesture during the render. Studio mode is a desk
+        // tool, so it just says to press again rather than carrying a blob
+        // around for a retry button.
+        track("poster_share_blocked", { board, scope });
+        setNote("iOS blocked the sheet — press again");
       } else {
         track("poster_downloaded", { board, scope, method: "download" });
         setNote("saved 1080×1350 — post it 📲");

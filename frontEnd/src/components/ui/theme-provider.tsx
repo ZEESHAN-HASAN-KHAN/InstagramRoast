@@ -35,17 +35,21 @@ export function ThemeProvider({
 
     root.classList.remove("light", "dark")
 
-    if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
-        ? "dark"
-        : "light"
+    const resolved =
+      theme === "system"
+        ? window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light"
+        : theme
 
-      root.classList.add(systemTheme)
-      return
-    }
+    root.classList.add(resolved)
 
-    root.classList.add(theme)
+    // Keeps the browser chrome (iOS status bar, Android nav bar) in step with
+    // the page. The boot script in index.html sets this for the first paint;
+    // without this line it would stay on the boot value after a theme switch.
+    document
+      .getElementById("theme-color")
+      ?.setAttribute("content", resolved === "dark" ? "#171717" : "#f9f8f5")
   }, [theme])
 
   const value = {

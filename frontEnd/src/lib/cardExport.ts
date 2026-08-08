@@ -61,7 +61,9 @@ export async function renderCardBlob(node: HTMLElement): Promise<Blob> {
   return rasterize(node, 2);
 }
 
-export type ShareOutcome = "shared" | "downloaded" | "cancelled";
+// "blocked" is the iOS case: the share sheet needs a live user gesture and the
+// render that produced the blob outlived it. See shareOrDownload.
+export type ShareOutcome = "shared" | "downloaded" | "cancelled" | "blocked";
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -79,6 +81,9 @@ function downloadBlob(blob: Blob, filename: string) {
  * Hands the image to the OS share sheet where that exists — on a phone this
  * drops the user straight into Instagram's story composer — and falls back to a
  * plain download everywhere else.
+ *
+ * Call it a second time with the same blob from a fresh tap when it returns
+ * "blocked": the retry is synchronous with the gesture, so it goes through.
  */
 export async function shareOrDownload(
   blob: Blob,
@@ -92,9 +97,21 @@ export async function shareOrDownload(
       await navigator.share({ files: [file], text: shareText });
       return "shared";
     } catch (err) {
+      const name = (err as Error)?.name;
+
       // Dismissing the sheet is a deliberate "no", not a failure to route
       // around with a surprise download.
-      if ((err as Error)?.name === "AbortError") return "cancelled";
+      if (name === "AbortError") return "cancelled";
+
+      // WebKit only opens the sheet while the tap that triggered it is still
+      // "active", and rendering the card burns through that window — fonts
+      // settle, then Safari needs two rasterize passes. By the time the blob
+      // exists the activation is gone and iOS throws NotAllowedError. Falling
+      // through to the download branch here is the worst outcome available:
+      // iOS Safari has no downloads, so it swaps the page for the raw image
+      // and the roast is gone. Report it instead and let the caller offer a
+      // second tap, which shares instantly because the blob is already made.
+      if (name === "NotAllowedError") return "blocked";
     }
   }
 

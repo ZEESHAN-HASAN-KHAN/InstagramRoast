@@ -47,7 +47,7 @@ const ReviewCard = ({
     <Link to={"/" + username} onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
       <figure
         className={cn(
-          "group shrink-0 w-[300px] cursor-pointer border-2 border-foreground rounded-3xl p-5 transition-all hover:-translate-y-1 hover:rotate-0 shadow-[5px_5px_0_0_hsl(0_0%_8%)]",
+          "group shrink-0 w-[300px] cursor-pointer border-2 border-foreground rounded-3xl p-5 transition-all hover:-translate-y-1 hover:rotate-0 shadow-[5px_5px_0_0_hsl(var(--brutal))]",
           bg, rot
         )}
       >

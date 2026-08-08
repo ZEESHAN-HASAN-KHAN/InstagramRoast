@@ -111,7 +111,7 @@ export function BurnRating({ username }: { username: string }) {
             <Link
               to="/leaderboard"
               onClick={() => track("rank_badge_clicked", { has_percentile: true })}
-              className="inline-flex items-center gap-2 bg-yellow-200 dark:bg-yellow-900/40 border-2 border-foreground rounded-full px-4 py-1.5 text-xs font-black rotate-[-1deg] shadow-[3px_3px_0_0_hsl(0_0%_8%)] hover:-translate-y-0.5 hover:rotate-0 transition-all"
+              className="inline-flex items-center gap-2 bg-yellow-200 dark:bg-yellow-900/40 border-2 border-foreground rounded-full px-4 py-1.5 text-xs font-black rotate-[-1deg] shadow-[3px_3px_0_0_hsl(var(--brutal))] hover:-translate-y-0.5 hover:rotate-0 transition-all"
             >
               💀 top {percentile.topPercent}% most savage in {percentileLabel} → see the board
             </Link>

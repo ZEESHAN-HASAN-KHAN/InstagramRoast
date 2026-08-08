@@ -116,11 +116,14 @@ export function RoastToast() {
           </span>
           <span className="text-base shrink-0">💀</span>
         </Link>
+        {/* The visible dot stays small so it doesn't crowd the handle, but a
+            24px close button is a coin-flip on a phone. The pseudo-element
+            pushes the real hit area out to 44px without moving any pixels. */}
         <button
           type="button"
           onClick={dismiss}
           aria-label="Dismiss notifications"
-          className="shrink-0 size-6 rounded-full border-2 border-foreground bg-background text-[10px] font-black leading-none hover:bg-muted transition-colors"
+          className="relative shrink-0 size-7 rounded-full border-2 border-foreground bg-background text-[11px] font-black leading-none hover:bg-muted transition-colors after:absolute after:-inset-y-2 after:-right-2.5 after:-left-1 after:content-['']"
         >
           ✕
         </button>

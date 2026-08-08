@@ -11,7 +11,7 @@ import {
   type RazorpayCheckoutResult,
 } from "@/lib/api";
 import { ProfileCard } from "./ProfileCard";
-import { track } from "@/lib/analytics";
+import { track, trackPageView } from "@/lib/analytics";
 
 interface PaypalButtonsInstance {
   render: (container: HTMLElement) => Promise<void>;
@@ -49,6 +49,29 @@ function loadPaypalSdk(clientId: string, currency: string): Promise<void> {
   return paypalSdkPromise;
 }
 
+// Razorpay's checkout.js is loaded async from index.html. On a phone over
+// mobile data it routinely isn't there yet when someone taps, and failing
+// instantly turned a slow connection into a dead paywall. Wait it out for a
+// few seconds first — the button already shows "opening checkout…", so the
+// wait reads as the checkout loading, which is exactly what it is.
+const RAZORPAY_WAIT_MS = 6000;
+
+function waitForRazorpay(timeoutMs = RAZORPAY_WAIT_MS): Promise<boolean> {
+  if (typeof window.Razorpay === "function") return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const started = Date.now();
+    const tick = window.setInterval(() => {
+      if (typeof window.Razorpay === "function") {
+        window.clearInterval(tick);
+        resolve(true);
+      } else if (Date.now() - started >= timeoutMs) {
+        window.clearInterval(tick);
+        resolve(false);
+      }
+    }, 150);
+  });
+}
+
 interface PaywallProps {
   info: PaywallInfo;
   // Called once credits are confirmed — the caller retries the original roast.
@@ -68,16 +91,43 @@ export function Paywall({ info, onUnlocked }: PaywallProps) {
   // split mirrors the backend's requireInternational guard.
   const usePaypal = currency !== "INR";
 
+  const gateway = usePaypal ? "paypal" : "razorpay";
+  const value = amount / 100;
+
+  // GA4's Monetization reports and the standard funnel explorations key off the
+  // `items` array, not off `value` alone. Without it the revenue lands but no
+  // report can break it down, so every ecommerce event below carries it.
+  const items = [
+    {
+      item_id: `credits_${credits}`,
+      item_name: `${credits} roast credits`,
+      item_category: "credits",
+      price: value,
+      quantity: 1,
+    },
+  ];
+
   // Top of the conversion funnel — everything downstream (checkout_opened,
   // purchase, paywall_abandoned) is measured against this event.
   useEffect(() => {
     track("paywall_shown", {
       variant: info.reroll ? "reroll" : "out_of_credits",
       has_preview: !!info.preview?.profile,
-      gateway: usePaypal ? "paypal" : "razorpay",
+      gateway,
       currency,
-      value: amount / 100,
+      value,
     });
+
+    // The paywall replaces the roast in place, without a route change, so GA
+    // otherwise never records anyone arriving at it — it shows up in Events but
+    // is missing from "Pages and screens" and from any path-based funnel. This
+    // is the "how many people reached the payments page" number.
+    trackPageView("/paywall", "Paywall — InstaRoasts");
+
+    // GA4's own recommended name for the same moment. Sent alongside the custom
+    // event so the built-in monetization funnel works without giving up the
+    // richer paywall_shown params.
+    track("view_item", { currency, value, items });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -98,6 +148,7 @@ export function Paywall({ info, onUnlocked }: PaywallProps) {
           createOrder: async () => {
             setError(null);
             track("checkout_opened", { gateway: "paypal" });
+            track("begin_checkout", { gateway: "paypal", currency, value, items });
             const order = await createPaypalOrder();
             return order.orderId;
           },
@@ -109,7 +160,8 @@ export function Paywall({ info, onUnlocked }: PaywallProps) {
                 transaction_id: data.orderID,
                 gateway: "paypal",
                 currency,
-                value: amount / 100,
+                value,
+                items,
               });
               onUnlocked();
             } catch {
@@ -153,13 +205,15 @@ export function Paywall({ info, onUnlocked }: PaywallProps) {
 
   async function handleRazorpayUnlock() {
     setError(null);
+    setBusy(true);
 
-    if (typeof window.Razorpay !== "function") {
+    if (!(await waitForRazorpay())) {
+      track("purchase_failed", { gateway: "razorpay", stage: "sdk_load" });
       setError("Checkout didn't load — check your connection and refresh.");
+      setBusy(false);
       return;
     }
 
-    setBusy(true);
     try {
       const order = await createPaymentOrder();
 
@@ -179,6 +233,10 @@ export function Paywall({ info, onUnlocked }: PaywallProps) {
               gateway: "razorpay",
               currency: order.currency,
               value: order.amount / 100,
+              // Priced off the order the server actually created, not the
+              // quote the paywall rendered with, so a mid-session price change
+              // can't report revenue that was never charged.
+              items: [{ ...items[0], price: order.amount / 100 }],
             });
             onUnlocked();
           } catch {
@@ -200,6 +258,12 @@ export function Paywall({ info, onUnlocked }: PaywallProps) {
       });
 
       track("checkout_opened", { gateway: "razorpay" });
+      track("begin_checkout", {
+        gateway: "razorpay",
+        currency: order.currency,
+        value: order.amount / 100,
+        items: [{ ...items[0], price: order.amount / 100 }],
+      });
       checkout.open();
     } catch {
       track("purchase_failed", { gateway: "razorpay", stage: "create_order" });
@@ -314,7 +378,7 @@ export function Paywall({ info, onUnlocked }: PaywallProps) {
           <button
             onClick={handleRazorpayUnlock}
             disabled={busy}
-            className="w-full bg-primary text-primary-foreground border-2 border-foreground rounded-full px-6 py-3 font-bold hover:-translate-y-0.5 transition-all shadow-[3px_3px_0_0_hsl(0_0%_8%)] disabled:opacity-60 disabled:hover:translate-y-0 disabled:cursor-not-allowed"
+            className="w-full bg-primary text-primary-foreground border-2 border-foreground rounded-full px-6 py-3 font-bold hover:-translate-y-0.5 transition-all shadow-[3px_3px_0_0_hsl(var(--brutal))] disabled:opacity-60 disabled:hover:translate-y-0 disabled:cursor-not-allowed"
           >
             {busy ? "opening checkout…" : `unlock ${credits} more roasts`}
           </button>
@@ -344,14 +408,14 @@ export function Paywall({ info, onUnlocked }: PaywallProps) {
         <Link
           to="/"
           onClick={() => track("paywall_abandoned", { to: "home" })}
-          className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-4 py-2 text-sm font-bold hover:-translate-y-0.5 transition-all shadow-[3px_3px_0_0_hsl(0_0%_8%)]"
+          className="inline-flex items-center justify-center gap-2 min-h-11 bg-card border-2 border-foreground rounded-full px-4 py-2 text-sm font-bold hover:-translate-y-0.5 transition-all shadow-[3px_3px_0_0_hsl(var(--brutal))]"
         >
           ← back home
         </Link>
         <Link
           to="/leaderboard"
           onClick={() => track("paywall_abandoned", { to: "leaderboard" })}
-          className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-4 py-2 text-sm font-bold hover:-translate-y-0.5 transition-all shadow-[3px_3px_0_0_hsl(0_0%_8%)]"
+          className="inline-flex items-center justify-center gap-2 min-h-11 bg-card border-2 border-foreground rounded-full px-4 py-2 text-sm font-bold hover:-translate-y-0.5 transition-all shadow-[3px_3px_0_0_hsl(var(--brutal))]"
         >
           or judge the hall of shame 🏆
         </Link>

@@ -19,7 +19,7 @@ export function Navbar() {
           className="flex items-center gap-2 group"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         >
-          <div className="size-9 bg-primary rounded-xl border-2 border-foreground flex items-center justify-center text-primary-foreground font-black text-lg -rotate-6 group-hover:rotate-6 transition-transform shadow-[2px_2px_0_0_hsl(0_0%_8%)]">
+          <div className="size-9 bg-primary rounded-xl border-2 border-foreground flex items-center justify-center text-primary-foreground font-black text-lg -rotate-6 group-hover:rotate-6 transition-transform shadow-[2px_2px_0_0_hsl(var(--brutal))]">
             🔥
           </div>
           <span className="font-serif italic font-bold text-xl">
@@ -56,9 +56,10 @@ export function Navbar() {
 
         {/* Mobile toggle */}
         <button
-          className="md:hidden p-2 rounded-lg hover:bg-muted transition-colors"
+          className="md:hidden size-11 -mr-2 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           aria-label="Toggle menu"
+          aria-expanded={isMenuOpen}
         >
           <div className="w-5 flex flex-col gap-1.5">
             <span
@@ -77,27 +78,29 @@ export function Navbar() {
       {/* Mobile menu */}
       {isMenuOpen && (
         <div className="md:hidden border-t-2 border-foreground bg-background">
-          <div className="flex flex-col px-6 py-4 gap-3 font-bold text-sm">
+          {/* min-h-11 rather than padding alone: these are the only nav on a
+              phone and a 20px-tall text link is not a target. */}
+          <div className="flex flex-col px-6 py-2 font-bold text-sm">
             <a
               onClick={() => scrollToSection("features")}
-              className="cursor-pointer hover:text-primary py-1"
+              className="cursor-pointer hover:text-primary flex items-center min-h-11"
             >
               features
             </a>
             <Link
               to="/leaderboard"
               onClick={() => setIsMenuOpen(false)}
-              className="hover:text-primary py-1"
+              className="hover:text-primary flex items-center min-h-11"
             >
               🏆 leaderboard
             </Link>
             <a
               onClick={() => scrollToSection("faq")}
-              className="cursor-pointer hover:text-primary py-1"
+              className="cursor-pointer hover:text-primary flex items-center min-h-11"
             >
               faq
             </a>
-            <div className="flex items-center gap-3 pt-2 border-t border-border">
+            <div className="flex items-center gap-3 mt-2 pt-3 pb-2 border-t border-border">
               <ModeToggle />
             </div>
           </div>

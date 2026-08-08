@@ -94,7 +94,7 @@ export function CompatUpsell({ username, language }: CompatUpsellProps) {
           <span className="w-full sm:w-auto sm:max-w-[40%] shrink-0 truncate text-center px-4 py-3 bg-muted border-2 border-foreground rounded-2xl font-mono font-bold">
             @{username}
           </span>
-          <span className="shrink-0 size-9 bg-pink-200 dark:bg-pink-900/40 border-2 border-foreground rounded-full flex items-center justify-center font-black text-xs shadow-[3px_3px_0_0_hsl(0_0%_8%)]">
+          <span className="shrink-0 size-9 bg-pink-200 dark:bg-pink-900/40 border-2 border-foreground rounded-full flex items-center justify-center font-black text-xs shadow-[3px_3px_0_0_hsl(var(--brutal))]">
             ×
           </span>
           <input
@@ -106,11 +106,11 @@ export function CompatUpsell({ username, language }: CompatUpsellProps) {
             }}
             placeholder="@their_handle"
             aria-label="Second Instagram handle"
-            className="flex-1 w-full min-w-0 px-4 py-3 bg-background border-2 border-foreground rounded-2xl font-mono outline-none focus:shadow-[3px_3px_0_0_hsl(24_72%_52%)] transition-all text-foreground placeholder:text-muted-foreground"
+            className="flex-1 w-full min-w-0 px-4 py-3 bg-background border-2 border-foreground rounded-2xl font-mono outline-none focus:shadow-[3px_3px_0_0_hsl(var(--primary))] transition-all text-foreground placeholder:text-muted-foreground"
           />
           <button
             type="submit"
-            className="w-full sm:w-auto shrink-0 bg-primary text-primary-foreground px-5 py-3 rounded-2xl font-black uppercase tracking-wider hover:-translate-y-0.5 hover:rotate-1 transition-all cursor-pointer border-2 border-foreground shadow-[3px_3px_0_0_hsl(0_0%_8%)]"
+            className="w-full sm:w-auto shrink-0 bg-primary text-primary-foreground px-5 py-3 rounded-2xl font-black uppercase tracking-wider hover:-translate-y-0.5 hover:rotate-1 transition-all cursor-pointer border-2 border-foreground shadow-[3px_3px_0_0_hsl(var(--brutal))]"
           >
             cook 'em 🔥
           </button>
@@ -128,7 +128,7 @@ export function CompatUpsell({ username, language }: CompatUpsellProps) {
                 onClick={() => cook(entry.username, "chip")}
                 className={`${
                   i % 2 ? "-rotate-2" : "rotate-2"
-                } inline-flex items-center gap-2 bg-background border-2 border-foreground rounded-full pl-1 pr-3 py-1 text-sm font-bold hover:-translate-y-1 hover:rotate-0 transition-all shadow-[3px_3px_0_0_hsl(0_0%_8%)] max-w-[12rem]`}
+                } inline-flex items-center gap-2 bg-background border-2 border-foreground rounded-full pl-1 pr-3 py-1 text-sm font-bold hover:-translate-y-1 hover:rotate-0 transition-all shadow-[3px_3px_0_0_hsl(var(--brutal))] max-w-[12rem]`}
               >
                 {entry.profile_pic_url ? (
                   <img

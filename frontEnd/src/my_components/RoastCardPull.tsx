@@ -15,6 +15,7 @@ import {
   renderCardBlob,
   shareOrDownload,
   type ExportFormat,
+  type ShareOutcome,
 } from "@/lib/cardExport";
 import { track } from "@/lib/analytics";
 import { getCardCounts, getCardState, revealCard } from "@/lib/api";
@@ -58,6 +59,15 @@ export function RoastCardPull({
   const [phase, setPhase] = useState<"back" | "suspense" | "front">("back");
   const [busy, setBusy] = useState<ExportFormat | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  // Holds a finished image that iOS refused to share because the render outran
+  // the tap's activation window. Keeping it lets the retry button open the
+  // sheet immediately, inside the new gesture, instead of rendering again.
+  const [pendingShare, setPendingShare] = useState<{
+    blob: Blob;
+    filename: string;
+    text: string;
+    format: ExportFormat;
+  } | null>(null);
   // The card is laid out at a fixed 540px and scaled down to whatever space the
   // page actually has, so the exported image matches what was on screen.
   const [displayWidth, setDisplayWidth] = useState(CARD_W);
@@ -178,6 +188,32 @@ export function RoastCardPull({
     );
   }
 
+  // Turns a share outcome into the note under the buttons and the matching
+  // funnel event. Shared by the first attempt and the iOS retry so the two
+  // can't drift.
+  function reportShare(outcome: ShareOutcome, format: ExportFormat) {
+    if (outcome === "cancelled") {
+      setNote(null);
+    } else if (outcome === "shared") {
+      track("card_shared", { tier: rarity.id, format, method: "web_share" });
+      setNote("shared! 🔥");
+    } else if (outcome === "blocked") {
+      track("card_share_blocked", { tier: rarity.id, format });
+      setNote("card's ready — tap share once more 📲");
+    } else {
+      track("card_downloaded", { tier: rarity.id, format, method: "download" });
+      setNote("saved to your downloads — post it 📲");
+    }
+  }
+
+  async function retryShare() {
+    if (!pendingShare) return;
+    const { blob, filename, text, format } = pendingShare;
+    const outcome = await shareOrDownload(blob, filename, text);
+    if (outcome !== "blocked") setPendingShare(null);
+    reportShare(outcome, format);
+  }
+
   async function exportCard(format: ExportFormat) {
     if (busy) return;
     const node = (format === "story" ? storyNodeRef : cardNodeRef).current;
@@ -185,6 +221,7 @@ export function RoastCardPull({
 
     setBusy(format);
     setNote(null);
+    setPendingShare(null);
     track("card_export_started", { tier: rarity.id, format });
 
     try {
@@ -198,22 +235,14 @@ export function RoastCardPull({
         minted !== null && rarity.id !== "common"
           ? `only ${minted.toLocaleString()} ever pulled`
           : `${rarity.pullRate}% pull rate`;
-      const outcome = await shareOrDownload(
-        blob,
-        cardFilename(profile.handle, format),
+      const filename = cardFilename(profile.handle, format);
+      const text =
         `@${profile.handle} pulled a ${rarity.name} roast card 🔥 (${scarcity})\n` +
-          `get roasted → https://instaroasts.com/${profile.handle}`
-      );
+        `get roasted → https://instaroasts.com/${profile.handle}`;
 
-      if (outcome === "cancelled") {
-        setNote(null);
-      } else if (outcome === "shared") {
-        track("card_shared", { tier: rarity.id, format, method: "web_share" });
-        setNote("shared! 🔥");
-      } else {
-        track("card_downloaded", { tier: rarity.id, format, method: "download" });
-        setNote("saved to your downloads — post it 📲");
-      }
+      const outcome = await shareOrDownload(blob, filename, text);
+      if (outcome === "blocked") setPendingShare({ blob, filename, text, format });
+      reportShare(outcome, format);
     } catch (err) {
       // Almost always a tainted canvas, i.e. the avatar host answered without
       // CORS headers. Nothing the user can do, so don't pretend otherwise.
@@ -270,7 +299,7 @@ export function RoastCardPull({
         <div className="animate-reveal space-y-3">
           {minted !== null && (
             <p className="text-center">
-              <span className="inline-block bg-yellow-200 dark:bg-yellow-900/40 border-2 border-foreground rounded-full px-4 py-1.5 text-xs font-black rotate-[-1deg] shadow-[3px_3px_0_0_hsl(0_0%_8%)]">
+              <span className="inline-block bg-yellow-200 dark:bg-yellow-900/40 border-2 border-foreground rounded-full px-4 py-1.5 text-xs font-black rotate-[-1deg] shadow-[3px_3px_0_0_hsl(var(--brutal))]">
                 {rarity.id === "common"
                   ? // A common pull is the one number that reads as a reason to
                     // roll again rather than as a brag.
@@ -281,25 +310,39 @@ export function RoastCardPull({
           )}
 
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <button
-              type="button"
-              disabled={busy !== null}
-              onClick={() => exportCard("story")}
-              className="inline-flex items-center gap-2 bg-primary text-primary-foreground border-2 border-foreground rounded-full px-5 py-2.5 text-sm font-black shadow-[3px_3px_0_0_hsl(0_0%_8%)] hover:-translate-y-0.5 hover:rotate-1 transition-all disabled:opacity-60 disabled:cursor-wait"
-            >
-              {busy === "story" ? "⏳ building…" : "📸 share to story"}
-            </button>
-            <button
-              type="button"
-              disabled={busy !== null}
-              onClick={() => exportCard("card")}
-              className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-5 py-2.5 text-sm font-bold shadow-[3px_3px_0_0_hsl(0_0%_8%)] hover:-translate-y-0.5 hover:-rotate-1 transition-all disabled:opacity-60 disabled:cursor-wait"
-            >
-              {busy === "card" ? "⏳ building…" : "⬇️ download card"}
-            </button>
+            {/* iOS lost the gesture during the render; the image is already in
+                hand, so this second tap opens the sheet straight away. */}
+            {pendingShare ? (
+              <button
+                type="button"
+                onClick={retryShare}
+                className="inline-flex items-center justify-center gap-2 min-h-11 bg-primary text-primary-foreground border-2 border-foreground rounded-full px-5 py-2.5 text-sm font-black shadow-[3px_3px_0_0_hsl(var(--brutal))] hover:-translate-y-0.5 hover:rotate-1 transition-all animate-pop"
+              >
+                📲 tap to share
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  disabled={busy !== null}
+                  onClick={() => exportCard("story")}
+                  className="inline-flex items-center justify-center gap-2 min-h-11 bg-primary text-primary-foreground border-2 border-foreground rounded-full px-5 py-2.5 text-sm font-black shadow-[3px_3px_0_0_hsl(var(--brutal))] hover:-translate-y-0.5 hover:rotate-1 transition-all disabled:opacity-60 disabled:cursor-wait"
+                >
+                  {busy === "story" ? "⏳ building…" : "📸 share to story"}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy !== null}
+                  onClick={() => exportCard("card")}
+                  className="inline-flex items-center justify-center gap-2 min-h-11 bg-card border-2 border-foreground rounded-full px-5 py-2.5 text-sm font-bold shadow-[3px_3px_0_0_hsl(var(--brutal))] hover:-translate-y-0.5 hover:-rotate-1 transition-all disabled:opacity-60 disabled:cursor-wait"
+                >
+                  {busy === "card" ? "⏳ building…" : "⬇️ download card"}
+                </button>
+              </>
+            )}
           </div>
 
-          <p className="text-center text-xs text-muted-foreground h-4">{note}</p>
+          <p className="text-center text-xs text-muted-foreground min-h-4">{note}</p>
 
           <div className="text-center">
             <button

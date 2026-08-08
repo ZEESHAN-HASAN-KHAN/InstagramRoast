@@ -11,8 +11,9 @@ export default {
         sans: ["Inter", "system-ui", "sans-serif"],
       },
       boxShadow: {
-        brutal: "8px 8px 0px 0px hsl(0 0% 8%)",
-        "brutal-lg": "12px 12px 0px 0px hsl(0 0% 8%)",
+        // --brutal is theme-aware; see the comment on it in index.css.
+        brutal: "8px 8px 0px 0px hsl(var(--brutal))",
+        "brutal-lg": "12px 12px 0px 0px hsl(var(--brutal))",
       },
       animation: {
         gradient: "gradient 8s linear infinite",

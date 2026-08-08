@@ -4,8 +4,28 @@
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/png" href="./src/assets/instagram.png" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#000000" />
+  <!-- viewport-fit=cover so env(safe-area-inset-*) reports real values; the
+       floating theme toggle sits in the iPhone home-indicator strip without it. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" id="theme-color" content="#171717" />
+
+  <!-- Resolves the theme before first paint. ThemeProvider only adds the class
+       in a useEffect, so until React mounted, a dark-mode phone painted the
+       light background and then flipped — a full white flash on every cold
+       load over mobile data. Precedence matches ModeToggle: the explicit
+       "theme" key wins, then ThemeProvider's own key, then the OS. -->
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem("theme") || localStorage.getItem("vite-ui-theme");
+        var dark =
+          saved === "dark" ||
+          (saved !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.add(dark ? "dark" : "light");
+        document.getElementById("theme-color").setAttribute("content", dark ? "#171717" : "#f9f8f5");
+      } catch (e) {}
+    })();
+  </script>
 
   <!-- Primary Meta Tags -->
   <title>InstaRoasts — AI Roasts Your Instagram Profile 🔥</title>

@@ -65,10 +65,10 @@ export function Compatibility() {
                 value={uname1}
                 onChange={(e) => setUname1(e.target.value.trim())}
                 placeholder="@username1"
-                className="w-full px-4 py-3 bg-background border-2 border-foreground rounded-2xl font-mono outline-none focus:shadow-[3px_3px_0_0_hsl(24_72%_52%)] transition-all text-foreground placeholder:text-muted-foreground"
+                className="w-full px-4 py-3 bg-background border-2 border-foreground rounded-2xl font-mono outline-none focus:shadow-[3px_3px_0_0_hsl(var(--primary))] transition-all text-foreground placeholder:text-muted-foreground"
               />
             </div>
-            <div className="shrink-0 size-10 bg-pink-200 dark:bg-pink-900/40 border-2 border-foreground rounded-full flex items-center justify-center font-black text-xs shadow-[3px_3px_0_0_hsl(0_0%_8%)]">
+            <div className="shrink-0 size-10 bg-pink-200 dark:bg-pink-900/40 border-2 border-foreground rounded-full flex items-center justify-center font-black text-xs shadow-[3px_3px_0_0_hsl(var(--brutal))]">
               VS
             </div>
             <div className="flex-1 w-full">
@@ -78,7 +78,7 @@ export function Compatibility() {
                 value={uname2}
                 onChange={(e) => setUname2(e.target.value.trim())}
                 placeholder="@username2"
-                className="w-full px-4 py-3 bg-background border-2 border-foreground rounded-2xl font-mono outline-none focus:shadow-[3px_3px_0_0_hsl(24_72%_52%)] transition-all text-foreground placeholder:text-muted-foreground"
+                className="w-full px-4 py-3 bg-background border-2 border-foreground rounded-2xl font-mono outline-none focus:shadow-[3px_3px_0_0_hsl(var(--primary))] transition-all text-foreground placeholder:text-muted-foreground"
               />
             </div>
           </div>
@@ -87,7 +87,7 @@ export function Compatibility() {
             <SelectDemo language={language} onValueChange={handleValueChange} />
             <button
               type="submit"
-              className="w-full bg-primary text-primary-foreground px-6 py-3 rounded-2xl font-black uppercase tracking-wider hover:-translate-y-0.5 transition-all cursor-pointer border-2 border-foreground shadow-[4px_4px_0_0_hsl(0_0%_8%)]"
+              className="w-full bg-primary text-primary-foreground px-6 py-3 rounded-2xl font-black uppercase tracking-wider hover:-translate-y-0.5 transition-all cursor-pointer border-2 border-foreground shadow-[4px_4px_0_0_hsl(var(--brutal))]"
             >
               check compatibility ❤️‍🔥
             </button>

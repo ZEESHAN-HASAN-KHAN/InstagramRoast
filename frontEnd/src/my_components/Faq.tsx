@@ -76,7 +76,7 @@ export function Faq() {
             return (
               <div
                 key={item.q}
-                className={`${rot} bg-card border-2 border-foreground rounded-2xl shadow-[4px_4px_0_0_hsl(0_0%_8%)] overflow-hidden`}
+                className={`${rot} bg-card border-2 border-foreground rounded-2xl shadow-[4px_4px_0_0_hsl(var(--brutal))] overflow-hidden`}
               >
                 <button
                   type="button"

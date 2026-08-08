@@ -40,6 +40,13 @@
 
     --radius: 0.75rem;
 
+    /* Hard offset "brutal" shadow. It has to track the theme: the shadow was
+       hardcoded to hsl(0 0% 8%), one point off the dark background's 9%, so in
+       dark mode every card, button and badge on the site lost its shadow
+       entirely. Light mode keeps the near-black; dark mode matches the
+       foreground so the slab reads as an extension of the 2px border. */
+    --brutal: 0 0% 8%;
+
     --color-1: 0 100% 63%;
     --color-2: 270 100% 63%;
     --color-3: 210 100% 63%;
@@ -75,6 +82,8 @@
     --border: 0 0% 20%;
     --input: 0 0% 20%;
     --ring: 24 72% 55%;
+
+    --brutal: 0 0% 98%;
 
     --color-1: 0 100% 63%;
     --color-2: 270 100% 63%;

@@ -206,6 +206,7 @@ export function CompatiblityRoast() {
       <ShareBar
         title={`@${uname1} vs @${uname2} — the compatibility verdict is in 💀`}
         text={compatibilityRoast}
+        source="compat"
       />
 
       {/* Compatibility roast card */}

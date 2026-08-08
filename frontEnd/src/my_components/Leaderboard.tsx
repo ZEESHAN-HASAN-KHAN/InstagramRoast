@@ -59,7 +59,7 @@ function ChampionPoster({ entry }: { entry: LeaderboardEntry }) {
       </span>
       {/* In flow on mobile: the card is clipped and rounded, so an absolutely
           positioned badge loses its corner on narrow screens. */}
-      <span className="relative mb-3 inline-block max-w-full bg-primary text-primary-foreground border-2 border-foreground rounded-full px-2.5 sm:px-3 py-1 text-[9px] sm:text-[10px] font-black uppercase tracking-widest -rotate-1 sm:rotate-[4deg] shadow-[2px_2px_0_0_hsl(0_0%_8%)] sm:absolute sm:-top-0.5 sm:right-4 sm:mb-0">
+      <span className="relative mb-3 inline-block max-w-full bg-primary text-primary-foreground border-2 border-foreground rounded-full px-2.5 sm:px-3 py-1 text-[9px] sm:text-[10px] font-black uppercase tracking-widest -rotate-1 sm:rotate-[4deg] shadow-[2px_2px_0_0_hsl(var(--brutal))] sm:absolute sm:-top-0.5 sm:right-4 sm:mb-0">
         public enemy no.1
       </span>
 
@@ -89,7 +89,7 @@ function RunnerTile({ entry, rank }: { entry: LeaderboardEntry; rank: number }) 
     <Link
       to={profileHref(entry)}
       onClick={() => trackBoardClick("most_roasted", rank)}
-      className="relative bg-card border-2 border-foreground rounded-2xl p-4 shadow-[3px_3px_0_0_hsl(0_0%_8%)] hover:-translate-y-1 transition-all flex items-center gap-3"
+      className="relative bg-card border-2 border-foreground rounded-2xl p-4 shadow-[3px_3px_0_0_hsl(var(--brutal))] hover:-translate-y-1 transition-all flex items-center gap-3"
     >
       <span className="font-mono font-bold text-sm text-muted-foreground tabular-nums shrink-0">
         {String(rank).padStart(2, "0")}
@@ -441,9 +441,9 @@ export function Leaderboard({ standalone = false }: { standalone?: boolean }) {
                     track("leaderboard_tab_changed", { scope: tab.scope });
                     setActive(tab.scope);
                   }}
-                  className={`border-2 border-foreground rounded-full px-4 py-1.5 text-xs font-black uppercase tracking-wider transition-all hover:-translate-y-0.5 ${
+                  className={`inline-flex items-center justify-center min-h-11 border-2 border-foreground rounded-full px-4 py-1.5 text-xs font-black uppercase tracking-wider transition-all hover:-translate-y-0.5 ${
                     active === tab.scope
-                      ? "bg-primary text-primary-foreground shadow-[3px_3px_0_0_hsl(0_0%_8%)]"
+                      ? "bg-primary text-primary-foreground shadow-[3px_3px_0_0_hsl(var(--brutal))]"
                       : "bg-card"
                   }`}
                 >
@@ -483,7 +483,7 @@ export function Leaderboard({ standalone = false }: { standalone?: boolean }) {
             <Link
               to="/leaderboard"
               onClick={() => track("leaderboard_open_full")}
-              className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-5 py-2.5 text-sm font-black hover:-translate-y-0.5 hover:rotate-[-1deg] transition-all shadow-[3px_3px_0_0_hsl(0_0%_8%)]"
+              className="inline-flex items-center justify-center gap-2 min-h-11 bg-card border-2 border-foreground rounded-full px-5 py-2.5 text-sm font-black hover:-translate-y-0.5 hover:rotate-[-1deg] transition-all shadow-[3px_3px_0_0_hsl(var(--brutal))]"
             >
               open the full hall of shame 🏆
             </Link>

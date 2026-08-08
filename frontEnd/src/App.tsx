@@ -120,8 +120,9 @@ function AppLayout() {
 
       <SiteFooter />
 
-      {/* Mobile floating controls */}
-      <div className="fixed bottom-4 right-4 z-50 opacity-80 md:hidden">
+      {/* Mobile floating controls. The bottom offset clears the iPhone home
+          indicator — index.html sets viewport-fit=cover, so the inset is real. */}
+      <div className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-50 opacity-80 md:hidden">
         <ModeToggle />
       </div>
     </div>

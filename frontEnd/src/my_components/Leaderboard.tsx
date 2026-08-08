@@ -9,6 +9,8 @@ import {
   type Leaderboards,
 } from "@/lib/api";
 import { track } from "@/lib/analytics";
+import { LeaderboardPosterButton } from "./LeaderboardPoster";
+import { useStudioMode } from "@/lib/studio";
 
 const trackBoardClick = (board: "most_roasted" | "most_savage", rank: number) =>
   track("leaderboard_profile_clicked", { board, rank });
@@ -342,6 +344,7 @@ export function Leaderboard({ standalone = false }: { standalone?: boolean }) {
   const [active, setActive] = useState<FeedScope>("global");
   const [boards, setBoards] = useState<Leaderboards | null>(null);
   const [loading, setLoading] = useState(true);
+  const studio = useStudioMode();
 
   // Tabs depend on how precisely we could place this visitor — someone we
   // couldn't locate just gets the global board rather than a "near you" tab
@@ -428,9 +431,9 @@ export function Leaderboard({ standalone = false }: { standalone?: boolean }) {
             </p>
           </div>
 
-          {tabs.length > 1 && (
-            <div className="flex flex-wrap items-center gap-2 shrink-0">
-              {tabs.map((tab) => (
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {tabs.length > 1 &&
+              tabs.map((tab) => (
                 <button
                   key={tab.scope}
                   type="button"
@@ -447,8 +450,13 @@ export function Leaderboard({ standalone = false }: { standalone?: boolean }) {
                   {tab.label}
                 </button>
               ))}
-            </div>
-          )}
+            {studio && !loading && (
+              <>
+                <LeaderboardPosterButton board="roasted" section={boards?.mostRoasted ?? null} />
+                <LeaderboardPosterButton board="savage" section={boards?.topRated ?? null} />
+              </>
+            )}
+          </div>
         </div>
 
         {loading ? (

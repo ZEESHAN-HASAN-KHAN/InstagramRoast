@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { SelectDemo } from "./SelectDemo";
-import { createToken } from "@/lib/utils";
+import { cleanHandle, createToken } from "@/lib/utils";
 import NumberTicker from "@/components/ui/number-ticker";
 import { CreditMeter } from "./CreditMeter";
 
@@ -15,7 +15,7 @@ export function Hero() {
   const handleValueChange = (value: string) => setLanguage(value);
 
   const discover = () => {
-    const cleaned = uname.trim().replace(/^@+/, "");
+    const cleaned = cleanHandle(uname);
     if (!cleaned) return;
     navigate(`/${cleaned}?language=${language}`);
   };

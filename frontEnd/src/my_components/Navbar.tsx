@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { ModeToggle } from "@/components/ui/ModeToggle";
 import { Link } from "react-router-dom";
-import { AvatarCirclesDemo } from "./Contributors";
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -49,7 +48,6 @@ export function Navbar() {
 
         {/* Right side desktop */}
         <div className="hidden md:flex items-center gap-3">
-          <AvatarCirclesDemo />
           <ModeToggle />
           <span className="inline-flex items-center gap-1 bg-foreground text-background px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider rotate-[-2deg] hover:rotate-0 transition-transform cursor-default">
             🌶️ spicy
@@ -100,7 +98,6 @@ export function Navbar() {
               faq
             </a>
             <div className="flex items-center gap-3 pt-2 border-t border-border">
-              <AvatarCirclesDemo />
               <ModeToggle />
             </div>
           </div>

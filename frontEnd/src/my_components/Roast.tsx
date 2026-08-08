@@ -11,6 +11,7 @@ import { ProfileCard } from "./ProfileCard";
 import { RoastCard } from "./RoastCard";
 import { RoastCardPull } from "./RoastCardPull";
 import { ShareBar } from "./ShareBar";
+import { CompatUpsell } from "./CompatUpsell";
 import { RoastProgress } from "./RoastProgress";
 import { BurnRating } from "./BurnRating";
 import { CreditMeter, useCredits } from "./CreditMeter";
@@ -324,6 +325,12 @@ export function Roast() {
         <div className="animate-reveal [animation-delay:400ms] space-y-4 text-center">
           <p className="font-serif italic text-lg">too good not to share 👇</p>
           <ShareBar title={shareTitle} text={roastData} />
+        </div>
+
+        {/* Compatibility upsell: last block on the page, so it catches everyone
+            who read to the end — turns a one-person share into a two-person run */}
+        <div className="animate-reveal [animation-delay:450ms]">
+          <CompatUpsell username={insta_data.username} language={ln} />
         </div>
       </div>
 

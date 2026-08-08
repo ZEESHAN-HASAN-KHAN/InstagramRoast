@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { SelectDemo } from "./SelectDemo";
 import { track } from "@/lib/analytics";
+import { cleanHandle } from "@/lib/utils";
 
 export function Compatibility() {
   const [uname1, setUname1] = useState("");
@@ -11,9 +12,13 @@ export function Compatibility() {
 
   const handleValueChange = (value: string) => setLanguage(value);
 
-  function discover(): void {
+  function discover(a: string, b: string): void {
     track("compatibility_submitted", { language });
-    navigate(`/compatibilityRoast?uname1=${uname1}&uname2=${uname2}&language=${language}`);
+    navigate(
+      `/compatibilityRoast?uname1=${encodeURIComponent(a)}&uname2=${encodeURIComponent(
+        b
+      )}&language=${language}`
+    );
   }
 
   return (
@@ -40,8 +45,12 @@ export function Compatibility() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (uname1 && uname2 && uname1 !== uname2) {
-              discover();
+            // Cleaned at submit, not on keystroke — stripping the @ while they
+            // type fights the cursor.
+            const a = cleanHandle(uname1);
+            const b = cleanHandle(uname2);
+            if (a && b && a.toLowerCase() !== b.toLowerCase()) {
+              discover(a, b);
             } else {
               alert("Please fill in both usernames. Also, they should be different.");
             }

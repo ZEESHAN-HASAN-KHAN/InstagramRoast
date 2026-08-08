@@ -6,7 +6,6 @@ import { Navbar } from "./my_components/Navbar";
 import { About } from "./my_components/About";
 import { Roast } from "./my_components/Roast";
 import { Faq } from "./my_components/Faq";
-import { AvatarCirclesDemo } from "./my_components/Contributors";
 import { ModeToggle } from "@/components/ui/ModeToggle";
 import React from "react";
 import { Compatibility } from "./my_components/Compatibility";
@@ -124,9 +123,6 @@ function AppLayout() {
       {/* Mobile floating controls */}
       <div className="fixed bottom-4 right-4 z-50 opacity-80 md:hidden">
         <ModeToggle />
-      </div>
-      <div className="fixed bottom-4 left-4 z-50 md:hidden">
-        <AvatarCirclesDemo />
       </div>
     </div>
   );

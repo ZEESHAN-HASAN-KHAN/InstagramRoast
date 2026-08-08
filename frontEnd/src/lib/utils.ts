@@ -6,6 +6,22 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+// Handles arrive pasted with an @, wrapped in whitespace, or as a full profile
+// URL. Everything downstream (routes, API calls, comparisons) wants the bare
+// handle, so normalise once here instead of at each form.
+export function cleanHandle(raw: string) {
+  let handle = raw.trim();
+
+  const marker = "instagram.com/";
+  const start = handle.toLowerCase().indexOf(marker);
+  if (start !== -1) {
+    handle = handle.substring(start + marker.length);
+  }
+
+  // Drops the query string, trailing path segments ("/reels"), and any @ prefix.
+  return handle.split(/[?#]/)[0].split("/").filter(Boolean)[0]?.replace(/^@+/, "") ?? "";
+}
+
 // create a jwt token with expiration of 1 minute using VITE_APP_TOKEN_SECRET
 export async function createToken() {
   const secret = new TextEncoder().encode(import.meta.env.VITE_APP_TOKEN_SECRET); // Encode secret

@@ -21,7 +21,7 @@ export function Privacy() {
       </Link>
 
       <h1 className="text-4xl font-serif font-bold italic mb-2">Privacy Policy</h1>
-      <p className="text-sm text-muted-foreground mb-10">Last updated: July 2026</p>
+      <p className="text-sm text-muted-foreground mb-10">Last updated: August 2026</p>
 
       <div className="prose prose-neutral dark:prose-invert max-w-none space-y-8 text-foreground/80 leading-relaxed">
 
@@ -59,13 +59,13 @@ export function Privacy() {
         <section>
           <h2 className="text-xl font-bold text-foreground mb-2">4. Payment Data</h2>
           <p>
-            InstaRoasts never sees or stores your card, UPI, or bank details — all payments are processed directly by <strong>Razorpay</strong>, our payment gateway partner, under their own security and privacy standards.
+            InstaRoasts never sees or stores your card, UPI, or bank details — all payments are processed directly by <strong>Razorpay</strong> (India) or <strong>PayPal</strong> (outside India), our payment gateway partners, under their own security and privacy standards.
           </p>
           <p className="mt-2">
-            To provide 2 free roasts per visitor and process paid unlocks without requiring an account, we store a randomly generated, anonymous session identifier (via a browser cookie), your approximate IP address, and country. These are used only to: count free roast usage, apply the correct regional price (₹100 in India, $1.99 elsewhere), and prevent abuse of the free tier. This data is not linked to your name, email, or Instagram identity, and is not shared with advertisers.
+            To provide 2 free roasts per visitor and process paid unlocks without requiring an account, we store a randomly generated, anonymous session identifier (via a browser cookie), your approximate IP address, and country. These are used only to: count free roast usage, apply the correct regional price and payment gateway (₹49 in India, $1.50 elsewhere), and prevent abuse of the free tier. This data is not linked to your name, email, or Instagram identity, and is not shared with advertisers.
           </p>
           <p className="mt-2">
-            We retain a record of completed orders (amount, currency, and Razorpay's payment/order IDs) for accounting and support purposes. See our <Link to="/refund-policy" className="underline">Refund &amp; Cancellation Policy</Link> for how payment issues are handled.
+            We retain a record of completed orders (amount, currency, and the gateway's payment/order IDs) for accounting and support purposes. See our <Link to="/refund-policy" className="underline">Refund &amp; Cancellation Policy</Link> for how payment issues are handled.
           </p>
         </section>
 

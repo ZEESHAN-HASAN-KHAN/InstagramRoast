@@ -21,14 +21,14 @@ export function RefundPolicy() {
       </Link>
 
       <h1 className="text-4xl font-serif font-bold italic mb-2">Refund &amp; Cancellation Policy</h1>
-      <p className="text-sm text-muted-foreground mb-10">Last updated: July 2026</p>
+      <p className="text-sm text-muted-foreground mb-10">Last updated: August 2026</p>
 
       <div className="prose prose-neutral dark:prose-invert max-w-none space-y-8 text-foreground/80 leading-relaxed">
 
         <section>
           <h2 className="text-xl font-bold text-foreground mb-2">1. Nothing to Cancel</h2>
           <p>
-            InstaRoasts does not offer subscriptions. Every payment is a single, one-time purchase that unlocks 2 additional roasts (₹100 in India, $1.99 elsewhere) — there is no recurring billing, so there is nothing to "cancel."
+            InstaRoasts does not offer subscriptions. Every payment is a single, one-time purchase that unlocks 2 additional roasts (₹49 in India, $1.50 elsewhere) — there is no recurring billing, so there is nothing to "cancel."
           </p>
         </section>
 
@@ -52,21 +52,24 @@ export function RefundPolicy() {
         <section>
           <h2 className="text-xl font-bold text-foreground mb-2">4. Payment Charged but No Credits Received</h2>
           <p>
-            If Razorpay confirms a successful payment but your account was not credited (for example, you closed the browser tab immediately after paying), our system reconciles this automatically within a few minutes in most cases. If it doesn't resolve on its own, contact us with your payment ID (visible in your Razorpay payment confirmation email or SMS) via the GitHub repositories linked in the site footer, and we will manually verify and either credit your session or process a refund to your original payment method.
+            If the payment gateway confirms a successful payment but your account was not credited (for example, you closed the browser tab immediately after paying), our system reconciles this automatically within a few minutes in most cases. If it doesn't resolve on its own, contact us with your payment ID and we will manually verify and either credit your session or process a refund to your original payment method.
+          </p>
+          <p className="mt-2">
+            Your payment ID appears in the confirmation you received from whichever gateway processed the payment — <strong>Razorpay</strong> (email or SMS) for purchases in India, or <strong>PayPal</strong> (transaction ID in your PayPal activity or receipt email) for purchases outside India. Reach us via the GitHub repositories linked in the site footer.
           </p>
         </section>
 
         <section>
           <h2 className="text-xl font-bold text-foreground mb-2">5. Duplicate or Accidental Charges</h2>
           <p>
-            If you were charged more than once for the same purchase, contact us with both payment IDs and we will refund the duplicate charge to your original payment method. Refunds are processed via Razorpay and typically reflect in 5–7 business days, depending on your bank or card issuer.
+            If you were charged more than once for the same purchase, contact us with both payment IDs and we will refund the duplicate charge to your original payment method. Refunds are processed through the same gateway that took the payment — Razorpay or PayPal — and typically reflect in 5–7 business days, depending on your bank, card issuer, or PayPal balance settlement.
           </p>
         </section>
 
         <section>
           <h2 className="text-xl font-bold text-foreground mb-2">6. How to Reach Us</h2>
           <p>
-            For any payment issue not resolved automatically, reach out via the GitHub repositories linked in the site footer with your Razorpay payment ID and a short description of the issue. We aim to respond within a few business days.
+            For any payment issue not resolved automatically, reach out via the GitHub repositories linked in the site footer with your Razorpay or PayPal payment ID and a short description of the issue. We aim to respond within a few business days.
           </p>
         </section>
 

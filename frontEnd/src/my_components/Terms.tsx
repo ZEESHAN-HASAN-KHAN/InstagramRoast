@@ -21,7 +21,7 @@ export function Terms() {
       </Link>
 
       <h1 className="text-4xl font-serif font-bold italic mb-2">Terms of Service</h1>
-      <p className="text-sm text-muted-foreground mb-10">Last updated: July 2026</p>
+      <p className="text-sm text-muted-foreground mb-10">Last updated: August 2026</p>
 
       <div className="prose prose-neutral dark:prose-invert max-w-none space-y-8 text-foreground/80 leading-relaxed">
 
@@ -56,11 +56,11 @@ export function Terms() {
             No account or sign-up is required to use InstaRoasts. Each visitor gets <strong>2 free roasts</strong>, tracked via an anonymous browser session (no personal information involved). Once used, unlocking <strong>2 additional roasts</strong> requires a one-time payment:
           </p>
           <ul className="list-disc ml-6 space-y-1 mt-2">
-            <li><strong>₹100 (INR)</strong> for customers in India</li>
-            <li><strong>$1.99 (USD)</strong> for customers outside India</li>
+            <li><strong>₹49 (INR)</strong> for customers in India</li>
+            <li><strong>$1.50 (USD)</strong> for customers outside India</li>
           </ul>
           <p className="mt-2">
-            Payments are processed securely by <strong>Razorpay</strong> via cards, UPI, or netbanking. This is a single one-time charge per purchase — InstaRoasts does not run subscriptions or store your card, UPI, or bank details; Razorpay handles and secures all payment instrument data.
+            Payments are processed securely by <strong>Razorpay</strong> (India — cards, UPI, or netbanking) or <strong>PayPal</strong> (outside India). Which gateway you see is determined by your region. This is a single one-time charge per purchase — InstaRoasts does not run subscriptions or store your card, UPI, or bank details; the payment provider handles and secures all payment instrument data.
           </p>
           <p className="mt-2">
             Delivery is instant and fully digital: once payment is confirmed, your unlocked roasts are available immediately in your browser. There is no physical product and nothing is shipped. See our <Link to="/refund-policy" className="underline">Refund &amp; Cancellation Policy</Link> for details on failed or undelivered roasts.

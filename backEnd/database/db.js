@@ -216,6 +216,16 @@ async function dbConnect() {
       CREATE INDEX IF NOT EXISTS idx_ai_responses_geo
         ON ai_responses (roaster_country, roaster_region, roaster_city);
     `);
+    // Postgres does not index a foreign key for you. The sitemap join walks
+    // every roast row grouped by profile, and without this it is a sequential
+    // scan of the largest table in the database on every cache miss.
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_ai_responses_profile ON ai_responses (profile_id);
+    `);
+    // The sitemap's eligibility filter (follower >= threshold) and nothing else.
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_profiles_follower ON profiles (follower);
+    `);
 
     // Community rating of a profile's roast — one vote per person per profile,
     // updatable. `voter_key` is the session id where one exists and 'ip:<addr>'

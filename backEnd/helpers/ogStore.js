@@ -4,6 +4,7 @@ const { Storage } = require("@google-cloud/storage");
 const { mintCard } = require("./cardIdentity");
 const { renderOgCard } = require("./ogCard");
 const { getUserData, getAIResponse } = require("../database/db");
+const { isIndexable } = require("../database/sitemap");
 const logger = require("./logger");
 
 // Rendered link-preview images live in their own bucket, separate from the
@@ -110,6 +111,10 @@ async function ensureOgMeta(username, language, origin) {
     image: `${origin}/api/v1/og-image/${encodeURIComponent(profile.username)}.jpg${langSuffix}`,
     rarity: identity.rarity.id,
     serial: identity.serial,
+    // Decided here rather than in the frontend so the robots tag on the page and
+    // the sitemap's contents can never disagree. The frontend already fetches
+    // this payload for every /:username request, so it costs no extra round trip.
+    indexable: isIndexable(profile),
   };
 }
 

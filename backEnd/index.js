@@ -17,6 +17,7 @@ const roastStreamRouter = require("./routes/roastStream");
 const paymentRouter = require("./routes/payment");
 const paymentWebhookRouter = require("./routes/paymentWebhook");
 const ogRouter = require("./routes/og");
+const sitemapRouter = require("./routes/sitemap");
 const logger = require("./helpers/logger");
 
 // Needed for req.ip to report the real client behind the platform's load
@@ -49,6 +50,10 @@ app.use("/api/v1", paymentWebhookRouter);
 // can't send a token, and a 401 makes them drop the preview entirely. These
 // endpoints only restate what the public roast page already shows.
 app.use("/api/v1", ogRouter);
+
+// Also before JWT — Googlebot can't send a token either, and the sitemap only
+// restates URLs that are already publicly reachable.
+app.use("/api/v1", sitemapRouter);
 
 app.use(jwt);
 

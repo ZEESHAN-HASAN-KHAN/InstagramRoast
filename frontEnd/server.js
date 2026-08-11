@@ -378,4 +378,16 @@ app.use((req, res) => {
   return res.type("html").send(template);
 });
 
-app.listen(PORT, () => console.log(`frontend listening on ${PORT}`));
+app.listen(PORT, () => {
+  // Every failure caused by a missing API_ORIGIN is silent by design — the
+  // preview falls back to the generic card, the sitemap falls back to one empty
+  // shard, and the page still renders. That is correct behaviour for a
+  // momentary outage and terrible for a misconfiguration, which looks identical
+  // and lasts until someone notices the previews are wrong. Say it once at boot.
+  if (!process.env.API_ORIGIN) {
+    console.warn(
+      `[config] API_ORIGIN is unset, falling back to ${API}. Link previews and the roast sitemap will not work unless the API is really there.`
+    );
+  }
+  console.log(`frontend listening on ${PORT}`);
+});

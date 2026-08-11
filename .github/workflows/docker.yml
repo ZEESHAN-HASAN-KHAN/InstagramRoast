@@ -124,3 +124,13 @@ jobs:
           region: "asia-east1"
           service: "instagram-roast-frontend"
           port: 5173
+          # server.js reads these at runtime, so they cannot come from the
+          # FRONTEND_ENV secret — that file only carries the VITE_ vars, which
+          # Vite inlines at build time and which never exist as process.env in
+          # the running container. Without API_ORIGIN the server falls back to
+          # localhost:8080, every call to the API fails, and both the per-roast
+          # link previews and the roast sitemap silently degrade to their
+          # generic fallbacks.
+          env_vars: |
+            API_ORIGIN=https://api.instaroasts.com
+            SITE_ORIGIN=https://instaroasts.com

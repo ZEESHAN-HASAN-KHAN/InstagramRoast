@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   getLeaderboard,
   getVisitorScope,
   type FeedScope,
   type LeaderboardEntry,
+  type LeaderboardRange,
   type LeaderboardSection,
   type Leaderboards,
 } from "@/lib/api";
 import { track } from "@/lib/analytics";
+import { asRarityId, auraRing } from "@/lib/cardAura";
+import { CardAura } from "./CardAura";
 import { LeaderboardPosterButton } from "./LeaderboardPoster";
 import { useStudioMode } from "@/lib/studio";
 
@@ -19,22 +22,37 @@ type Tab = { scope: FeedScope; label: string };
 
 const profileHref = (entry: LeaderboardEntry) => `/${entry.username}?language=english`;
 
+// Every avatar on the boards carries its owner's card aura, so a rare pull is
+// visible even in a one-line ledger row where nothing else about the profile
+// is. Nothing is rendered differently for a profile whose card is face-down.
 function Avatar({
   entry,
   className,
+  intensity = 0.8,
 }: {
   entry: LeaderboardEntry;
   className: string;
+  intensity?: number;
 }) {
+  const ring = auraRing(asRarityId(entry.card_tier), intensity);
+
   return entry.profile_pic_url ? (
     <img
       src={entry.profile_pic_url}
       alt=""
       loading="lazy"
-      className={`${className} rounded-full border-2 border-foreground object-cover shrink-0`}
+      {...ring}
+      className={`${className} ${
+        ring?.className ?? ""
+      } relative rounded-full border-2 border-foreground object-cover shrink-0`}
     />
   ) : (
-    <span className={`${className} rounded-full border-2 border-foreground bg-muted shrink-0`} />
+    <span
+      {...ring}
+      className={`${className} ${
+        ring?.className ?? ""
+      } relative rounded-full border-2 border-foreground bg-muted shrink-0`}
+    />
   );
 }
 
@@ -51,6 +69,7 @@ function ChampionPoster({ entry }: { entry: LeaderboardEntry }) {
       onClick={() => trackBoardClick("most_roasted", 1)}
       className="relative block bg-card border-2 border-foreground rounded-3xl p-4 sm:p-6 shadow-brutal sm:rotate-[-0.6deg] hover:rotate-0 hover:-translate-y-1 transition-all overflow-hidden"
     >
+      <CardAura tier={asRarityId(entry.card_tier)} intensity={1.8} />
       <span
         aria-hidden="true"
         className="absolute -right-3 -bottom-5 sm:-bottom-8 font-black text-[4rem] sm:text-[9rem] leading-none opacity-[0.06] select-none tabular-nums"
@@ -64,7 +83,7 @@ function ChampionPoster({ entry }: { entry: LeaderboardEntry }) {
       </span>
 
       <div className="relative flex items-center gap-3 sm:gap-5 sm:pt-3">
-        <Avatar entry={entry} className="size-16 sm:size-20 md:size-24" />
+        <Avatar entry={entry} className="size-16 sm:size-20 md:size-24" intensity={1.3} />
         <div className="min-w-0 flex-1">
           <span className="block font-serif italic font-bold text-lg sm:text-xl md:text-2xl truncate">
             @{entry.username}
@@ -91,11 +110,12 @@ function RunnerTile({ entry, rank }: { entry: LeaderboardEntry; rank: number }) 
       onClick={() => trackBoardClick("most_roasted", rank)}
       className="relative bg-card border-2 border-foreground rounded-2xl p-4 shadow-[3px_3px_0_0_hsl(var(--brutal))] hover:-translate-y-1 transition-all flex items-center gap-3"
     >
-      <span className="font-mono font-bold text-sm text-muted-foreground tabular-nums shrink-0">
+      <CardAura tier={asRarityId(entry.card_tier)} intensity={1.2} />
+      <span className="relative font-mono font-bold text-sm text-muted-foreground tabular-nums shrink-0">
         {String(rank).padStart(2, "0")}
       </span>
       <Avatar entry={entry} className="size-11" />
-      <span className="min-w-0 flex-1">
+      <span className="relative min-w-0 flex-1">
         <span className="block font-bold text-sm truncate">@{entry.username}</span>
         <span className="block text-xs text-muted-foreground tabular-nums">
           {entry.roast_count ?? 0} 👀
@@ -127,9 +147,11 @@ function LedgerRow({ entry, rank }: { entry: LeaderboardEntry; rank: number }) {
 function MostRoastedBoard({
   section,
   limit,
+  onAllTime,
 }: {
   section: LeaderboardSection | null;
   limit?: number;
+  onAllTime?: () => void;
 }) {
   const entries = (section?.entries ?? []).slice(0, limit);
   const [champion, ...rest] = entries;
@@ -148,7 +170,11 @@ function MostRoastedBoard({
       </div>
 
       {!champion ? (
-        <EmptyBoard text="nobody's been cooked here yet." cta="light the first fire →" />
+        <EmptyBoard
+          text="nobody's been cooked here yet."
+          cta="light the first fire →"
+          onAllTime={onAllTime}
+        />
       ) : (
         <>
           <div className="animate-reveal">
@@ -215,6 +241,9 @@ function SavageRow({
   featured?: boolean;
 }) {
   const average = entry.average ?? 0;
+  // The savage board is inverted (cream on ink), which is the one place an aura
+  // has room to actually glow — so it gets a touch more of it.
+  const ring = auraRing(asRarityId(entry.card_tier), featured ? 1.4 : 1);
   return (
     <Link
       to={profileHref(entry)}
@@ -227,9 +256,10 @@ function SavageRow({
         {String(rank).padStart(2, "0")}
       </span>
       <span
+        {...ring}
         className={`shrink-0 rounded-full border-2 border-background/40 overflow-hidden ${
-          featured ? "size-12" : "size-8"
-        }`}
+          ring?.className ?? ""
+        } ${featured ? "size-12" : "size-8"}`}
       >
         {entry.profile_pic_url ? (
           <img src={entry.profile_pic_url} alt="" loading="lazy" className="size-full object-cover" />
@@ -263,9 +293,11 @@ function SavageRow({
 function SavageBoard({
   section,
   limit,
+  onAllTime,
 }: {
   section: LeaderboardSection | null;
   limit?: number;
+  onAllTime?: () => void;
 }) {
   const entries = (section?.entries ?? []).slice(0, limit);
 
@@ -290,6 +322,17 @@ function SavageBoard({
           <p className="text-xs text-background/60">
             rate a roast and the case file opens.
           </p>
+          {/* A quiet day doesn't mean an empty archive — the all-time board is
+              almost never empty, so offer it rather than ending on a dead end. */}
+          {onAllTime && (
+            <button
+              type="button"
+              onClick={onAllTime}
+              className="text-xs font-bold underline decoration-wavy underline-offset-4 hover:text-primary transition-colors"
+            >
+              see the all-time verdicts →
+            </button>
+          )}
         </div>
       ) : (
         <div className="divide-y divide-background/15">
@@ -306,17 +349,38 @@ function SavageBoard({
 
 /* --- shared bits --------------------------------------------------------- */
 
-function EmptyBoard({ text, cta }: { text: string; cta: string }) {
+function EmptyBoard({
+  text,
+  cta,
+  onAllTime,
+}: {
+  text: string;
+  cta: string;
+  onAllTime?: () => void;
+}) {
   return (
     <div className="border-2 border-dashed border-foreground/30 rounded-3xl p-8 text-center space-y-3">
       <p className="text-3xl">🦗</p>
       <p className="font-serif italic">{text}</p>
-      <Link
-        to="/"
-        className="inline-block text-sm font-bold underline decoration-wavy underline-offset-4 hover:text-primary transition-colors"
-      >
-        {cta}
-      </Link>
+      <div className="flex flex-wrap items-center justify-center gap-4">
+        <Link
+          to="/"
+          className="text-sm font-bold underline decoration-wavy underline-offset-4 hover:text-primary transition-colors"
+        >
+          {cta}
+        </Link>
+        {/* Only passed on the day board: nothing happened in the window, but the
+            archive still has a lineup to show. */}
+        {onAllTime && (
+          <button
+            type="button"
+            onClick={onAllTime}
+            className="text-sm font-bold underline decoration-wavy underline-offset-4 hover:text-primary transition-colors"
+          >
+            see the all-time board →
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -339,12 +403,42 @@ function BoardSkeleton() {
   );
 }
 
+const RANGE_TABS: { range: LeaderboardRange; label: string }[] = [
+  { range: "day", label: "today" },
+  { range: "all", label: "all time" },
+];
+
+const RANGE_COPY: Record<LeaderboardRange, { heading: string; highlight: string; meta: string }> = {
+  day: { heading: "today's", highlight: "biggest losses", meta: "live · rolling 24h window" },
+  all: { heading: "all-time", highlight: "biggest losses", meta: "since day one · every burn ever" },
+};
+
 export function Leaderboard({ standalone = false }: { standalone?: boolean }) {
   const [tabs, setTabs] = useState<Tab[]>([{ scope: "global", label: "🌍 global" }]);
   const [active, setActive] = useState<FeedScope>("global");
   const [boards, setBoards] = useState<Leaderboards | null>(null);
   const [loading, setLoading] = useState(true);
   const studio = useStudioMode();
+
+  // On the dedicated page the range lives in the URL, so an all-time board can
+  // be linked and shared as one — that board is the evergreen half and the only
+  // one still true tomorrow. The homepage embed keeps it in local state; it has
+  // no URL of its own to write to.
+  const [params, setParams] = useSearchParams();
+  const [localRange, setLocalRange] = useState<LeaderboardRange>("day");
+  const range: LeaderboardRange =
+    standalone ? (params.get("range") === "all" ? "all" : "day") : localRange;
+
+  const changeRange = (next: LeaderboardRange) => {
+    track("leaderboard_range_changed", { range: next, standalone });
+    if (!standalone) return setLocalRange(next);
+    const updated = new URLSearchParams(params);
+    if (next === "day") updated.delete("range");
+    else updated.set("range", next);
+    // Replace, not push: flicking between the two boards shouldn't fill the
+    // back button with the same page.
+    setParams(updated, { replace: true });
+  };
 
   // Tabs depend on how precisely we could place this visitor — someone we
   // couldn't locate just gets the global board rather than a "near you" tab
@@ -371,7 +465,7 @@ export function Leaderboard({ standalone = false }: { standalone?: boolean }) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    getLeaderboard(active)
+    getLeaderboard(active, range)
       .then((data) => {
         if (!cancelled) setBoards(data);
       })
@@ -384,7 +478,7 @@ export function Leaderboard({ standalone = false }: { standalone?: boolean }) {
     return () => {
       cancelled = true;
     };
-  }, [active]);
+  }, [active, range]);
 
   // Section-impression once per mount — page_view alone can't tell whether the
   // homepage embed was ever the thing people actually engaged with.
@@ -418,17 +512,51 @@ export function Leaderboard({ standalone = false }: { standalone?: boolean }) {
               🏆 hall of shame
             </span>
             <h2 className="text-4xl md:text-5xl font-serif font-bold italic text-balance">
-              today's{" "}
+              {RANGE_COPY[range].heading}{" "}
               <span className="inline-block bg-yellow-200 dark:bg-yellow-900/40 px-2 -rotate-1 border-2 border-foreground rounded-xl">
-                biggest losses
+                {RANGE_COPY[range].highlight}
               </span>
             </h2>
-            <p className="mt-3 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              {/* Live semantic indicator, not decoration: the board really is a
-                  rolling 24h window that updates as views land. */}
-              <span className="size-2 rounded-full bg-primary animate-pulse" /> live · rolling 24h
-              window
-            </p>
+            {/* The switch and the line describing what it switched to are one
+                unit, so they share a wrapping flex row — as two inline-level
+                siblings they landed on the same line box and collided. */}
+            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-3">
+              {/* Segmented, not two loose pills: the two ranges are one choice,
+                  and sharing a border is what says so. */}
+              <div
+                role="group"
+                aria-label="Leaderboard time range"
+                className="flex shrink-0 border-2 border-foreground rounded-full bg-card p-1 shadow-[3px_3px_0_0_hsl(var(--brutal))]"
+              >
+                {RANGE_TABS.map((tab) => (
+                  <button
+                    key={tab.range}
+                    type="button"
+                    aria-pressed={range === tab.range}
+                    onClick={() => changeRange(tab.range)}
+                    className={`inline-flex items-center justify-center min-h-9 rounded-full px-4 py-1 text-xs font-black uppercase tracking-wider transition-all ${
+                      range === tab.range
+                        ? "bg-foreground text-background"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                {/* On the day board the dot is a live semantic indicator, not
+                    decoration: it really is a rolling 24h window that updates as
+                    views land. The archive doesn't move, so it doesn't pulse. */}
+                <span
+                  className={`size-2 shrink-0 rounded-full ${
+                    range === "day" ? "bg-primary animate-pulse" : "bg-muted-foreground/50"
+                  }`}
+                />
+                {RANGE_COPY[range].meta}
+              </p>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 shrink-0">
@@ -452,8 +580,16 @@ export function Leaderboard({ standalone = false }: { standalone?: boolean }) {
               ))}
             {studio && !loading && (
               <>
-                <LeaderboardPosterButton board="roasted" section={boards?.mostRoasted ?? null} />
-                <LeaderboardPosterButton board="savage" section={boards?.topRated ?? null} />
+                <LeaderboardPosterButton
+                  board="roasted"
+                  range={range}
+                  section={boards?.mostRoasted ?? null}
+                />
+                <LeaderboardPosterButton
+                  board="savage"
+                  range={range}
+                  section={boards?.topRated ?? null}
+                />
               </>
             )}
           </div>
@@ -467,12 +603,14 @@ export function Leaderboard({ standalone = false }: { standalone?: boolean }) {
               <MostRoastedBoard
                 section={boards?.mostRoasted ?? null}
                 limit={standalone ? undefined : 5}
+                onAllTime={range === "day" ? () => changeRange("all") : undefined}
               />
             </div>
             <div className="min-w-0 lg:col-span-5">
               <SavageBoard
                 section={boards?.topRated ?? null}
                 limit={standalone ? undefined : 5}
+                onAllTime={range === "day" ? () => changeRange("all") : undefined}
               />
             </div>
           </div>
@@ -481,8 +619,8 @@ export function Leaderboard({ standalone = false }: { standalone?: boolean }) {
         {!standalone && (
           <div className="text-center mt-10">
             <Link
-              to="/leaderboard"
-              onClick={() => track("leaderboard_open_full")}
+              to={range === "all" ? "/leaderboard?range=all" : "/leaderboard"}
+              onClick={() => track("leaderboard_open_full", { range })}
               className="inline-flex items-center justify-center gap-2 min-h-11 bg-card border-2 border-foreground rounded-full px-5 py-2.5 text-sm font-black hover:-translate-y-0.5 hover:rotate-[-1deg] transition-all shadow-[3px_3px_0_0_hsl(var(--brutal))]"
             >
               open the full hall of shame 🏆

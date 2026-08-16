@@ -11,7 +11,7 @@ export function LeaderboardPage() {
   // navigation, and must stay in step with PAGE_META["/leaderboard"].
   const image = "https://instaroasts.com/og-leaderboard.png";
   const description =
-    "Today's most roasted and most savage Instagram profiles — see who got cooked hardest in the last 24 hours, worldwide and near you.";
+    "The most roasted and most savage Instagram profiles — today's rolling 24h board and the all-time hall of shame, worldwide and near you.";
 
   return (
     <>

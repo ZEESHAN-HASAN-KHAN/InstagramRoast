@@ -166,9 +166,136 @@ html {
 .card-ember { animation: card-ember 2.8s ease-in-out infinite; }
 .card-frame-spin { animation: card-frame-spin 8s linear infinite; }
 
+/* ── Unlocked-card aura ────────────────────────────────────────────────────
+   Worn by a profile everywhere it appears — recents grid, leaderboards, its
+   own roast page — once its card has been flipped face-up. Colour and tempo
+   come from the tier (see lib/cardAura.tsx), which sets the custom properties
+   below; nothing here is applied to a profile whose card is still face-down.
+
+   Lit from the inside out: a burning border with the glow bleeding inward, and
+   fire off the bottom edge. A soft outer bloom was the first attempt and read
+   as a drop shadow — on a dark page where every card already casts one, the
+   tier simply didn't register. */
+
+/* Shared fallbacks, so a stray aura element without its properties renders as
+   a dim grey ember rather than an invalid-colour black box. */
+.card-aura-panel,
+.card-aura-ring {
+  --aura: 180 174 170;
+  --aura-2: var(--aura);
+  --aura-spread: 16px;
+  --aura-speed: 3.4s;
+}
+
+/* Avatars: the ring is the whole signal. An inset shadow on an <img> paints
+   under its own picture, so the light goes on the border and just outside it. */
+@keyframes card-aura-ring {
+  0%, 100% {
+    border-color: rgb(var(--aura) / 0.75);
+    box-shadow: 0 0 5px rgb(var(--aura) / 0.45), 0 0 var(--aura-spread) rgb(var(--aura) / 0.25);
+  }
+  50% {
+    border-color: rgb(var(--aura) / 1);
+    box-shadow:
+      0 0 9px rgb(var(--aura) / 0.85),
+      0 0 calc(var(--aura-spread) * 1.5) rgb(var(--aura-2) / 0.45);
+  }
+}
+.card-aura-ring {
+  border-color: rgb(var(--aura) / 0.85);
+  animation: card-aura-ring var(--aura-speed) ease-in-out infinite;
+}
+
+/* Tiles and cards: an overlay that owns the lit edge, so the element beneath
+   keeps its own border and brutal drop shadow untouched. `border-radius:
+   inherit` is why the caller only has to be `relative` — the panel takes the
+   corners of whatever it's laid over. */
+@keyframes card-aura-panel {
+  0%, 100% {
+    border-color: rgb(var(--aura) / 0.7);
+    box-shadow:
+      inset 0 0 12px rgb(var(--aura) / 0.22),
+      inset 0 -16px 26px -14px rgb(var(--aura) / 0.5),
+      0 0 8px rgb(var(--aura) / 0.3);
+  }
+  50% {
+    border-color: rgb(var(--aura) / 1);
+    box-shadow:
+      inset 0 0 22px rgb(var(--aura) / 0.42),
+      inset 0 -26px 34px -14px rgb(var(--aura) / 0.8),
+      0 0 calc(var(--aura-spread) * 0.9) rgb(var(--aura-2) / 0.45);
+  }
+}
+.card-aura-panel {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  border: 2px solid rgb(var(--aura) / 0.85);
+  /* Keeps the flames inside the card's corners. */
+  overflow: hidden;
+  animation: card-aura-panel var(--aura-speed) ease-in-out infinite;
+}
+
+/* Fire off the bottom edge. Two blurred gradient bodies on different periods —
+   one wide bed, one pair of offset tongues — which is enough irregularity to
+   read as flame rather than as a pulsing bar. */
+@keyframes card-aura-flame {
+  0%   { transform: scaleY(0.82) translateY(8%); opacity: 0.55; }
+  100% { transform: scaleY(1.15) translateY(-3%); opacity: 1; }
+}
+.card-aura-flame,
+.card-aura-flame::after {
+  position: absolute;
+  transform-origin: 50% 100%;
+  will-change: transform, opacity;
+}
+.card-aura-flame {
+  left: -6%;
+  right: -6%;
+  bottom: -12%;
+  height: 44%;
+  background: radial-gradient(
+    58% 100% at 50% 100%,
+    rgb(var(--aura) / 0.8) 0%,
+    rgb(var(--aura) / 0.32) 45%,
+    transparent 72%
+  );
+  filter: blur(9px);
+  animation: card-aura-flame 1.9s ease-in-out infinite alternate;
+}
+.card-aura-flame::after {
+  content: "";
+  inset: 0;
+  background:
+    radial-gradient(34% 92% at 30% 100%, rgb(var(--aura-2) / 0.7) 0%, transparent 70%),
+    radial-gradient(30% 84% at 68% 100%, rgb(var(--aura) / 0.75) 0%, transparent 70%);
+  animation: card-aura-flame 1.25s ease-in-out infinite alternate-reverse;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .card-shimmer, .card-holo, .card-ember, .card-frame-spin,
   .card-suspense, .card-idle-bob { animation: none; }
+
+  /* Still lit, just no longer breathing — the tier is information, and dropping
+     it entirely would hide it from anyone who asked for less motion. */
+  .card-aura-ring {
+    animation: none;
+    border-color: rgb(var(--aura) / 0.95);
+    box-shadow: 0 0 7px rgb(var(--aura) / 0.6), 0 0 var(--aura-spread) rgb(var(--aura) / 0.3);
+  }
+  .card-aura-panel {
+    animation: none;
+    border-color: rgb(var(--aura) / 0.9);
+    box-shadow:
+      inset 0 0 16px rgb(var(--aura) / 0.3),
+      inset 0 -20px 30px -14px rgb(var(--aura) / 0.6);
+  }
+  .card-aura-flame,
+  .card-aura-flame::after {
+    animation: none;
+    opacity: 0.8;
+  }
 }
 
 /* Custom scrollbar */

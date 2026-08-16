@@ -9,7 +9,7 @@ import {
   STORY_BACKDROPS,
   type CardProfile,
 } from "./RoastTradingCard";
-import type { Rarity } from "@/lib/cardRarity";
+import type { Rarity, RarityId } from "@/lib/cardRarity";
 import {
   cardFilename,
   renderCardBlob,
@@ -43,6 +43,13 @@ type RoastCardPullProps = {
   /** Re-roll is the paid path out of a bad pull, so the card offers it directly. */
   onReroll: () => void;
   rerollCostsCredit: boolean;
+  /**
+   * Fires with the tier whenever the card is face-up and with null whenever it
+   * isn't — a re-roll puts a fresh card face-down, and the page's aura has to
+   * go out with it. The card is the only thing that knows the reveal state, so
+   * anything else on the page that reacts to it hears about it here.
+   */
+  onRevealChange?: (tier: RarityId | null) => void;
 };
 
 export function RoastCardPull({
@@ -52,6 +59,7 @@ export function RoastCardPull({
   profile,
   onReroll,
   rerollCostsCredit,
+  onRevealChange,
 }: RoastCardPullProps) {
   const identity = useMemo(() => mintCard(username, roast), [username, roast]);
   const { rarity } = identity;
@@ -147,6 +155,14 @@ export function RoastCardPull({
     },
     []
   );
+
+  // Covers both ways a card ends up face-up — a live flip and a reveal restored
+  // from the server — and both ways it goes back down: a re-roll, or navigating
+  // to a different handle.
+  useEffect(() => {
+    onRevealChange?.(phase === "front" ? rarity.id : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, rarity.id]);
 
   function celebrate() {
     const colors = rarity.confettiColors;

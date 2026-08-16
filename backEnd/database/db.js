@@ -341,6 +341,44 @@ async function dbConnect() {
         ON profile_views (viewer_country, viewer_region, viewer_city);
     `);
 
+    // The all-time half of the leaderboard. profile_views is pruned after
+    // PROFILE_VIEW_RETENTION_DAYS, so it can't answer "ever" — this table keeps
+    // one permanent row per (profile, viewer) and is never pruned.
+    //
+    // One row per pair rather than a counter column, because the board counts
+    // *people*, not visits: the primary key is the dedupe, exactly like the
+    // COUNT(DISTINCT viewer_key) the 24h board does over the raw rows. Geo is
+    // whichever location that viewer was first seen from.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS profile_view_totals (
+        profile_id      INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+        viewer_key      TEXT NOT NULL,
+        viewer_country  VARCHAR(4),
+        viewer_region   VARCHAR(80),
+        viewer_city     VARCHAR(80),
+        first_viewed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (profile_id, viewer_key)
+      );
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_profile_view_totals_geo
+        ON profile_view_totals (viewer_country, viewer_region, viewer_city);
+    `);
+    // Seeds the table from whatever un-pruned history exists, so the all-time
+    // board doesn't start at zero on the day it ships. Idempotent — the ON
+    // CONFLICT makes every later boot a no-op, which also backfills anything a
+    // failed write in recordProfileView dropped.
+    await pool.query(`
+      INSERT INTO profile_view_totals
+        (profile_id, viewer_key, viewer_country, viewer_region, viewer_city, first_viewed_at)
+      SELECT DISTINCT ON (profile_id, viewer_key)
+             profile_id, viewer_key, viewer_country, viewer_region, viewer_city, created_at
+      FROM profile_views
+      WHERE viewer_key IS NOT NULL
+      ORDER BY profile_id, viewer_key, created_at
+      ON CONFLICT (profile_id, viewer_key) DO NOTHING;
+    `);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS payment_orders (
         id                   SERIAL PRIMARY KEY,

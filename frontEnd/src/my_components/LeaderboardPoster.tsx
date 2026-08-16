@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { corsAvatarUrl } from "./RoastTradingCard";
 import { renderCardBlob, shareOrDownload } from "@/lib/cardExport";
 import { track } from "@/lib/analytics";
-import type { FeedScope, LeaderboardEntry, LeaderboardSection } from "@/lib/api";
+import type { FeedScope, LeaderboardEntry, LeaderboardRange, LeaderboardSection } from "@/lib/api";
 
 // The daily Instagram post. Same trick as the roast card: the board is laid out
 // at half size in real DOM and rasterized at 2x, so this exports at 1080x1350 —
@@ -107,41 +107,52 @@ const THEMES: Record<PosterBoard, Theme> = {
   },
 };
 
+// The same two posters render either range, so every string that names a time
+// span is a function of it. `headlineSuffix` is what closes the headline —
+// "most roasted on the internet today" / "…of all time".
+const RANGE_WORDS: Record<
+  LeaderboardRange,
+  { kicker: string; when: string; headlineSuffix: string }
+> = {
+  day: { kicker: "last 24h", when: "today", headlineSuffix: "today" },
+  all: { kicker: "all time", when: "ever", headlineSuffix: "of all time" },
+};
+
 const COPY: Record<
   PosterBoard,
   {
-    kicker: string;
+    kicker: (range: LeaderboardRange) => string;
     headline: string;
     championLabel: string;
     ledgerTitle: string;
     ledgerMetric: string;
-    empty: string;
+    empty: (range: LeaderboardRange) => string;
     quietSub: string;
-    quiet: (n: number, place: string) => string;
-    caption: (place: string) => string;
+    quiet: (n: number, place: string, range: LeaderboardRange) => string;
+    caption: (place: string, range: LeaderboardRange) => string;
   }
 > = {
   roasted: {
-    kicker: "🏆 hall of shame · last 24h",
+    kicker: (range) => `🏆 hall of shame · ${RANGE_WORDS[range].kicker}`,
     headline: "most roasted",
     championLabel: "public enemy no.1",
     ledgerTitle: "the rest of the lineup",
     ledgerMetric: "views",
-    empty: "🦗 nobody got cooked here today.",
+    empty: (range) => `🦗 nobody got cooked here ${range === "day" ? "today" : "yet"}.`,
     quietSub: "slow day. fix it. 🔥",
-    quiet: (n, place) => `only ${n} got cooked ${place} today.`,
-    caption: (place) => `🏆 most roasted ${place} today.`,
+    quiet: (n, place, range) => `only ${n} got cooked ${place} ${RANGE_WORDS[range].when}.`,
+    caption: (place, range) => `🏆 most roasted ${place} ${RANGE_WORDS[range].headlineSuffix}.`,
   },
   savage: {
-    kicker: "💀 burn ratings · last 24h",
+    kicker: (range) => `💀 burn ratings · ${RANGE_WORDS[range].kicker}`,
     headline: "most savage",
     championLabel: "certified war crime",
     ledgerTitle: "runners-up in cruelty",
     ledgerMetric: "burn score",
-    empty: "🦗 no verdicts in yet.",
+    empty: () => "🦗 no verdicts in yet.",
     quietSub: "go rate some burns. 💀",
-    quiet: (n, place) => `only ${n} roasts got judged ${place} today.`,
-    caption: (place) => `💀 most savage roasts ${place} today.`,
+    quiet: (n, place, range) => `only ${n} roasts got judged ${place} ${RANGE_WORDS[range].when}.`,
+    caption: (place, range) => `💀 most savage roasts ${place} ${RANGE_WORDS[range].headlineSuffix}.`,
   },
 };
 
@@ -517,6 +528,8 @@ export type LeaderboardPosterProps = {
   label: string | null;
   /** Which of the two boards this post is. */
   board?: PosterBoard;
+  /** Which time range the entries came from — drives every dated string. */
+  range?: LeaderboardRange;
   /** Frozen at build time so the stamp matches the day the image is posted. */
   date?: Date;
 };
@@ -531,6 +544,7 @@ export function LeaderboardPoster({
   scope,
   label,
   board = "roasted",
+  range = "day",
   date = new Date(),
 }: LeaderboardPosterProps) {
   const shown = entries.slice(0, POSTER_LIMIT);
@@ -588,7 +602,7 @@ export function LeaderboardPoster({
             transform: "rotate(-2deg)",
           }}
         >
-          {copy.kicker}
+          {copy.kicker(range)}
         </div>
 
         <div
@@ -618,7 +632,7 @@ export function LeaderboardPoster({
           >
             {place}
           </span>{" "}
-          today
+          {RANGE_WORDS[range].headlineSuffix}
         </div>
       </div>
 
@@ -661,7 +675,7 @@ export function LeaderboardPoster({
                   transform: "rotate(-0.5deg)",
                 }}
               >
-                {copy.quiet(shown.length, place)}
+                {copy.quiet(shown.length, place, range)}
                 <br />
                 <span style={{ fontFamily: SANS, fontStyle: "normal", fontSize: 14, fontWeight: 800 }}>
                   {copy.quietSub}
@@ -682,7 +696,7 @@ export function LeaderboardPoster({
               color: theme.ledgerMuted,
             }}
           >
-            {copy.empty}
+            {copy.empty(range)}
           </div>
         )}
       </div>
@@ -735,9 +749,11 @@ export function LeaderboardPoster({
 export function LeaderboardPosterButton({
   section,
   board = "roasted",
+  range = "day",
 }: {
   section: LeaderboardSection | null;
   board?: PosterBoard;
+  range?: LeaderboardRange;
 }) {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -753,37 +769,37 @@ export function LeaderboardPosterButton({
 
     setBusy(true);
     setNote(null);
-    track("poster_export_started", { board, scope, entries: entries.length });
+    track("poster_export_started", { board, scope, range, entries: entries.length });
 
     try {
       const blob = await renderCardBlob(node);
       const place = placePhrase(scope, label);
       const outcome = await shareOrDownload(
         blob,
-        `instaroasts-${board}-${placeSlug(scope, label)}-${new Date()
+        `instaroasts-${board}-${range}-${placeSlug(scope, label)}-${new Date()
           .toISOString()
           .slice(0, 10)}.png`,
-        `${COPY[board].caption(place)}\n\nget yours → https://instaroasts.com`
+        `${COPY[board].caption(place, range)}\n\nget yours → https://instaroasts.com`
       );
 
       if (outcome === "cancelled") setNote(null);
       else if (outcome === "shared") {
-        track("poster_shared", { board, scope, method: "web_share" });
+        track("poster_shared", { board, scope, range, method: "web_share" });
         setNote("shared 🔥");
       } else if (outcome === "blocked") {
         // iOS dropped the gesture during the render. Studio mode is a desk
         // tool, so it just says to press again rather than carrying a blob
         // around for a retry button.
-        track("poster_share_blocked", { board, scope });
+        track("poster_share_blocked", { board, scope, range });
         setNote("iOS blocked the sheet — press again");
       } else {
-        track("poster_downloaded", { board, scope, method: "download" });
+        track("poster_downloaded", { board, scope, range, method: "download" });
         setNote("saved 1080×1350 — post it 📲");
       }
     } catch (err) {
       // Same failure mode as the roast card: one avatar host answering without
       // CORS headers taints the canvas and kills the whole render.
-      track("poster_export_failed", { board, scope });
+      track("poster_export_failed", { board, scope, range });
       setNote("couldn't build the image — try again");
       if (import.meta.env.DEV) console.error("[poster export]", err);
     } finally {
@@ -791,7 +807,9 @@ export function LeaderboardPosterButton({
     }
   }
 
-  const idle = board === "savage" ? "💀 savage post" : "🖼️ roasted post";
+  const idle = `${board === "savage" ? "💀 savage" : "🖼️ roasted"}${
+    range === "all" ? " (all time)" : ""
+  } post`;
 
   return (
     <div className="flex items-center gap-2">
@@ -799,7 +817,7 @@ export function LeaderboardPosterButton({
         type="button"
         onClick={build}
         disabled={busy}
-        title={`Render today's ${board} board as a 1080×1350 Instagram post`}
+        title={`Render the ${range === "all" ? "all-time" : "24h"} ${board} board as a 1080×1350 Instagram post`}
         className="border-2 border-dashed border-foreground/50 rounded-full px-4 py-1.5 text-xs font-black uppercase tracking-wider bg-card hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-wait"
       >
         {busy ? "⏳ rendering…" : idle}
@@ -812,8 +830,14 @@ export function LeaderboardPosterButton({
         aria-hidden
         style={{ position: "fixed", top: 0, left: -20000, pointerEvents: "none", zIndex: -1 }}
       >
-        <div ref={nodeRef} data-export={`leaderboard-poster-${board}`}>
-          <LeaderboardPoster entries={entries} scope={scope} label={label} board={board} />
+        <div ref={nodeRef} data-export={`leaderboard-poster-${board}-${range}`}>
+          <LeaderboardPoster
+            entries={entries}
+            scope={scope}
+            label={label}
+            board={board}
+            range={range}
+          />
         </div>
       </div>
     </div>

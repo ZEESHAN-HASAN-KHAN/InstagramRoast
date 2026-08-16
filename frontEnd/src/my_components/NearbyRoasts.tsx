@@ -6,6 +6,8 @@ import {
   type FeedScope,
   type RoastedProfile,
 } from "@/lib/api";
+import { asRarityId, auraRing } from "@/lib/cardAura";
+import { CardAura } from "./CardAura";
 
 const GRID_LIMIT = 24;
 
@@ -22,29 +24,49 @@ function timeAgo(iso: string) {
 }
 
 function RoastCardLink({ roast }: { roast: RoastedProfile }) {
+  const tier = asRarityId(roast.card_tier);
+  // The lit panel carries the tier across the grid; the ring is what you read
+  // once you're looking at one tile.
+  const ring = auraRing(tier, 0.8);
+
   return (
     <Link
       to={`/${roast.username}?language=english`}
-      className="group bg-card border-2 border-foreground rounded-2xl p-4 shadow-[3px_3px_0_0_hsl(var(--brutal))] hover:-translate-y-1 hover:rotate-1 transition-all flex flex-col items-center text-center gap-2"
+      className="group relative bg-card border-2 border-foreground rounded-2xl p-4 shadow-[3px_3px_0_0_hsl(var(--brutal))] hover:-translate-y-1 hover:rotate-1 transition-all flex flex-col items-center text-center gap-2"
     >
+      <CardAura tier={tier} intensity={1.3} />
+
       {roast.profile_pic_url ? (
         <img
           src={roast.profile_pic_url}
           alt=""
           loading="lazy"
-          className="size-16 rounded-full border-2 border-foreground object-cover"
+          {...ring}
+          className={`relative size-16 rounded-full border-2 border-foreground object-cover ${
+            ring?.className ?? ""
+          }`}
         />
       ) : (
-        <span className="size-16 rounded-full border-2 border-foreground bg-muted" />
+        <span
+          {...ring}
+          className={`relative size-16 rounded-full border-2 border-foreground bg-muted ${
+            ring?.className ?? ""
+          }`}
+        />
       )}
-      <span className="font-bold text-sm truncate max-w-full">@{roast.username}</span>
+      {/* Positioned, so the text stays above the flames rather than being
+          tinted by them — the panel is an absolutely positioned sibling and
+          would otherwise paint over everything static. */}
+      <span className="relative font-bold text-sm truncate max-w-full">@{roast.username}</span>
       {roast.full_name && (
-        <span className="text-xs text-muted-foreground truncate max-w-full">{roast.full_name}</span>
+        <span className="relative text-xs text-muted-foreground truncate max-w-full">
+          {roast.full_name}
+        </span>
       )}
-      <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+      <span className="relative text-[10px] font-black uppercase tracking-wider text-muted-foreground">
         {timeAgo(roast.created_at)}
       </span>
-      <span className="text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+      <span className="relative text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity">
         see the damage 🔥
       </span>
     </Link>

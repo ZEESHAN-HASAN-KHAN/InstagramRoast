@@ -172,6 +172,31 @@ async function getRatingStats(profileId, voterKey, geo) {
   return stats;
 }
 
+// --- unlocked card tier ------------------------------------------------------
+
+// The tier a profile wears in every list on the site, or NULL when nobody has
+// flipped its card yet. Face-down cards must not leak their tier: the whole
+// point of the pull is that the rarity is unknown until someone opens it, so
+// the EXISTS on card_reveals is a correctness condition, not an optimisation.
+//
+// Most recent revealed card wins. A re-roast mints a new card that starts face
+// down, so a profile keeps showing its last opened card until the new one is
+// pulled — which is the honest answer to "what has this profile got".
+//
+// LATERAL rather than a correlated scalar subquery per column: it stays one
+// join for however many fields this eventually needs, and every caller already
+// has `p` in scope.
+const REVEALED_CARD_JOIN = `
+  LEFT JOIN LATERAL (
+    SELECT a.card_tier
+    FROM ai_responses a
+    WHERE a.profile_id = p.id
+      AND a.card_tier IS NOT NULL
+      AND EXISTS (SELECT 1 FROM card_reveals cr WHERE cr.ai_response_id = a.id)
+    ORDER BY a.created_at DESC
+    LIMIT 1
+  ) card ON TRUE`;
+
 // --- discovery feed ----------------------------------------------------------
 
 const FEED_LIMIT = 15;
@@ -185,9 +210,10 @@ async function queryRecentRoasts(params, limit = FEED_LIMIT) {
   const result = await pool.query(
     `SELECT * FROM (
        SELECT DISTINCT ON (a.profile_id)
-              p.username, p.full_name, p.profile_pic_url, a.created_at
+              p.username, p.full_name, p.profile_pic_url, a.created_at, card.card_tier
        FROM ai_responses a
        JOIN profiles p ON p.id = a.profile_id
+       ${REVEALED_CARD_JOIN}
        WHERE ($1::text IS NULL OR a.roaster_country = $1)
          AND ($2::text IS NULL OR a.roaster_region  = $2)
          AND ($3::text IS NULL OR a.roaster_city    = $3)
@@ -222,23 +248,32 @@ async function getRecentRoasts(geo, scope = "global", { strict = false, limit = 
 const BOARD_LIMIT = 10;
 const BOARD_WINDOW_HOURS = Number(process.env.LEADERBOARD_WINDOW_HOURS) || 24;
 
+// Two boards, two time ranges. "day" is the rolling window — what's hot right
+// now, and the reason to come back tomorrow. "all" is the permanent record,
+// which is the one worth linking to.
+const RANGES = ["day", "all"];
+const parseRange = (value) => (RANGES.includes(value) ? value : "day");
+
 // Most-viewed roasts in the rolling window. Views, not generated roasts: a roast
 // is generated once and then read by everyone who opens the link, so counting
 // generations would score every profile 1.
 //
 // DISTINCT viewers, so the number means "how many people saw this" — one person
 // coming back across several hours is one entry on the board, not several.
-async function queryMostRoasted(params) {
+async function queryMostRoastedDay(params) {
   const result = await pool.query(
-    `SELECT p.username, p.full_name, p.profile_pic_url,
+    `SELECT p.username, p.full_name, p.profile_pic_url, card.card_tier,
             COUNT(DISTINCT v.viewer_key)::int AS roast_count
      FROM profile_views v
      JOIN profiles p ON p.id = v.profile_id
+     ${REVEALED_CARD_JOIN}
      WHERE v.created_at > now() - ($4::text || ' hours')::interval
        AND ($1::text IS NULL OR v.viewer_country = $1)
        AND ($2::text IS NULL OR v.viewer_region  = $2)
        AND ($3::text IS NULL OR v.viewer_city    = $3)
-     GROUP BY p.id
+     -- card_tier joins the key because the planner only infers functional
+     -- dependency from p's own primary key, not through a lateral.
+     GROUP BY p.id, card.card_tier
      ORDER BY roast_count DESC, MAX(v.created_at) DESC
      LIMIT ${BOARD_LIMIT};`,
     [params.country, params.region, params.city, String(BOARD_WINDOW_HOURS)]
@@ -246,22 +281,50 @@ async function queryMostRoasted(params) {
   return result.rows;
 }
 
+// Same number over all of history. It reads from profile_view_totals rather
+// than profile_views because the latter is pruned weekly — and the totals table
+// already holds one row per distinct viewer, so this is a plain COUNT(*).
+async function queryMostRoastedAllTime(params) {
+  const result = await pool.query(
+    `SELECT p.username, p.full_name, p.profile_pic_url, card.card_tier,
+            COUNT(*)::int AS roast_count
+     FROM profile_view_totals t
+     JOIN profiles p ON p.id = t.profile_id
+     ${REVEALED_CARD_JOIN}
+     WHERE ($1::text IS NULL OR t.viewer_country = $1)
+       AND ($2::text IS NULL OR t.viewer_region  = $2)
+       AND ($3::text IS NULL OR t.viewer_city    = $3)
+     GROUP BY p.id, card.card_tier
+     ORDER BY roast_count DESC, MAX(t.first_viewed_at) DESC
+     LIMIT ${BOARD_LIMIT};`,
+    [params.country, params.region, params.city]
+  );
+  return result.rows;
+}
+
 // Highest-rated profiles, scoped by where the *voters* were — a local board
 // should reflect what your area found savage, not who happened to generate it.
-async function queryTopRated(params) {
+//
+// `windowHours` null means all of history. On the day board it filters on when
+// the vote was cast, so the two boards on that tab describe the same 24 hours;
+// without it the savage board silently showed lifetime ratings next to a
+// window'd view count and the tab's "today" label was only true of one half.
+async function queryTopRated(params, windowHours) {
   const result = await pool.query(
-    `SELECT p.username, p.full_name, p.profile_pic_url,
+    `SELECT p.username, p.full_name, p.profile_pic_url, card.card_tier,
             AVG(r.rating)::float8 AS average, COUNT(*)::int AS votes
      FROM roast_ratings r
      JOIN profiles p ON p.id = r.profile_id
+     ${REVEALED_CARD_JOIN}
      WHERE ($1::text IS NULL OR r.voter_country = $1)
        AND ($2::text IS NULL OR r.voter_region  = $2)
        AND ($3::text IS NULL OR r.voter_city    = $3)
-     GROUP BY p.id
+       AND ($4::text IS NULL OR r.created_at > now() - ($4::text || ' hours')::interval)
+     GROUP BY p.id, card.card_tier
      HAVING COUNT(*) >= ${MIN_VOTES_FOR_BOARD}
      ORDER BY average DESC, votes DESC
      LIMIT ${BOARD_LIMIT};`,
-    [params.country, params.region, params.city]
+    [params.country, params.region, params.city, windowHours === null ? null : String(windowHours)]
   );
   return result.rows;
 }
@@ -269,10 +332,13 @@ async function queryTopRated(params) {
 // Both boards resolve their scope independently: ratings are far sparser than
 // views, so forcing them to share one scope would either drag the busy board up
 // to global or leave the quiet one empty.
-async function getLeaderboard(geo, scope = "global") {
+async function getLeaderboard(geo, scope = "global", range = "day") {
+  const allTime = parseRange(range) === "all";
   const [mostRoasted, topRated] = await Promise.all([
-    withScopeCascade(geo, scope, 3, queryMostRoasted),
-    withScopeCascade(geo, scope, 3, queryTopRated),
+    withScopeCascade(geo, scope, 3, allTime ? queryMostRoastedAllTime : queryMostRoastedDay),
+    withScopeCascade(geo, scope, 3, (params) =>
+      queryTopRated(params, allTime ? null : BOARD_WINDOW_HOURS)
+    ),
   ]);
   return { mostRoasted, topRated };
 }
@@ -336,15 +402,32 @@ function viewerKeyFor({ sessionId, ip }) {
 function recordProfileView(profileId, geo = {}, viewer = {}) {
   if (!profileId) return;
   const { country = null, region = null, city = null } = geo || {};
+  const viewerKey = viewerKeyFor(viewer);
   pool
     .query(
       `INSERT INTO profile_views
          (profile_id, viewer_key, view_hour, viewer_country, viewer_region, viewer_city)
        VALUES ($1, $2, date_trunc('hour', now()), $3, $4, $5)
        ON CONFLICT (profile_id, viewer_key, view_hour) DO NOTHING;`,
-      [profileId, viewerKeyFor(viewer), country, region, city]
+      [profileId, viewerKey, country, region, city]
     )
     .catch((error) => logger.error("Failed to record profile view", { profileId, error: error.message }));
+
+  // The permanent record, written on every view rather than only the first:
+  // the ON CONFLICT makes repeats free, and the row must survive the prune that
+  // eventually takes the profile_views row above. A failure here is logged and
+  // healed by the backfill on next boot, not retried.
+  pool
+    .query(
+      `INSERT INTO profile_view_totals
+         (profile_id, viewer_key, viewer_country, viewer_region, viewer_city)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (profile_id, viewer_key) DO NOTHING;`,
+      [profileId, viewerKey, country, region, city]
+    )
+    .catch((error) =>
+      logger.error("Failed to record all-time profile view", { profileId, error: error.message })
+    );
 }
 
 const VIEW_RETENTION_DAYS = Number(process.env.PROFILE_VIEW_RETENTION_DAYS) || 7;
@@ -376,4 +459,5 @@ module.exports = {
   hasRevealedCard,
   recordCardReveal,
   SCOPES,
+  RANGES,
 };

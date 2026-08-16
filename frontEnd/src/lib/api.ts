@@ -174,11 +174,16 @@ export interface RatingStats {
   localLabel: string | null;
 }
 
+// The tier of this profile's most recently *revealed* card, or null when
+// nobody has flipped one yet. Never set for a face-down card — the backend
+// withholds it so the site can't spoil a pull that hasn't happened. Drives the
+// aura in lib/cardAura.ts.
 export interface RoastedProfile {
   username: string;
   full_name: string;
   profile_pic_url: string | null;
   created_at: string;
+  card_tier?: string | null;
 }
 
 export interface LeaderboardEntry {
@@ -188,6 +193,7 @@ export interface LeaderboardEntry {
   roast_count?: number;
   average?: number;
   votes?: number;
+  card_tier?: string | null;
 }
 
 // Which geographic scope actually produced these rows. The backend widens from
@@ -207,7 +213,12 @@ export interface LeaderboardSection {
   entries: LeaderboardEntry[];
 }
 
+// "day" is the rolling 24h window, "all" the permanent record. Unlike scope,
+// this is never widened server-side — a range is answered as asked.
+export type LeaderboardRange = "day" | "all";
+
 export interface Leaderboards {
+  range: LeaderboardRange;
   mostRoasted: LeaderboardSection;
   topRated: LeaderboardSection;
 }
@@ -289,8 +300,11 @@ export async function getRecentFeed(
   return response.json();
 }
 
-export async function getLeaderboard(scope: FeedScope = "global"): Promise<Leaderboards> {
-  const response = await authedFetch(`/api/v1/leaderboard?scope=${scope}`);
+export async function getLeaderboard(
+  scope: FeedScope = "global",
+  range: LeaderboardRange = "day"
+): Promise<Leaderboards> {
+  const response = await authedFetch(`/api/v1/leaderboard?scope=${scope}&range=${range}`);
   if (!response.ok) throw new Error("Could not load the leaderboard");
   return response.json();
 }

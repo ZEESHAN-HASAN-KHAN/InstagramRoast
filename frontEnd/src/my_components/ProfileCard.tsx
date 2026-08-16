@@ -1,3 +1,7 @@
+import { auraRing } from "@/lib/cardAura";
+import { CardAura } from "./CardAura";
+import type { RarityId } from "@/lib/cardRarity";
+
 export type ProfileData = {
   handle: string;
   displayName: string;
@@ -14,15 +18,41 @@ function formatCount(n: number) {
   return String(n);
 }
 
-export function ProfileCard({ profile }: { profile: ProfileData }) {
+export function ProfileCard({
+  profile,
+  cardTier = null,
+}: {
+  profile: ProfileData;
+  /**
+   * Tier of the card pulled from this roast, once it's face-up. Null until
+   * someone flips it — an unopened card must not be advertised by a glow.
+   */
+  cardTier?: RarityId | null;
+}) {
+  const ring = auraRing(cardTier, 1.6);
+
   return (
     <div className="relative bg-card border-2 border-foreground rounded-3xl p-6 md:p-8 shadow-brutal rotate-[0.5deg]">
-      <div className="absolute -top-3 -right-3 bg-accent text-accent-foreground text-xs font-black uppercase px-3 py-1.5 rounded-full rotate-[8deg] shadow-md">
+      {/* The card's own brutal drop shadow is a box-shadow, and so is the aura —
+          hence a layer of its own rather than styling the card element. It also
+          clips the flames to the card's corners. */}
+      <CardAura tier={cardTier} intensity={2.2} />
+
+      <div className="absolute -top-3 -right-3 bg-accent text-accent-foreground text-xs font-black uppercase px-3 py-1.5 rounded-full rotate-[8deg] shadow-md z-10">
         🎯 target locked
       </div>
-      <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
+      <div className="relative flex flex-col sm:flex-row gap-6 items-center sm:items-start">
         <div className="relative shrink-0">
-          <div className="size-28 md:size-32 rounded-full p-1 bg-gradient-to-tr from-primary via-pink-400 to-accent">
+          {/* The tier replaces the default gradient collar when there is one —
+              two competing rings around one avatar reads as a mistake. */}
+          <div
+            {...ring}
+            className={`size-28 md:size-32 rounded-full p-1 ${
+              ring
+                ? `${ring.className} border-2 bg-transparent`
+                : "bg-gradient-to-tr from-primary via-pink-400 to-accent"
+            }`}
+          >
             <img
               src={profile.avatarUrl}
               alt={`${profile.displayName} avatar`}

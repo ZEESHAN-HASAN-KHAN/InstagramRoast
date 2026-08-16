@@ -16,6 +16,7 @@ import { RoastProgress } from "./RoastProgress";
 import { BurnRating } from "./BurnRating";
 import { CreditMeter, useCredits } from "./CreditMeter";
 import { track } from "@/lib/analytics";
+import type { RarityId } from "@/lib/cardRarity";
 
 interface InstagramData {
   insta_data: {
@@ -62,6 +63,10 @@ export function Roast() {
   const searchParams = new URLSearchParams(useLocation().search);
   const ln = searchParams.get("language") || "english";
   const [isRunning, setIsRunning] = useState(false);
+  // Tier of the card once it's face-up, reported up by RoastCardPull. Drives
+  // the aura on the profile card above it, so opening the card lights up the
+  // whole page rather than just the card itself.
+  const [cardTier, setCardTier] = useState<RarityId | null>(null);
   // Bumped on every roast attempt so the loading ladder restarts even when the
   // username stays the same (re-roast, post-checkout retry).
   const [runId, setRunId] = useState(0);
@@ -295,7 +300,7 @@ export function Roast() {
 
         {/* Profile Card */}
         <div className="animate-reveal [animation-delay:200ms]">
-          <ProfileCard profile={profile} />
+          <ProfileCard profile={profile} cardTier={cardTier} />
         </div>
 
         {/* Roast Card */}
@@ -313,6 +318,7 @@ export function Roast() {
             profile={profile}
             onReroll={rerollRoast}
             rerollCostsCredit={rerollCostsCredit}
+            onRevealChange={setCardTier}
           />
         </div>
 

@@ -13,6 +13,7 @@ const {
   hasRevealedCard,
   recordCardReveal,
   SCOPES,
+  RANGES,
 } = require("../database/engagement");
 
 // Same identity a view is counted under, so one person is one person across
@@ -22,6 +23,12 @@ const voterKeyFor = (req) =>
 
 function parseScope(value) {
   return SCOPES.includes(value) ? value : "global";
+}
+
+// Defaults to the rolling window — that's what every existing link and the
+// homepage embed expect to get back when they don't ask.
+function parseRange(value) {
+  return RANGES.includes(value) ? value : "day";
 }
 
 const FEED_LIMIT = 15;
@@ -215,12 +222,14 @@ engagementRouter.get("/cards/counts", async (_req, res) => {
 engagementRouter.get("/leaderboard", async (req, res) => {
   try {
     const scope = parseScope(req.query.scope);
+    const range = parseRange(req.query.range);
 
-    const board = await cached(`board:${geoKey(scope, req.visitorGeo)}`, () =>
-      getLeaderboard(req.visitorGeo, scope)
+    const board = await cached(`board:${range}:${geoKey(scope, req.visitorGeo)}`, () =>
+      getLeaderboard(req.visitorGeo, scope, range)
     );
 
     return res.status(200).json({
+      range,
       mostRoasted: {
         scope: board.mostRoasted.scope,
         label: board.mostRoasted.label,

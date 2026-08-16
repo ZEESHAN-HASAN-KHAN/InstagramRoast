@@ -30,7 +30,9 @@ export function CompatUpsell({ username, language }: CompatUpsellProps) {
   // plain input.
   useEffect(() => {
     let cancelled = false;
-    getLeaderboard("global")
+    // All-time, not the 24h board: these are suggestion chips, and a quiet day
+    // would leave the card with nothing to suggest.
+    getLeaderboard("global", "all")
       .then((boards) => {
         if (cancelled) return;
         const picks = boards.mostRoasted.entries

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getRecentFeed, type RecentFeed } from "@/lib/api";
+import { asRarityId, auraRing } from "@/lib/cardAura";
 import { track } from "@/lib/analytics";
 
 const DISMISS_KEY = "roast-toast-dismissed";
@@ -74,6 +75,9 @@ export function RoastToast() {
 
   const roast = feed.roasts[index];
   const isLocal = feed.scope !== "global" && !!feed.label;
+  // Same rule as everywhere else: only a card someone has actually flipped
+  // face-up gets to glow.
+  const ring = auraRing(asRarityId(roast.card_tier), 0.7);
 
   const dismiss = () => {
     track("roast_toast_dismissed", { position: index });
@@ -100,10 +104,18 @@ export function RoastToast() {
               src={roast.profile_pic_url}
               alt=""
               loading="lazy"
-              className="size-8 rounded-full border-2 border-foreground object-cover shrink-0"
+              {...ring}
+              className={`size-8 rounded-full border-2 border-foreground object-cover shrink-0 ${
+                ring?.className ?? ""
+              }`}
             />
           ) : (
-            <span className="size-8 rounded-full border-2 border-foreground bg-muted shrink-0" />
+            <span
+              {...ring}
+              className={`size-8 rounded-full border-2 border-foreground bg-muted shrink-0 ${
+                ring?.className ?? ""
+              }`}
+            />
           )}
           <span className="text-sm min-w-0 truncate">
             <span className="font-bold group-hover:text-primary transition-colors">

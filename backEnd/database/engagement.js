@@ -329,18 +329,75 @@ async function queryTopRated(params, windowHours) {
   return result.rows;
 }
 
-// Both boards resolve their scope independently: ratings are far sparser than
-// views, so forcing them to share one scope would either drag the busy board up
-// to global or leave the quiet one empty.
+// Rarity is a dice roll, so the interesting question isn't "who has the most
+// cards" — it's who got lucky. Ranked on the single best card a profile holds,
+// because that's what people actually brag about, with collection breadth as
+// the tiebreak between two profiles sitting on the same top tier.
+//
+// Only revealed cards count. A face-down card must never reach a public board:
+// the tier is supposed to be unknown until someone flips it, and listing it
+// here would spoil the pull for everyone.
+//
+// Scoped by where the roast was *generated* (roaster_*), matching the recents
+// feed — a card belongs to the place that pulled it.
+const TIER_WEIGHT = `CASE a.card_tier
+        WHEN 'diamond' THEN 5
+        WHEN 'golden'  THEN 4
+        WHEN 'nuclear' THEN 3
+        WHEN 'crispy'  THEN 2
+        ELSE 1
+      END`;
+
+async function queryTopCards(params, windowHours) {
+  const result = await pool.query(
+    // One row per revealed card. The window is applied to when the card was
+    // *pulled*, not when the roast was written — a card minted last week and
+    // flipped an hour ago is today's news, and the reverse isn't news at all.
+    // MIN because card_reveals holds a row per viewer and the first flip is
+    // the one that happened.
+    `WITH revealed AS (
+       SELECT a.profile_id, a.card_tier, ${TIER_WEIGHT} AS weight,
+              MIN(cr.revealed_at) AS pulled_at
+       FROM ai_responses a
+       JOIN card_reveals cr ON cr.ai_response_id = a.id
+       WHERE a.card_tier IS NOT NULL
+         AND ($1::text IS NULL OR a.roaster_country = $1)
+         AND ($2::text IS NULL OR a.roaster_region  = $2)
+         AND ($3::text IS NULL OR a.roaster_city    = $3)
+       GROUP BY a.id, a.profile_id, a.card_tier
+     )
+     SELECT p.username, p.full_name, p.profile_pic_url,
+            -- The rarest tier held: both the ranking key and the colour this
+            -- row's aura burns in.
+            (ARRAY_AGG(r.card_tier ORDER BY r.weight DESC, r.pulled_at DESC))[1] AS card_tier,
+            ARRAY_AGG(DISTINCT r.card_tier) AS tiers,
+            COUNT(DISTINCT r.card_tier)::int AS variety,
+            COUNT(*)::int AS cards,
+            MAX(r.weight)::int AS best_weight
+     FROM revealed r
+     JOIN profiles p ON p.id = r.profile_id
+     WHERE ($4::text IS NULL OR r.pulled_at > now() - ($4::text || ' hours')::interval)
+     GROUP BY p.id
+     ORDER BY best_weight DESC, variety DESC, cards DESC, MAX(r.pulled_at) DESC
+     LIMIT ${BOARD_LIMIT};`,
+    [params.country, params.region, params.city, windowHours === null ? null : String(windowHours)]
+  );
+  return result.rows;
+}
+
+// Every board resolves its scope independently: ratings and rare pulls are far
+// sparser than views, so forcing them to share one scope would either drag the
+// busy board up to global or leave the quiet ones empty.
 async function getLeaderboard(geo, scope = "global", range = "day") {
   const allTime = parseRange(range) === "all";
-  const [mostRoasted, topRated] = await Promise.all([
+  const window = allTime ? null : BOARD_WINDOW_HOURS;
+
+  const [mostRoasted, topRated, topCards] = await Promise.all([
     withScopeCascade(geo, scope, 3, allTime ? queryMostRoastedAllTime : queryMostRoastedDay),
-    withScopeCascade(geo, scope, 3, (params) =>
-      queryTopRated(params, allTime ? null : BOARD_WINDOW_HOURS)
-    ),
+    withScopeCascade(geo, scope, 3, (params) => queryTopRated(params, window)),
+    withScopeCascade(geo, scope, 3, (params) => queryTopCards(params, window)),
   ]);
-  return { mostRoasted, topRated };
+  return { mostRoasted, topRated, topCards };
 }
 
 // --- card reveals ------------------------------------------------------------
@@ -362,6 +419,70 @@ async function hasRevealedCard(aiResponseId) {
     [aiResponseId]
   );
   return result.rowCount > 0;
+}
+
+/**
+ * Every card this profile has had flipped face-up, newest pull first.
+ *
+ * One row per roast, not per reveal — a card opened by fifty people is still
+ * one card. `pulled_at` is the first flip, which is the moment that actually
+ * happened; card_reveals keeps a row per viewer after that.
+ *
+ * Face-down cards are absent by construction (the join is the filter), so this
+ * can be served to anyone without spoiling an unopened pull.
+ */
+async function getRevealedCards(profileId) {
+  const result = await pool.query(
+    `SELECT a.id, a.card_tier AS tier, a.card_serial AS serial, a.language,
+            MIN(cr.revealed_at) AS pulled_at
+     FROM ai_responses a
+     JOIN card_reveals cr ON cr.ai_response_id = a.id
+     WHERE a.profile_id = $1
+       AND a.card_tier IS NOT NULL
+     GROUP BY a.id, a.card_tier, a.card_serial, a.language
+     ORDER BY MIN(cr.revealed_at) DESC
+     LIMIT 50;`,
+    [profileId]
+  );
+  return result.rows;
+}
+
+/**
+ * One specific roast of a profile, by id — including ones a re-roll has since
+ * superseded.
+ *
+ * A re-roll appends a row and getAIResponse serves newest-first, so every
+ * earlier roast is still stored but has no URL of its own. That's fine until
+ * the card it minted is on a leaderboard and in a collection strip, at which
+ * point the card points at a roast nobody can open. This is that URL.
+ *
+ * Scoped by profile as well as id so a guessed id can't be used to read a
+ * different profile's roast through this route.
+ *
+ * `is_latest` marks whether it's still the live roast for its language, which
+ * is how the page knows to say "you're reading an older pull".
+ *
+ * Restricted to roasts whose card has been flipped. Every link into this route
+ * comes from a collection strip, which only lists revealed cards — so the only
+ * way to ask for an unrevealed one is to type an id by hand, and answering that
+ * would put a face-down card on screen and spoil someone's pull.
+ */
+async function getResponseById(profileId, responseId) {
+  const result = await pool.query(
+    `SELECT a.id, a.response_text, a.language, a.card_tier, a.card_serial, a.created_at,
+            (a.id = (
+              SELECT b.id FROM ai_responses b
+              WHERE b.profile_id = a.profile_id AND b.language = a.language
+              ORDER BY b.created_at DESC
+              LIMIT 1
+            )) AS is_latest
+     FROM ai_responses a
+     WHERE a.id = $1
+       AND a.profile_id = $2
+       AND EXISTS (SELECT 1 FROM card_reveals cr WHERE cr.ai_response_id = a.id);`,
+    [responseId, profileId]
+  );
+  return result.rows[0] ?? null;
 }
 
 /**
@@ -391,6 +512,28 @@ async function recordCardReveal({ aiResponseId, profileId, sessionId, ip, viewer
 // not an election.
 function viewerKeyFor({ sessionId, ip }) {
   return sessionId ?? `ip:${ip || "unknown"}`;
+}
+
+// Identifies a *voter*, and deliberately not the same rule as above.
+//
+// viewerKeyFor prefers the session id, which makes a private window a new
+// person — fine for a view counter, useless for a poll: one browser could
+// hand a profile unlimited 5s just by reopening incognito. Ratings therefore
+// key off the IP first and only fall back to the session when there's no
+// address to key on at all.
+//
+// The known trade-off is a shared NAT — an office, a campus, a carrier doing
+// CGNAT — collapsing into one vote. That's the price of the guarantee, and for
+// a crowd rating it's the right side to err on: an inflated 5.0 from one person
+// with a private window damages the board more than a missing vote from someone
+// behind the same router as a previous voter.
+//
+// Never falls back to a shared 'unknown' bucket: that would make every
+// unidentifiable visitor the same voter, so each one would overwrite the last
+// one's rating instead of merely being refused a second vote.
+function raterKeyFor({ sessionId, ip }) {
+  if (ip) return `ip:${ip}`;
+  return sessionId ? `sess:${sessionId}` : null;
 }
 
 // Fire-and-forget: a failure here must never cost someone their roast, and the
@@ -456,8 +599,11 @@ module.exports = {
   recordProfileView,
   pruneOldViews,
   viewerKeyFor,
+  raterKeyFor,
   hasRevealedCard,
   recordCardReveal,
+  getRevealedCards,
+  getResponseById,
   SCOPES,
   RANGES,
 };

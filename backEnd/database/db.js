@@ -286,6 +286,34 @@ async function dbConnect() {
       CREATE INDEX IF NOT EXISTS idx_roast_ratings_profile ON roast_ratings (profile_id);
     `);
 
+    // Ratings shipped keyed on the session id where one existed, which made a
+    // private window a new voter — one person could rate the same roast as many
+    // times as they could open incognito windows. Votes are now keyed on the IP
+    // (see raterKeyFor); these two statements bring the rows already in the
+    // table onto that key.
+    //
+    // Collapse first: two rows for one IP on one profile are the duplicate
+    // votes that bug produced, and the UNIQUE (profile_id, voter_key) below
+    // can't be satisfied while they both exist. Newest wins — it's the most
+    // recent opinion that person expressed.
+    await pool.query(`
+      DELETE FROM roast_ratings a
+      USING roast_ratings b
+      WHERE a.profile_id = b.profile_id
+        AND a.ip_address = b.ip_address
+        AND a.ip_address NOT IN ('', 'unknown')
+        AND (a.updated_at, a.id) < (b.updated_at, b.id);
+    `);
+    // Then re-key the survivors. Rows with no usable address keep whatever key
+    // they had: rewriting them all to one placeholder would merge unrelated
+    // people into a single voter.
+    await pool.query(`
+      UPDATE roast_ratings
+      SET voter_key = 'ip:' || ip_address
+      WHERE ip_address NOT IN ('', 'unknown')
+        AND voter_key IS DISTINCT FROM 'ip:' || ip_address;
+    `);
+
     // Who looked at a roast, for the "most roasted today" board. Counting
     // ai_responses instead wouldn't work: roasts are cached, so a profile only
     // ever gets one row no matter how many people read it.

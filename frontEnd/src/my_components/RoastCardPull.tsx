@@ -44,12 +44,20 @@ type RoastCardPullProps = {
   onReroll: () => void;
   rerollCostsCredit: boolean;
   /**
-   * Fires with the tier whenever the card is face-up and with null whenever it
-   * isn't — a re-roll puts a fresh card face-down, and the page's aura has to
-   * go out with it. The card is the only thing that knows the reveal state, so
-   * anything else on the page that reacts to it hears about it here.
+   * Fires with the tier and serial whenever the card is face-up, and with nulls
+   * whenever it isn't — a re-roll puts a fresh card face-down, and the page's
+   * aura has to go out with it. The card is the only thing that knows the
+   * reveal state, so anything else on the page that reacts to it (the profile
+   * card's aura, the collection strip) hears about it here.
    */
-  onRevealChange?: (tier: RarityId | null) => void;
+  onRevealChange?: (tier: RarityId | null, serial: string | null) => void;
+  /**
+   * Forces the card face-up and skips the server lookup. Set when the page is
+   * showing an archived roast: that route only serves roasts whose card has
+   * already been flipped, and the lookup would otherwise answer about the
+   * *newest* roast for the language, which is a different card.
+   */
+  alreadyRevealed?: boolean;
 };
 
 export function RoastCardPull({
@@ -60,6 +68,7 @@ export function RoastCardPull({
   onReroll,
   rerollCostsCredit,
   onRevealChange,
+  alreadyRevealed = false,
 }: RoastCardPullProps) {
   const identity = useMemo(() => mintCard(username, roast), [username, roast]);
   const { rarity } = identity;
@@ -125,15 +134,16 @@ export function RoastCardPull({
   useEffect(() => {
     timers.current.forEach(clearTimeout);
     timers.current = [];
-    setPhase("back");
+    setPhase(alreadyRevealed ? "front" : "back");
     setNote(null);
-  }, [username, identity.serial]);
+  }, [username, identity.serial, alreadyRevealed]);
 
   // Then ask the server whether this viewer already opened this card. Only
   // promotes a card that's still face-down: if they tapped while this was in
   // flight, the suspense they're watching must be allowed to finish rather than
   // being cut short by a late answer.
   useEffect(() => {
+    if (alreadyRevealed) return;
     let cancelled = false;
     getCardState(username, language)
       .then(({ revealed }) => {
@@ -147,7 +157,7 @@ export function RoastCardPull({
     return () => {
       cancelled = true;
     };
-  }, [username, language, identity.serial]);
+  }, [username, language, identity.serial, alreadyRevealed]);
 
   useEffect(
     () => () => {
@@ -160,9 +170,10 @@ export function RoastCardPull({
   // from the server — and both ways it goes back down: a re-roll, or navigating
   // to a different handle.
   useEffect(() => {
-    onRevealChange?.(phase === "front" ? rarity.id : null);
+    const up = phase === "front";
+    onRevealChange?.(up ? rarity.id : null, up ? identity.serial : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, rarity.id]);
+  }, [phase, rarity.id, identity.serial]);
 
   function celebrate() {
     const colors = rarity.confettiColors;

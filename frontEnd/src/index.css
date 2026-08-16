@@ -273,9 +273,55 @@ html {
   animation: card-aura-flame 1.25s ease-in-out infinite alternate-reverse;
 }
 
+/* ── Rating invite ─────────────────────────────────────────────────────────
+   The flames breathe until someone votes. A row of five static emoji reads as
+   a score display rather than a control, which is most of why the rating went
+   untouched — this says "these are buttons" without adding a word. Stops dead
+   on hover so it never fights the pointer, and after voting there is nothing
+   left to invite. */
+@keyframes rating-invite {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-4px) scale(1.06); }
+}
+.rating-invite > * {
+  animation: rating-invite 1.8s ease-in-out infinite;
+}
+.rating-invite:hover > * {
+  animation: none;
+}
+
+/* ── Odds table ────────────────────────────────────────────────────────────
+   The "what's in the deck" panel. Bars scale in rather than growing by width:
+   a transform stays off the layout path, so five of these animating at once
+   costs nothing. Each row's delay is set inline, so the table reads top-down
+   like a pack being fanned out. */
+@keyframes card-odds-fill {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+.card-odds-bar {
+  transform-origin: left center;
+  animation: card-odds-fill 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* A light sweep across the top tiers only — the two people actually chase. */
+@keyframes card-odds-sheen {
+  0%        { transform: translateX(-120%); }
+  60%, 100% { transform: translateX(320%); }
+}
+.card-odds-sheen {
+  animation: card-odds-sheen 3.6s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .card-shimmer, .card-holo, .card-ember, .card-frame-spin,
   .card-suspense, .card-idle-bob { animation: none; }
+
+  .rating-invite > * { animation: none; }
+
+  /* Bars still show their length, they just arrive at it. */
+  .card-odds-bar { animation: none; }
+  .card-odds-sheen { animation: none; opacity: 0; }
 
   /* Still lit, just no longer breathing — the tier is information, and dropping
      it entirely would hide it from anyone who asked for less motion. */

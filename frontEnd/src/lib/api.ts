@@ -194,6 +194,12 @@ export interface LeaderboardEntry {
   average?: number;
   votes?: number;
   card_tier?: string | null;
+  /** Card board only: every distinct tier this profile has had revealed. */
+  tiers?: string[];
+  /** How many of those there are — the collection-breadth tiebreak. */
+  variety?: number;
+  /** Total revealed cards, re-rolls included. */
+  cards?: number;
 }
 
 // Which geographic scope actually produced these rows. The backend widens from
@@ -221,6 +227,8 @@ export interface Leaderboards {
   range: LeaderboardRange;
   mostRoasted: LeaderboardSection;
   topRated: LeaderboardSection;
+  /** Rarest card pulled, breadth of collection as the tiebreak. */
+  topCards: LeaderboardSection;
 }
 
 export interface VisitorScope {
@@ -264,6 +272,61 @@ export async function getCardState(username: string, language: string): Promise<
     `/api/v1/profiles/${encodeURIComponent(username)}/card?language=${encodeURIComponent(language)}`
   );
   if (!response.ok) throw new Error("Could not load card state");
+  return response.json();
+}
+
+// Every card this profile has had flipped face-up — the thing the leaderboard
+// is counting when it credits someone with "2 cards · 2 tiers". Face-down cards
+// never appear, so this can be shown to anyone.
+export interface RevealedCard {
+  /** The roast this card was minted from — what makes the card clickable. */
+  id: number;
+  tier: string;
+  serial: string | null;
+  language: string | null;
+  pulled_at: string;
+}
+
+export interface CardCollection {
+  cards: RevealedCard[];
+  total: number;
+  tiers: number;
+}
+
+export async function getCardCollection(username: string): Promise<CardCollection> {
+  const response = await authedFetch(
+    `/api/v1/profiles/${encodeURIComponent(username)}/cards`
+  );
+  if (!response.ok) throw new Error("Could not load the card collection");
+  return response.json();
+}
+
+// A specific roast by id, including ones a re-roll has superseded. The live
+// roast route only ever serves the newest per language, so this is the only way
+// back to an older card's roast.
+export interface ArchivedRoast {
+  insta_data: {
+    profile_pic_url: string;
+    username: string;
+    full_name: string;
+    follower: number;
+    following: number;
+    biography: string;
+    post: number;
+  };
+  data: string;
+  language: string;
+  /** False when a re-roll has since replaced it as the live roast. */
+  isLatest: boolean;
+  card: { tier: string | null; serial: string | null };
+  createdAt: string;
+}
+
+export async function getArchivedRoast(username: string, id: number): Promise<ArchivedRoast> {
+  const response = await authedFetch(
+    `/api/v1/profiles/${encodeURIComponent(username)}/roasts/${id}`
+  );
+  if (!response.ok) throw new Error("Could not load that roast");
   return response.json();
 }
 

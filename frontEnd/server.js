@@ -100,7 +100,7 @@ const PAGE_META = {
   "/leaderboard": {
     title: "Hall of Shame 🏆 — InstaRoasts Leaderboard",
     description:
-      "The most roasted and most savage Instagram profiles — today's rolling 24h board and the all-time hall of shame, worldwide and near you.",
+      "The most roasted, most savage and rarest-card Instagram profiles — today's rolling 24h boards and the all-time hall of shame, worldwide and near you.",
     image: `${SITE}/og-leaderboard.png`,
     imageAlt: "InstaRoasts leaderboard — who got cooked hardest today",
     sitemap: { changefreq: "daily", priority: "0.9" },

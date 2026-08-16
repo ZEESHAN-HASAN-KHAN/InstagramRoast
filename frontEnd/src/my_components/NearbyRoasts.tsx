@@ -7,6 +7,7 @@ import {
   type RoastedProfile,
 } from "@/lib/api";
 import { asRarityId, auraRing } from "@/lib/cardAura";
+import { track } from "@/lib/analytics";
 import { CardAura } from "./CardAura";
 
 const GRID_LIMIT = 24;
@@ -23,7 +24,7 @@ function timeAgo(iso: string) {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
-function RoastCardLink({ roast }: { roast: RoastedProfile }) {
+function RoastCardLink({ roast, scope }: { roast: RoastedProfile; scope: FeedScope }) {
   const tier = asRarityId(roast.card_tier);
   // The lit panel carries the tier across the grid; the ring is what you read
   // once you're looking at one tile.
@@ -32,6 +33,7 @@ function RoastCardLink({ roast }: { roast: RoastedProfile }) {
   return (
     <Link
       to={`/${roast.username}?language=english`}
+      onClick={() => track("feed_profile_clicked", { scope, tier: tier ?? "none" })}
       className="group relative bg-card border-2 border-foreground rounded-2xl p-4 shadow-[3px_3px_0_0_hsl(var(--brutal))] hover:-translate-y-1 hover:rotate-1 transition-all flex flex-col items-center text-center gap-2"
     >
       <CardAura tier={tier} intensity={1.3} />
@@ -155,7 +157,10 @@ export function NearbyRoasts() {
               <button
                 key={tab.scope}
                 type="button"
-                onClick={() => setActive(tab.scope)}
+                onClick={() => {
+                  track("feed_tab_changed", { scope: tab.scope });
+                  setActive(tab.scope);
+                }}
                 className={`border-2 border-foreground rounded-full px-4 py-1.5 text-xs font-black uppercase tracking-wider transition-all hover:-translate-y-0.5 ${
                   active === tab.scope
                     ? "bg-primary text-primary-foreground shadow-[3px_3px_0_0_hsl(var(--brutal))]"
@@ -196,7 +201,7 @@ export function NearbyRoasts() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {roasts.map((roast) => (
-              <RoastCardLink key={roast.username} roast={roast} />
+              <RoastCardLink key={roast.username} roast={roast} scope={active} />
             ))}
           </div>
         )}

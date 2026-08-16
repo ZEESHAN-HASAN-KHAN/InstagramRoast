@@ -11,12 +11,23 @@ import {
 } from "@/lib/api";
 import { track } from "@/lib/analytics";
 import { asRarityId, auraRing } from "@/lib/cardAura";
+import { RARITIES, RARITY_ORDER } from "@/lib/cardRarity";
 import { CardAura } from "./CardAura";
 import { LeaderboardPosterButton } from "./LeaderboardPoster";
 import { useStudioMode } from "@/lib/studio";
 
-const trackBoardClick = (board: "most_roasted" | "most_savage", rank: number) =>
-  track("leaderboard_profile_clicked", { board, rank });
+// `tier` rides along so the report can answer whether a burning rare-card row
+// actually pulls more clicks than a plain one — the aura's only justification.
+const trackBoardClick = (
+  board: "most_roasted" | "most_savage" | "rarest_cards",
+  rank: number,
+  entry: LeaderboardEntry
+) =>
+  track("leaderboard_profile_clicked", {
+    board,
+    rank,
+    tier: asRarityId(entry.card_tier) ?? "none",
+  });
 
 type Tab = { scope: FeedScope; label: string };
 
@@ -66,7 +77,7 @@ function ChampionPoster({ entry }: { entry: LeaderboardEntry }) {
   return (
     <Link
       to={profileHref(entry)}
-      onClick={() => trackBoardClick("most_roasted", 1)}
+      onClick={() => trackBoardClick("most_roasted", 1, entry)}
       className="relative block bg-card border-2 border-foreground rounded-3xl p-4 sm:p-6 shadow-brutal sm:rotate-[-0.6deg] hover:rotate-0 hover:-translate-y-1 transition-all overflow-hidden"
     >
       <CardAura tier={asRarityId(entry.card_tier)} intensity={1.8} />
@@ -107,7 +118,7 @@ function RunnerTile({ entry, rank }: { entry: LeaderboardEntry; rank: number }) 
   return (
     <Link
       to={profileHref(entry)}
-      onClick={() => trackBoardClick("most_roasted", rank)}
+      onClick={() => trackBoardClick("most_roasted", rank, entry)}
       className="relative bg-card border-2 border-foreground rounded-2xl p-4 shadow-[3px_3px_0_0_hsl(var(--brutal))] hover:-translate-y-1 transition-all flex items-center gap-3"
     >
       <CardAura tier={asRarityId(entry.card_tier)} intensity={1.2} />
@@ -129,7 +140,7 @@ function LedgerRow({ entry, rank }: { entry: LeaderboardEntry; rank: number }) {
   return (
     <Link
       to={profileHref(entry)}
-      onClick={() => trackBoardClick("most_roasted", rank)}
+      onClick={() => trackBoardClick("most_roasted", rank, entry)}
       className="flex items-center gap-3 py-2.5 px-1 hover:bg-background hover:px-3 rounded-xl transition-all"
     >
       <span className="font-mono text-sm text-muted-foreground tabular-nums shrink-0 w-6">
@@ -247,7 +258,7 @@ function SavageRow({
   return (
     <Link
       to={profileHref(entry)}
-      onClick={() => trackBoardClick("most_savage", rank)}
+      onClick={() => trackBoardClick("most_savage", rank, entry)}
       className={`flex items-center gap-3 rounded-xl transition-all hover:bg-background/15 ${
         featured ? "bg-background/10 p-3" : "py-2 px-1 hover:px-3"
       }`}
@@ -341,6 +352,160 @@ function SavageBoard({
               <SavageRow entry={entry} rank={i + 1} featured={i === 0} />
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* --- rarest cards: the vault --------------------------------------------- */
+
+// Rarity is pure luck, so this board is a luck board — it ranks on the single
+// best card someone is sitting on, which is the thing people screenshot, and
+// breaks ties on how many different tiers they've collected.
+//
+// Only cards that have actually been flipped appear here; the backend won't
+// hand over a face-down card's tier at all.
+
+/** The tiers a profile holds, rarest first, as a row of little chips. */
+function TierChips({ tiers }: { tiers: string[] }) {
+  const held = RARITY_ORDER.filter((id) => tiers.includes(id)).reverse();
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1">
+      {held.map((id) => (
+        <span
+          key={id}
+          title={RARITIES[id].name}
+          className="inline-flex items-center gap-0.5 rounded-full border border-foreground/20 bg-background/60 px-1.5 py-0.5 text-[10px] font-black leading-none"
+        >
+          {RARITIES[id].emoji}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function VaultRow({
+  entry,
+  rank,
+  featured,
+}: {
+  entry: LeaderboardEntry;
+  rank: number;
+  featured?: boolean;
+}) {
+  const tier = asRarityId(entry.card_tier);
+  const rarity = tier ? RARITIES[tier] : null;
+  const tiers = entry.tiers ?? [];
+  const cards = entry.cards ?? 0;
+
+  return (
+    <Link
+      to={profileHref(entry)}
+      onClick={() => trackBoardClick("rarest_cards", rank, entry)}
+      className={`relative flex items-center gap-3 rounded-2xl transition-all ${
+        featured
+          ? "bg-background border-2 border-foreground p-3 sm:p-4 shadow-[3px_3px_0_0_hsl(var(--brutal))] hover:-translate-y-0.5"
+          : "py-2.5 px-1 hover:bg-background hover:px-3"
+      }`}
+    >
+      {/* Only the top holder gets the full lit panel — a stack of ten burning
+          cards would be a light show, not a ranking. */}
+      {featured && <CardAura tier={tier} intensity={1.6} />}
+
+      <span className="relative font-mono text-sm text-muted-foreground tabular-nums shrink-0 w-6">
+        {String(rank).padStart(2, "0")}
+      </span>
+      <Avatar
+        entry={entry}
+        className={featured ? "size-12 sm:size-14" : "size-8"}
+        intensity={featured ? 1.2 : 0.8}
+      />
+
+      <span className="relative flex-1 min-w-0">
+        <span className={`block font-bold truncate ${featured ? "text-base" : "text-sm"}`}>
+          @{entry.username}
+        </span>
+        <span className="mt-0.5 flex flex-wrap items-center gap-2">
+          {rarity && (
+            <span className="text-xs font-black uppercase tracking-wide">
+              {rarity.emoji} {rarity.name}
+            </span>
+          )}
+          {/* The pull rate is the brag — "I have a gold one" means nothing
+              without "1 in 22 people ever see this". */}
+          {rarity && (
+            <span className="text-[10px] font-mono text-muted-foreground tabular-nums">
+              {rarity.pullRate}% pull
+            </span>
+          )}
+        </span>
+      </span>
+
+      <span className="relative shrink-0 text-right space-y-1">
+        {tiers.length > 1 && <TierChips tiers={tiers} />}
+        <span className="block text-[10px] font-mono text-muted-foreground tabular-nums">
+          {cards} card{cards === 1 ? "" : "s"}
+          {tiers.length > 1 ? ` · ${tiers.length} tiers` : ""}
+        </span>
+      </span>
+    </Link>
+  );
+}
+
+function VaultBoard({
+  section,
+  limit,
+  onAllTime,
+}: {
+  section: LeaderboardSection | null;
+  limit?: number;
+  onAllTime?: () => void;
+}) {
+  const entries = (section?.entries ?? []).slice(0, limit);
+  const [top, ...rest] = entries;
+
+  return (
+    <div className="bg-card border-2 border-foreground rounded-3xl p-4 sm:p-5 md:p-6 shadow-brutal">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
+        <h3 className="font-serif italic font-bold text-xl md:text-2xl">🎴 rarest pulls</h3>
+        {section?.label && section.scope !== "global" && (
+          <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+            {section.label}
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-muted-foreground mb-4">
+        best card anyone's flipped, breadth of collection breaks the tie
+      </p>
+
+      {entries.length === 0 ? (
+        <div className="border-2 border-dashed border-foreground/30 rounded-2xl p-6 text-center space-y-2">
+          <p className="text-3xl">🃏</p>
+          <p className="font-serif italic">no cards flipped here yet.</p>
+          <p className="text-xs text-muted-foreground">
+            every roast mints one. pull it and this board is yours.
+          </p>
+          {onAllTime && (
+            <button
+              type="button"
+              onClick={onAllTime}
+              className="text-xs font-bold underline decoration-wavy underline-offset-4 hover:text-primary transition-colors"
+            >
+              see the all-time vault →
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <VaultRow entry={top} rank={1} featured />
+          {rest.length > 0 && (
+            <div className="divide-y-2 divide-dashed divide-foreground/15 border-t-2 border-dashed border-foreground/15 pt-1">
+              {rest.map((entry, i) => (
+                <VaultRow key={entry.username} entry={entry} rank={i + 2} />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -483,12 +648,15 @@ export function Leaderboard({ standalone = false }: { standalone?: boolean }) {
   // Section-impression once per mount — page_view alone can't tell whether the
   // homepage embed was ever the thing people actually engaged with.
   useEffect(() => {
-    track("leaderboard_viewed", { standalone });
+    track("leaderboard_viewed", { standalone, range, scope: active });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const hasAnything =
-    boards && (boards.mostRoasted.entries.length > 0 || boards.topRated.entries.length > 0);
+    boards &&
+    (boards.mostRoasted.entries.length > 0 ||
+      boards.topRated.entries.length > 0 ||
+      boards.topCards.entries.length > 0);
 
   // Before there's any traffic there's no board worth showing, and a page of
   // empty podiums makes the site look dead. The dedicated /leaderboard page
@@ -609,6 +777,15 @@ export function Leaderboard({ standalone = false }: { standalone?: boolean }) {
             <div className="min-w-0 lg:col-span-5">
               <SavageBoard
                 section={boards?.topRated ?? null}
+                limit={standalone ? undefined : 5}
+                onAllTime={range === "day" ? () => changeRange("all") : undefined}
+              />
+            </div>
+            {/* Full width under the other two: its rows carry a tier name, a
+                pull rate and a chip row, which a 5-column gutter can't hold. */}
+            <div className="min-w-0 lg:col-span-12">
+              <VaultBoard
+                section={boards?.topCards ?? null}
                 limit={standalone ? undefined : 5}
                 onAllTime={range === "day" ? () => changeRange("all") : undefined}
               />

@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useLocation, Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
-import { enqueueRoast, apiUrl } from "@/lib/api";
+import { enqueueRoast, apiUrl, getArchivedRoast, type ArchivedRoast } from "@/lib/api";
 import { useRoastJobStream } from "@/hooks/useRoastJobStream";
 import { Paywall } from "./Paywall";
 import { usePacedIndex } from "@/hooks/usePacedIndex";
@@ -10,6 +10,8 @@ import Confetti from "@/components/ui/confetti";
 import { ProfileCard } from "./ProfileCard";
 import { RoastCard } from "./RoastCard";
 import { RoastCardPull } from "./RoastCardPull";
+import { CardCollection } from "./CardCollection";
+import { CardOdds } from "./CardOdds";
 import { ShareBar } from "./ShareBar";
 import { CompatUpsell } from "./CompatUpsell";
 import { RoastProgress } from "./RoastProgress";
@@ -62,11 +64,24 @@ export function Roast() {
   const { username } = useParams();
   const searchParams = new URLSearchParams(useLocation().search);
   const ln = searchParams.get("language") || "english";
+  // `?card=<roast id>` opens one specific past roast — the card collection
+  // links here. Without it the page serves the newest roast for the language,
+  // which after a re-roll is a different card entirely.
+  const cardParam = searchParams.get("card");
+  const archivedId = cardParam && /^\d+$/.test(cardParam) ? Number(cardParam) : null;
   const [isRunning, setIsRunning] = useState(false);
-  // Tier of the card once it's face-up, reported up by RoastCardPull. Drives
-  // the aura on the profile card above it, so opening the card lights up the
-  // whole page rather than just the card itself.
-  const [cardTier, setCardTier] = useState<RarityId | null>(null);
+  // The card once it's face-up, reported up by RoastCardPull. Drives the aura
+  // on the profile card above it — so opening the card lights up the whole page
+  // rather than just the card itself — and tells the collection strip below to
+  // re-read, so a fresh pull joins the collection immediately.
+  const [card, setCard] = useState<{ tier: RarityId | null; serial: string | null }>({
+    tier: null,
+    serial: null,
+  });
+  // An archived roast is fetched straight out, not queued: it already exists,
+  // so there's nothing to generate, nothing to pay for and no ladder to walk.
+  const [archived, setArchived] = useState<ArchivedRoast | null>(null);
+  const [archivedFailed, setArchivedFailed] = useState(false);
   // Bumped on every roast attempt so the loading ladder restarts even when the
   // username stays the same (re-roast, post-checkout retry).
   const [runId, setRunId] = useState(0);
@@ -95,9 +110,16 @@ export function Roast() {
   // Hold the loading screen until the ladder finishes its last beat, even if
   // the result already arrived — the payoff lands harder after the build-up.
   // Exception: a fully-cached roast skips the animation and loads instantly.
-  const received = status === "done" && (cached || displayedStep >= loadingSteps.length);
-  const userData = result;
-  const roastData = result?.data ?? "";
+  // An archived roast bypasses the job stream entirely — it's already written,
+  // so it's ready the moment the fetch lands.
+  const received = archivedId
+    ? archived !== null
+    : status === "done" && (cached || displayedStep >= loadingSteps.length);
+  const userData = archivedId ? archived : result;
+  const roastData = (archivedId ? archived?.data : result?.data) ?? "";
+  // The card's own language, not the URL's — an older pull carries whichever
+  // language it was written in.
+  const roastLanguage = archived?.language ?? ln;
   const liveInstaData = partial?.insta_data ?? null;
   // Reveal the real profile card only once the ladder reaches the "AI reading
   // the vibes" step, so the card appearing reads as that step's reward.
@@ -126,9 +148,39 @@ export function Roast() {
   useEffect(() => {
     if (username) document.title = `Roast of ${username} 🔥`;
     wasReroll.current = false;
-    runRoast();
+    // Queuing a job for a roast that already exists would burn a scrape and,
+    // worse, hand back the *newest* roast rather than the one that was asked
+    // for by id.
+    if (!archivedId) runRoast();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [username]);
+  }, [username, archivedId]);
+
+  useEffect(() => {
+    if (!archivedId || !username) return;
+    let cancelled = false;
+    setArchived(null);
+    setArchivedFailed(false);
+    getArchivedRoast(username, archivedId)
+      .then((data) => {
+        if (cancelled) return;
+        setArchived(data);
+        track("archived_roast_opened", {
+          tier: data.card.tier ?? "unknown",
+          latest: data.isLatest,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setArchivedFailed(true);
+          // A dead card link is a broken promise from a board or a share, so
+          // it's worth seeing rather than inferring from a bounce.
+          track("archived_roast_missing");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [username, archivedId]);
 
   useEffect(() => {
     if (received) {
@@ -151,6 +203,29 @@ export function Roast() {
 
   if (status === "paywall" && paywallInfo) {
     return <Paywall info={paywallInfo} onUnlocked={() => runRoast(wasReroll.current)} />;
+  }
+
+  // A card id that doesn't resolve: deleted profile, a roast whose card was
+  // never flipped, or a hand-edited URL. Offer the live roast rather than a
+  // dead end — that's the thing they were almost certainly after.
+  if (archivedFailed) {
+    return (
+      <div className="max-w-3xl mx-auto px-6 py-16 text-center space-y-6">
+        <div className="text-7xl">🃏</div>
+        <h1 className="text-2xl md:text-3xl font-serif font-bold italic text-balance">
+          that card's roast isn't around
+        </h1>
+        <p className="text-sm text-muted-foreground max-w-md mx-auto">
+          it may have never been flipped, or the profile's been wiped.
+        </p>
+        <Link
+          to={`/${username}?language=${ln}`}
+          className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-4 py-2 text-sm font-bold hover:-translate-y-0.5 transition-all shadow-[3px_3px_0_0_hsl(var(--brutal))]"
+        >
+          read the latest roast of @{username} →
+        </Link>
+      </div>
+    );
   }
 
   if (status === "failed") {
@@ -189,8 +264,10 @@ export function Roast() {
           <meta name="robots" content="index, follow" />
         </Helmet>
         <div className="max-w-3xl mx-auto space-y-10">
-          {/* Loading ladder: paced through every stage for the build-up */}
-          <RoastProgress steps={loadingSteps} activeIndex={displayedStep} />
+          {/* Loading ladder: paced through every stage for the build-up. An
+              archived roast isn't being generated, so claiming to scrape
+              Instagram for it would be a lie — it just gets skeletons. */}
+          {!archivedId && <RoastProgress steps={loadingSteps} activeIndex={displayedStep} />}
 
           {/* Profile: real card once scraped AND the ladder caught up, skeleton until then */}
           {showLiveProfile && liveInstaData ? (
@@ -224,7 +301,9 @@ export function Roast() {
             <div className="h-5 bg-muted rounded w-[75%]" />
           </div>
           <p className="text-center text-sm text-muted-foreground italic">
-            {stageMessage || "⏳ crafting your roast… hang tight"}
+            {archivedId
+              ? "🗃️ digging that card's roast out of the archive…"
+              : stageMessage || "⏳ crafting your roast… hang tight"}
           </p>
         </div>
       </div>
@@ -283,10 +362,28 @@ export function Roast() {
           </div>
         </div>
 
+        {/* Reading a superseded pull. Says so plainly and offers the way back —
+            otherwise an old roast is indistinguishable from the live one and
+            people share the wrong link. */}
+        {archived && !archived.isLatest && (
+          <div className="animate-reveal flex flex-wrap items-center justify-between gap-3 bg-card border-2 border-dashed border-foreground/40 rounded-2xl px-4 py-3">
+            <span className="text-sm">
+              🗃️ you're reading an <span className="font-bold">older pull</span> — a re-roll has
+              replaced it since.
+            </span>
+            <Link
+              to={`/${username}?language=${roastLanguage}`}
+              className="text-xs font-black uppercase tracking-wider underline decoration-wavy underline-offset-4 hover:text-primary transition-colors"
+            >
+              jump to the latest →
+            </Link>
+          </div>
+        )}
+
         {/* Heading */}
         <div className="animate-reveal [animation-delay:100ms] text-center space-y-4">
           <div className="inline-block bg-foreground text-background px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest rotate-[-2deg]">
-            🚨 roast incoming
+            {archivedId ? "🗃️ from the archive" : "🚨 roast incoming"}
           </div>
           <h1 className="text-4xl md:text-6xl font-serif font-bold italic text-balance leading-[1.05]">
             we cooked{" "}
@@ -300,12 +397,20 @@ export function Roast() {
 
         {/* Profile Card */}
         <div className="animate-reveal [animation-delay:200ms]">
-          <ProfileCard profile={profile} cardTier={cardTier} />
+          <ProfileCard profile={profile} cardTier={card.tier} />
         </div>
 
         {/* Roast Card */}
         <div className="animate-reveal [animation-delay:300ms] pt-4">
           <RoastCard roast={roastData} />
+        </div>
+
+        {/* Community verdict, straight off the back of the roast. It used to sit
+            below the card, the collection and the odds table, which is three
+            payoffs past the moment someone actually has an opinion — by then
+            they've either shared or left. */}
+        <div className="animate-reveal [animation-delay:310ms]">
+          <BurnRating username={insta_data.username} />
         </div>
 
         {/* Collectible card: the pull is the share hook, so it sits directly
@@ -314,18 +419,32 @@ export function Roast() {
           <RoastCardPull
             username={insta_data.username}
             roast={roastData}
-            language={ln}
+            language={roastLanguage}
             profile={profile}
             onReroll={rerollRoast}
             rerollCostsCredit={rerollCostsCredit}
-            onRevealChange={setCardTier}
+            onRevealChange={(tier, serial) => setCard({ tier, serial })}
+            alreadyRevealed={!!archivedId}
           />
         </div>
 
-        {/* Community verdict */}
-        <div className="animate-reveal [animation-delay:350ms]">
-          <BurnRating username={insta_data.username} />
+        {/* Everything this profile has ever pulled. Renders nothing until there
+            are at least two — one card is already on screen above. */}
+        <div className="animate-reveal [animation-delay:340ms] pt-4">
+          <CardCollection
+            username={insta_data.username}
+            currentSerial={card.serial}
+            refreshKey={`${card.tier ?? ""}:${card.serial ?? ""}`}
+          />
         </div>
+
+        {/* What they could have pulled instead. Only once the card is face-up:
+            before that it would answer the question the reveal exists to ask. */}
+        {card.tier && (
+          <div className="animate-reveal pt-4">
+            <CardOdds highlight={card.tier} />
+          </div>
+        )}
 
         {/* Share */}
         <div className="animate-reveal [animation-delay:400ms] space-y-4 text-center">

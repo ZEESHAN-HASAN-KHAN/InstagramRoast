@@ -1,6 +1,24 @@
 // Thin wrapper over the gtag.js snippet loaded in index.html. Analytics must
 // never break the app: every call is a safe no-op when gtag is absent (ad
 // blockers, script failed, local dev without the snippet).
+//
+// ── Reporting on parameters ───────────────────────────────────────────────
+// GA4 *collects* custom event parameters but will not *report* on them until
+// each name is registered as a custom definition (Admin → Data display →
+// Custom definitions). Until then they show as "(not set)", and registration
+// is not retroactive — data collected before the dimension exists stays
+// unreportable forever. Register first, then ship.
+//
+// Event-scoped dimensions this app relies on:
+//   channel, method, source, gateway, variant, stage, tier, format,
+//   board, scope, range, surface, result
+// Metrics (numbers you'll want averaged rather than bucketed):
+//   rating, rank, judges, cards, tiers
+//
+// Keep the vocabulary small on purpose: a new param name is a new dimension
+// someone has to remember to register, so prefer reusing `source`/`surface`
+// over inventing `from_where`. Values are stable slugs, never button labels —
+// renaming a button must not split a metric.
 
 type GtagValue = string | number | boolean | undefined;
 // GA4's ecommerce events carry an `items` array of objects, so params can't be

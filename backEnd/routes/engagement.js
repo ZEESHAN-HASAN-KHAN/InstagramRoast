@@ -10,16 +10,25 @@ const {
   getLeaderboard,
   pruneOldViews,
   viewerKeyFor,
+  raterKeyFor,
   hasRevealedCard,
   recordCardReveal,
+  getRevealedCards,
+  getResponseById,
+  recordProfileView,
   SCOPES,
   RANGES,
 } = require("../database/engagement");
 
-// Same identity a view is counted under, so one person is one person across
-// both features.
-const voterKeyFor = (req) =>
+// Views and card reveals count per browser session where one exists.
+const viewerFor = (req) =>
   viewerKeyFor({ sessionId: req.roastSession?.id ?? null, ip: req.clientIp });
+
+// Votes count per IP. A session id is per browser profile, so a private window
+// is a brand new session and the same person could rate the same roast as many
+// times as they can open windows — see raterKeyFor.
+const voterKeyFor = (req) =>
+  raterKeyFor({ sessionId: req.roastSession?.id ?? null, ip: req.clientIp });
 
 function parseScope(value) {
   return SCOPES.includes(value) ? value : "global";
@@ -113,6 +122,66 @@ engagementRouter.get("/profiles/:username/card", async (req, res) => {
   }
 });
 
+// The profile's whole collection — what the leaderboard means when it credits
+// someone with "2 cards · 2 tiers". Deliberately uncached: it's a single
+// indexed lookup, and it has to be right the instant after someone flips a
+// card, which a shared 60s cache can't promise.
+engagementRouter.get("/profiles/:username/cards", async (req, res) => {
+  try {
+    const profile = await getUserData(req.params.username);
+    if (!profile) return res.status(404).json({ message: "Profile not found" });
+
+    const cards = await getRevealedCards(profile.id);
+    return res.status(200).json({
+      cards,
+      total: cards.length,
+      tiers: [...new Set(cards.map((c) => c.tier))].length,
+    });
+  } catch (error) {
+    logger.error("Error reading card collection", { error: error.message });
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// Opens the roast a specific card was minted from, superseded ones included.
+//
+// Free, like every other read of an existing roast: credits pay for
+// *generating*, and this generates nothing. Charging here would also break the
+// collection strip, which is full of roasts that were already paid for once.
+engagementRouter.get("/profiles/:username/roasts/:id", async (req, res) => {
+  try {
+    const responseId = Number(req.params.id);
+    if (!Number.isInteger(responseId) || responseId <= 0) {
+      return res.status(400).json({ message: "Bad roast id" });
+    }
+
+    const profile = await getUserData(req.params.username);
+    if (!profile) return res.status(404).json({ message: "Profile not found" });
+
+    const roast = await getResponseById(profile.id, responseId);
+    if (!roast) return res.status(404).json({ message: "Roast not found" });
+
+    // Same reasoning as the live roast route: a roast is generated once and
+    // read many times, and it's the reading the boards are about.
+    recordProfileView(profile.id, req.visitorGeo, {
+      sessionId: req.roastSession?.id ?? null,
+      ip: req.clientIp,
+    });
+
+    return res.status(200).json({
+      insta_data: { ...profile, profile_pic_url: bucketUrl(profile.profile_pic_url) },
+      data: roast.response_text,
+      language: roast.language,
+      isLatest: roast.is_latest === true,
+      card: { tier: roast.card_tier, serial: roast.card_serial },
+      createdAt: roast.created_at,
+    });
+  } catch (error) {
+    logger.error("Error reading archived roast", { error: error.message });
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
 engagementRouter.post("/profiles/:username/card/reveal", async (req, res) => {
   try {
     const card = await currentCard(req.params.username, parseLanguage(req.body?.language));
@@ -123,7 +192,7 @@ engagementRouter.post("/profiles/:username/card/reveal", async (req, res) => {
       profileId: card.profileId,
       sessionId: req.roastSession?.id ?? null,
       ip: req.clientIp,
-      viewerKey: voterKeyFor(req),
+      viewerKey: viewerFor(req),
     });
 
     return res.status(200).json({ revealed: true, firstReveal });
@@ -159,6 +228,13 @@ engagementRouter.post("/profiles/:username/rating", async (req, res) => {
     if (!profile) return res.status(404).json({ message: "Profile not found" });
 
     const voterKey = voterKeyFor(req);
+    // No address and no session means nothing to attribute the vote to, and
+    // storing it under a shared placeholder would let each such visitor
+    // overwrite the previous one's rating.
+    if (!voterKey) {
+      return res.status(400).json({ message: "We couldn't identify you to record that vote" });
+    }
+
     await upsertRating({
       profileId: profile.id,
       aiResponseId: await getLatestResponseId(profile.id),
@@ -239,6 +315,11 @@ engagementRouter.get("/leaderboard", async (req, res) => {
         scope: board.topRated.scope,
         label: board.topRated.label,
         entries: board.topRated.rows.map(toProfileRow),
+      },
+      topCards: {
+        scope: board.topCards.scope,
+        label: board.topCards.label,
+        entries: board.topCards.rows.map(toProfileRow),
       },
     });
   } catch (error) {

@@ -461,10 +461,15 @@ export function Roast() {
         </div>
       </div>
 
+      {/* pointer-events-none is load-bearing. This canvas is the size of the
+          whole roast page and it is mounted for exactly the 5000ms below, so
+          without it every tap in the first five seconds after a roast lands
+          hits the canvas instead of the button underneath — "roast someone
+          else" and the re-roast button simply did nothing until it unmounted. */}
       {isRunning && (
         <Confetti
           ref={confettiRef}
-          className="absolute left-0 top-0 z-0 size-full"
+          className="pointer-events-none absolute left-0 top-0 z-0 size-full"
         />
       )}
     </div>

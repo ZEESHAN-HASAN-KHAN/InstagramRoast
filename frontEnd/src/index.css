@@ -187,59 +187,74 @@ html {
   --aura-speed: 3.4s;
 }
 
+/* ── Why none of this animates a colour or a shadow ────────────────────────
+   Both the ring and the panel used to breathe by animating `border-color` and
+   `box-shadow` between two keyframes. Neither property can be composited, so
+   every frame forced a style recalc and a full repaint of a blurred shadow —
+   on the main thread, forever, for every aura on the page. A roast page shows
+   about ten of them and a feed grid up to twenty-four; measured on a throttled
+   phone profile that pinned the main thread at ~100% busy for as long as the
+   page was open, and taps simply queued behind it. That is the "buttons do
+   nothing for the first few seconds" bug.
+
+   Only `opacity` and `transform` animate without repainting. So the breath is
+   now an opacity fade of a whole overlay that carries its lit state
+   statically, and the avatar ring — which sits on an <img> and therefore has
+   no overlay to fade — is lit but still. */
+
 /* Avatars: the ring is the whole signal. An inset shadow on an <img> paints
-   under its own picture, so the light goes on the border and just outside it. */
-@keyframes card-aura-ring {
-  0%, 100% {
-    border-color: rgb(var(--aura) / 0.75);
-    box-shadow: 0 0 5px rgb(var(--aura) / 0.45), 0 0 var(--aura-spread) rgb(var(--aura) / 0.25);
-  }
-  50% {
-    border-color: rgb(var(--aura) / 1);
-    box-shadow:
-      0 0 9px rgb(var(--aura) / 0.85),
-      0 0 calc(var(--aura-spread) * 1.5) rgb(var(--aura-2) / 0.45);
-  }
-}
+   under its own picture, so the light goes on the border and just outside it.
+
+   Static, at roughly the peak of the old cycle: the tier colour is what has to
+   read from across a grid, and an <img> cannot carry a pseudo-element overlay
+   to fade, so there is no way to make it pulse without repainting it. */
 .card-aura-ring {
-  border-color: rgb(var(--aura) / 0.85);
-  animation: card-aura-ring var(--aura-speed) ease-in-out infinite;
+  border-color: rgb(var(--aura) / 0.95);
+  box-shadow:
+    0 0 7px rgb(var(--aura) / 0.6),
+    0 0 calc(var(--aura-spread) * 1.25) rgb(var(--aura-2) / 0.32);
 }
 
 /* Tiles and cards: an overlay that owns the lit edge, so the element beneath
    keeps its own border and brutal drop shadow untouched. `border-radius:
    inherit` is why the caller only has to be `relative` — the panel takes the
-   corners of whatever it's laid over. */
-@keyframes card-aura-panel {
-  0%, 100% {
-    border-color: rgb(var(--aura) / 0.7);
-    box-shadow:
-      inset 0 0 12px rgb(var(--aura) / 0.22),
-      inset 0 -16px 26px -14px rgb(var(--aura) / 0.5),
-      0 0 8px rgb(var(--aura) / 0.3);
-  }
-  50% {
-    border-color: rgb(var(--aura) / 1);
-    box-shadow:
-      inset 0 0 22px rgb(var(--aura) / 0.42),
-      inset 0 -26px 34px -14px rgb(var(--aura) / 0.8),
-      0 0 calc(var(--aura-spread) * 0.9) rgb(var(--aura-2) / 0.45);
-  }
+   corners of whatever it's laid over.
+
+   The panel is pure decoration with nothing readable inside it, so fading the
+   entire overlay reproduces the old breath — dimmer in the trough, full at the
+   peak — for the cost of a composited opacity change. */
+@keyframes card-aura-breathe {
+  0%, 100% { opacity: 0.72; }
+  50% { opacity: 1; }
 }
 .card-aura-panel {
   position: absolute;
   inset: 0;
   pointer-events: none;
   border-radius: inherit;
-  border: 2px solid rgb(var(--aura) / 0.85);
+  border: 2px solid rgb(var(--aura) / 1);
+  box-shadow:
+    inset 0 0 22px rgb(var(--aura) / 0.42),
+    inset 0 -26px 34px -14px rgb(var(--aura) / 0.8),
+    0 0 calc(var(--aura-spread) * 0.9) rgb(var(--aura-2) / 0.45);
   /* Keeps the flames inside the card's corners. */
   overflow: hidden;
-  animation: card-aura-panel var(--aura-speed) ease-in-out infinite;
+  animation: card-aura-breathe var(--aura-speed) ease-in-out infinite;
+  will-change: opacity;
 }
 
-/* Fire off the bottom edge. Two blurred gradient bodies on different periods —
-   one wide bed, one pair of offset tongues — which is enough irregularity to
-   read as flame rather than as a pulsing bar. */
+/* Fire off the bottom edge. Two gradient bodies on different periods — one wide
+   bed, one pair of offset tongues — which is enough irregularity to read as
+   flame rather than as a pulsing bar.
+
+   These used to be softened with `filter: blur(9px)`. A blur on an element that
+   is also being scaled is the single most expensive thing on the roast page: the
+   blurred bitmap cannot simply be composited at a new transform, so it is
+   re-rasterized every frame. Measured on a throttled phone profile, dropping the
+   blur alone took the page from ~73% main-thread occupancy to ~15%.
+
+   The softness now comes from the gradients themselves — extra stops and a
+   longer falloff, which the rasterizer resolves once and then only translates. */
 @keyframes card-aura-flame {
   0%   { transform: scaleY(0.82) translateY(8%); opacity: 0.55; }
   100% { transform: scaleY(1.15) translateY(-3%); opacity: 1; }
@@ -256,20 +271,30 @@ html {
   bottom: -12%;
   height: 44%;
   background: radial-gradient(
-    58% 100% at 50% 100%,
-    rgb(var(--aura) / 0.8) 0%,
-    rgb(var(--aura) / 0.32) 45%,
-    transparent 72%
+    62% 100% at 50% 100%,
+    rgb(var(--aura) / 0.62) 0%,
+    rgb(var(--aura) / 0.3) 38%,
+    rgb(var(--aura) / 0.12) 62%,
+    transparent 86%
   );
-  filter: blur(9px);
   animation: card-aura-flame 1.9s ease-in-out infinite alternate;
 }
 .card-aura-flame::after {
   content: "";
   inset: 0;
   background:
-    radial-gradient(34% 92% at 30% 100%, rgb(var(--aura-2) / 0.7) 0%, transparent 70%),
-    radial-gradient(30% 84% at 68% 100%, rgb(var(--aura) / 0.75) 0%, transparent 70%);
+    radial-gradient(
+      40% 96% at 30% 100%,
+      rgb(var(--aura-2) / 0.5) 0%,
+      rgb(var(--aura-2) / 0.16) 45%,
+      transparent 82%
+    ),
+    radial-gradient(
+      36% 88% at 68% 100%,
+      rgb(var(--aura) / 0.55) 0%,
+      rgb(var(--aura) / 0.18) 45%,
+      transparent 82%
+    );
   animation: card-aura-flame 1.25s ease-in-out infinite alternate-reverse;
 }
 

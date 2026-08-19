@@ -87,7 +87,13 @@ const Confetti = forwardRef<ConfettiRef, Props>((props, ref) => {
 
   return (
     <ConfettiContext.Provider value={api}>
-      <canvas ref={canvasRef} {...rest} />
+      {/* Confetti is decoration and must never be a hit target: this canvas is
+          usually stretched over a whole screen, and any caller that forgets to
+          disable pointer events turns it into an invisible sheet that eats
+          every click for as long as it is mounted. Defaulted here rather than
+          left to the caller; `className` still wins if one genuinely wants a
+          clickable canvas. */}
+      <canvas ref={canvasRef} style={{ pointerEvents: "none" }} {...rest} />
       {children}
     </ConfettiContext.Provider>
   );

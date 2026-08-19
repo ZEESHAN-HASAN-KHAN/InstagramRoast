@@ -12,6 +12,7 @@ import {
 } from "@/lib/api";
 import {
   loadPaypalSdk,
+  prefetchRazorpay,
   waitForRazorpay,
   type PaypalButtonsInstance,
 } from "@/lib/checkout";
@@ -88,6 +89,12 @@ export function MintClaim({
       quantity: 1,
     },
   ];
+
+  // See the same call in Paywall: the checkout SDK is fetched when a surface
+  // that can charge appears, not on every page load.
+  useEffect(() => {
+    if (mint.claimable) prefetchRazorpay();
+  }, [mint.claimable]);
 
   useEffect(() => {
     if (!mint.claimable) return;

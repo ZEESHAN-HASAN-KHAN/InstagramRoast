@@ -1,11 +1,14 @@
 import { cn } from "@/lib/utils";
 import Marquee from "@/components/ui/marquee";
-import cr from "../assets/cr.png";
-import lm from "../assets/lm.png";
-import nj from "../assets/nj.png";
-import bk from "../assets/bk.png";
-import vk from "../assets/vk.png";
-import dj from "../assets/dj.png";
+// 144px square crops of the original press shots. The full-size PNGs were
+// 3.7MB between them for six 48px avatars, all of it downloaded before the
+// browser could finish booting the app; these are 37KB total.
+import cr from "../assets/cr-144.jpg";
+import lm from "../assets/lm-144.jpg";
+import nj from "../assets/nj-144.jpg";
+import bk from "../assets/bk-144.jpg";
+import vk from "../assets/vk-144.jpg";
+import dj from "../assets/dj-144.jpg";
 import { Link } from "react-router-dom";
 
 const reviews = [
@@ -57,6 +60,8 @@ const ReviewCard = ({
               className="size-12 rounded-full bg-background border-2 border-foreground object-cover shrink-0"
               width="48"
               height="48"
+              loading="lazy"
+              decoding="async"
               alt={name}
               src={img}
             />

@@ -40,15 +40,52 @@ export function loadPaypalSdk(clientId: string, currency: string): Promise<void>
   return paypalSdkPromise;
 }
 
-// Razorpay's checkout.js is loaded async from index.html. On a phone over
-// mobile data it routinely isn't there yet when someone taps, and failing
-// instantly turned a slow connection into a dead paywall. Wait it out for a
-// few seconds first — the button already shows "opening checkout…", so the
-// wait reads as the checkout loading, which is exactly what it is.
+// Razorpay's checkout.js used to be a tag in index.html. Even marked async it
+// still competed with the app's own bundle for bandwidth and for the main
+// thread during boot, on every page, for a script the overwhelming majority of
+// visitors never reach. It is injected from here instead: on idle after the app
+// has started (see prefetchRazorpay) and, failing that, at the moment someone
+// actually taps a pay button.
+const RAZORPAY_SRC = "https://checkout.razorpay.com/v1/checkout.js";
+
+let razorpaySdkPromise: Promise<void> | null = null;
+
+export function loadRazorpaySdk(): Promise<void> {
+  if (typeof window.Razorpay === "function") return Promise.resolve();
+  if (!razorpaySdkPromise) {
+    razorpaySdkPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = RAZORPAY_SRC;
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = () => {
+        // Cleared so a later tap gets a fresh attempt rather than inheriting a
+        // failure from a moment of bad signal.
+        razorpaySdkPromise = null;
+        reject(new Error("Razorpay checkout failed to load"));
+      };
+      document.head.appendChild(script);
+    });
+  }
+  return razorpaySdkPromise;
+}
+
+// Warms the SDK without blocking anything. Fire-and-forget: a failure here is
+// retried by waitForRazorpay when the button is actually pressed.
+export function prefetchRazorpay() {
+  loadRazorpaySdk().catch(() => {});
+}
+
+// On a phone over mobile data the script routinely isn't there yet when someone
+// taps, and failing instantly turned a slow connection into a dead paywall.
+// Wait it out for a few seconds first — the button already shows "opening
+// checkout…", so the wait reads as the checkout loading, which is exactly what
+// it is.
 const RAZORPAY_WAIT_MS = 6000;
 
 export function waitForRazorpay(timeoutMs = RAZORPAY_WAIT_MS): Promise<boolean> {
   if (typeof window.Razorpay === "function") return Promise.resolve(true);
+  prefetchRazorpay();
   return new Promise((resolve) => {
     const started = Date.now();
     const tick = window.setInterval(() => {

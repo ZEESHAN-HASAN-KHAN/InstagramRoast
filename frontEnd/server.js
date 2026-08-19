@@ -13,6 +13,7 @@
 
 // ESM, because package.json declares "type": "module".
 import express from "express";
+import compression from "compression";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,6 +21,14 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
+
+// The SPA bundle and its CSS are a few hundred KB of highly compressible text.
+// Served raw they were the whole reason the page sat there unresponsive for the
+// first seconds on mobile — the main thread can't run event handlers for code
+// it is still downloading. gzip cuts them to roughly a quarter. Registered
+// first so it also covers the HTML shell and the sitemaps below.
+app.use(compression());
+
 const PORT = Number(process.env.PORT) || 5173;
 const DIST = path.join(__dirname, "dist");
 const API = (process.env.API_ORIGIN || "http://localhost:8080").replace(/\/$/, "");
@@ -300,10 +309,20 @@ app.get("/sitemap-roasts-:shard.xml", async (req, res) => {
 // silently strips the card preview from a large slice of real profiles.
 app.use(
   express.static(DIST, {
-    // The shell must never be cached alongside the hashed assets — it carries
-    // the per-roast tags injected below.
     setHeaders: (res, filePath) => {
-      if (filePath.endsWith("index.html")) res.setHeader("Cache-Control", "no-cache");
+      // The shell must never be cached alongside the hashed assets — it carries
+      // the per-roast tags injected below.
+      if (filePath.endsWith("index.html")) {
+        res.setHeader("Cache-Control", "no-cache");
+        return;
+      }
+      // Everything under /assets carries a content hash in its filename, so a
+      // changed file is a changed URL and the old one can be kept forever. The
+      // default was a bare ETag, which still cost a blocking round trip per
+      // asset on every repeat visit before anything could run.
+      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      }
     },
   })
 );

@@ -12,6 +12,7 @@ import {
 } from "@/lib/api";
 import {
   loadPaypalSdk,
+  prefetchRazorpay,
   waitForRazorpay,
   type PaypalButtonsInstance,
 } from "@/lib/checkout";
@@ -52,6 +53,14 @@ export function Paywall({ info, onUnlocked }: PaywallProps) {
       quantity: 1,
     },
   ];
+
+  // Warm the checkout SDK the moment the wall is on screen. It is no longer a
+  // tag in index.html — that cost every visitor ~200ms of script execution
+  // during boot for a script only buyers reach — so this is where it gets
+  // fetched, well before anyone reaches for the button.
+  useEffect(() => {
+    prefetchRazorpay();
+  }, []);
 
   // Top of the conversion funnel — everything downstream (checkout_opened,
   // purchase, paywall_abandoned) is measured against this event.

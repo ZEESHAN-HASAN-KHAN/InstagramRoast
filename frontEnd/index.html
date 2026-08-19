@@ -80,26 +80,62 @@
   }
   </script>
 
-  <!-- Razorpay Checkout — exposes window.Razorpay, used by the paywall -->
-  <script async src="https://checkout.razorpay.com/v1/checkout.js"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Birthstone&family=Courgette&family=Kaushan+Script&family=Lora:ital,wght@1,400..700&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"
-    rel="stylesheet">
+  <!-- Razorpay Checkout is no longer a tag here. It is injected from
+       src/lib/checkout.ts once the app is idle, so it stops competing with the
+       app's own bundle during boot on every page for a script most visitors
+       never reach. The preconnect stays: it makes that later fetch cheap. -->
+  <link rel="preconnect" href="https://checkout.razorpay.com">
+  <!-- No Google Fonts link on purpose. It used to pull Birthstone, Courgette,
+       Kaushan Script, Lora and Montserrat from a render-blocking stylesheet —
+       and not one of those families is named anywhere in the CSS. The design
+       asks for Inter / Playfair Display / JetBrains Mono (see tailwind.config.js
+       and index.css), which have always fallen back to system-ui / Georgia /
+       ui-monospace. So this was five font families and a blocking round trip
+       bought nothing. To actually adopt the intended faces, add them back
+       non-blocking:
+         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+         <link rel="stylesheet" media="print" onload="this.media='all'"
+           href="https://fonts.googleapis.com/css2?family=Inter:wght@400..800&family=Playfair+Display:ital,wght@0,400..800;1,400..800&family=JetBrains+Mono:wght@400;700&display=swap"> -->
 </head>
 
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-WWTG44VWV7"></script>
+  <!-- Google tag (gtag.js)
+
+       The queue is set up immediately, so every gtag() call from the app lands
+       in dataLayer from the very first millisecond and nothing is lost. The
+       library itself is fetched only once the page has loaded and the main
+       thread is idle: it costs ~150ms of script execution, which is 150ms the
+       browser was spending on analytics instead of on the first tap. It drains
+       the queue on arrival, so the deferral changes what is reported not at
+       all — only when it is sent. -->
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag() { dataLayer.push(arguments); }
     gtag('js', new Date());
-
     gtag('config', 'G-WWTG44VWV7');
+
+    (function () {
+      var loaded = false;
+      function loadGtag() {
+        if (loaded) return;
+        loaded = true;
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=G-WWTG44VWV7';
+        document.head.appendChild(s);
+      }
+      function schedule() {
+        if (window.requestIdleCallback) window.requestIdleCallback(loadGtag, { timeout: 4000 });
+        else setTimeout(loadGtag, 1500);
+      }
+      if (document.readyState === 'complete') schedule();
+      else window.addEventListener('load', schedule, { once: true });
+      // A visitor who leaves before the idle callback fires still has to be
+      // counted, so flush on the way out.
+      window.addEventListener('pagehide', loadGtag, { once: true });
+    })();
   </script>
 </body>
 

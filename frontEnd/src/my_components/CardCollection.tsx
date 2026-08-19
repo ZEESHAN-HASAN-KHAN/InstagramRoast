@@ -60,13 +60,27 @@ function CardChip({
           {rarity.name}
         </span>
         <span className="block text-[10px] font-mono text-muted-foreground tabular-nums">
-          {card.serial ? `#${card.serial} · ` : ""}
+          {card.mint_no ? `mint #${card.mint_no} · ` : ""}
           {rarity.pullRate}% · {pulledAgo(card.pulled_at)}
         </span>
+        {card.claimed_by && (
+          <span className="block text-[10px] font-bold truncate">
+            <span className="text-muted-foreground">
+              {card.mint_no === 1 ? "first minted by " : "minted by "}
+            </span>
+            <span className="text-primary">@{card.claimed_by}</span>
+          </span>
+        )}
       </span>
-      {/* Tells you which of these is the card sitting above — without it a
-          collection of three reads as three unrelated cards. */}
-      {current ? (
+      {/* Three states, most urgent first. An unclaimed #1 is the one row in this
+          strip worth interrupting for: it's the profile's first roast ever, the
+          most expensive claim, and it is invisible anywhere else on the site
+          once a re-roll has pushed it out of the live slot. */}
+      {card.mint_no === 1 && !card.claimed_by ? (
+        <span className="ml-auto shrink-0 rounded-full bg-primary text-primary-foreground px-2 py-0.5 text-[9px] font-black uppercase tracking-wider">
+          #1 unclaimed
+        </span>
+      ) : current ? (
         <span className="ml-auto shrink-0 rounded-full bg-foreground text-background px-2 py-0.5 text-[9px] font-black uppercase tracking-wider">
           on screen
         </span>

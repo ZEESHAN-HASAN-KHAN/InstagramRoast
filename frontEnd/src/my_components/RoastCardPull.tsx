@@ -18,7 +18,8 @@ import {
   type ShareOutcome,
 } from "@/lib/cardExport";
 import { track } from "@/lib/analytics";
-import { getCardCounts, getCardState, revealCard } from "@/lib/api";
+import { getCardCounts, getCardState, revealCard, type MintState } from "@/lib/api";
+import { MintClaim } from "./MintClaim";
 
 // The story canvas exports at 1080x1920; like the card it's laid out at half
 // that and rasterized at 2x.
@@ -58,6 +59,15 @@ type RoastCardPullProps = {
    * *newest* roast for the language, which is a different card.
    */
   alreadyRevealed?: boolean;
+  /**
+   * The archived card's own mint, from the archive fetch. Supplied instead of
+   * looking it up, because the card endpoint answers about the profile's
+   * *newest* roast — asking it about an archived card would price and sell a
+   * different card than the one on screen.
+   */
+  archivedMint?: MintState | null;
+  /** This card's roast id, so a claim is pinned to it rather than to "newest". */
+  responseId?: number;
 };
 
 export function RoastCardPull({
@@ -69,6 +79,8 @@ export function RoastCardPull({
   rerollCostsCredit,
   onRevealChange,
   alreadyRevealed = false,
+  archivedMint = null,
+  responseId,
 }: RoastCardPullProps) {
   const identity = useMemo(() => mintCard(username, roast), [username, roast]);
   const { rarity } = identity;
@@ -109,6 +121,23 @@ export function RoastCardPull({
   // the reveal on a number.
   const [minted, setMinted] = useState<number | null>(null);
 
+  // This card's permanent number within the profile, and whether the right to
+  // put a name on it is still for sale. Null until the card-state lookup lands,
+  // and stays null when it fails — the claim panel simply doesn't appear rather
+  // than the reveal breaking over it.
+  const [mint, setMint] = useState<MintState | null>(archivedMint);
+
+  // Which roast the live card belongs to, learned from the same lookup. An
+  // archived card is told its id via props instead — it can't ask, since the
+  // lookup answers about the newest card rather than the one on screen.
+  const [liveResponseId, setLiveResponseId] = useState<number | undefined>(undefined);
+
+  // An archived card's mint arrives with the roast rather than from a lookup,
+  // and it changes when the collection strip moves to a different card.
+  useEffect(() => {
+    if (alreadyRevealed) setMint(archivedMint);
+  }, [alreadyRevealed, archivedMint]);
+
   useEffect(() => {
     track("card_minted", { tier: rarity.id, serial: identity.serial });
   }, [rarity.id, identity.serial]);
@@ -146,8 +175,18 @@ export function RoastCardPull({
     if (alreadyRevealed) return;
     let cancelled = false;
     getCardState(username, language)
-      .then(({ revealed }) => {
-        if (cancelled || !revealed) return;
+      .then((state) => {
+        if (cancelled) return;
+        // The mint number rides along on the same lookup. Note this effect is
+        // skipped for an archived roast, which is deliberate: that route serves
+        // a superseded card while this endpoint answers about the *newest* one,
+        // so its mint would belong to a different card entirely.
+        setMint(state.mint);
+        // Pin the live card's id too, so a claim opened here targets the card
+        // being looked at rather than re-resolving to "newest" at pay time —
+        // which would be a different card if a re-roll landed in between.
+        setLiveResponseId(state.responseId);
+        if (!state.revealed) return;
         setPhase((current) => (current === "back" ? "front" : current));
       })
       .catch(() => {
@@ -302,6 +341,7 @@ export function RoastCardPull({
             <RoastTradingCard
               identity={identity}
               profile={profile}
+              mint={mint}
               width={displayWidth}
               mode="live"
             />
@@ -371,6 +411,29 @@ export function RoastCardPull({
 
           <p className="text-center text-xs text-muted-foreground min-h-4">{note}</p>
 
+          {/* Below the share row on purpose: sharing is the growth loop and has
+              to stay the first thing in reach. The claim is the next step down,
+              still above the fold on a phone, and above the re-roll — someone
+              who wants to keep this card should be asked before they're offered
+              a way to replace it. */}
+          {mint && (
+            <MintClaim
+              username={username}
+              language={language}
+              mint={mint}
+              responseId={responseId ?? liveResponseId}
+              tier={rarity.id}
+              archived={alreadyRevealed}
+              onClaimed={(fulfilment) =>
+                setMint((current) =>
+                  current
+                    ? { ...current, claimedBy: fulfilment.claimedBy, claimable: false }
+                    : current
+                )
+              }
+            />
+          )}
+
           <div className="text-center">
             <button
               type="button"
@@ -400,13 +463,14 @@ export function RoastCardPull({
         }}
       >
         <div ref={cardNodeRef} data-export="card" style={{ width: CARD_W, height: CARD_H }}>
-          <RoastTradingCard identity={identity} profile={profile} mode="export" />
+          <RoastTradingCard identity={identity} profile={profile} mint={mint} mode="export" />
         </div>
         <div ref={storyNodeRef} data-export="story">
           <StoryFrame handle={profile.handle} rarity={rarity}>
             <RoastTradingCard
               identity={identity}
               profile={profile}
+              mint={mint}
               mode="export"
               width={452}
             />

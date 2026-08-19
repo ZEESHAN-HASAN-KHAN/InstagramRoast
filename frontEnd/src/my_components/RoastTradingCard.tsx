@@ -140,9 +140,24 @@ function headlineSize(len: number) {
   return 25;
 }
 
+/**
+ * The card's permanent number within its profile, and who owns it.
+ *
+ * Optional because the card renders before the lookup lands, and on the
+ * archived-roast route where the number can't be resolved to this card. A
+ * claimed mint is printed on the face rather than only in the page around it:
+ * the exported image is what gets posted, and the credit travelling with the
+ * screenshot is the entire reason someone buys the number.
+ */
+export type CardMint = {
+  no: number;
+  claimedBy: string | null;
+};
+
 export type RoastTradingCardProps = {
   identity: RoastCardIdentity;
   profile: CardProfile;
+  mint?: CardMint | null;
   /** `export` freezes every animation and drops the outer shadow so nothing
    *  bleeds outside the captured bounds. */
   mode?: "live" | "export";
@@ -154,6 +169,7 @@ export type RoastTradingCardProps = {
 export function RoastTradingCard({
   identity,
   profile,
+  mint = null,
   mode = "live",
   width = CARD_W,
   className = "",
@@ -338,6 +354,12 @@ export function RoastTradingCard({
                   letterSpacing: "0.08em",
                 }}
               >
+                {/* Two different numbers, deliberately both shown. The serial is
+                    flavour derived from the roast text; the mint is the real,
+                    sequential position in the profile's history — the one that
+                    can be owned. Mint #1 is called out instead of numbered,
+                    because "first" is the thing worth reading at a glance. */}
+                {mint ? (mint.no === 1 ? "👑 FIRST MINT · " : `MINT #${mint.no} · `) : ""}
                 NO. {serial}
               </span>
             </div>
@@ -475,6 +497,28 @@ export function RoastTradingCard({
                 {rarity.pullRate}% pull rate
               </span>
             </div>
+
+            {/* ── Owner credit ── the claimed name, on the face, in the export */}
+            {mint?.claimedBy && (
+              <div
+                style={{
+                  position: "relative",
+                  marginTop: 8,
+                  textAlign: "center",
+                  fontFamily: "Inter, system-ui, sans-serif",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  color: skin.muted,
+                  letterSpacing: "0.04em",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {mint.no === 1 ? "first minted by" : "minted by"}{" "}
+                <span style={{ color: skin.text }}>@{mint.claimedBy}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

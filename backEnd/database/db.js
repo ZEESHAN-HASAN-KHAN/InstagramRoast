@@ -282,6 +282,60 @@ async function dbConnect() {
       CREATE INDEX IF NOT EXISTS idx_card_reveals_viewer ON card_reveals (viewer_key);
     `);
 
+    // Every card minted for a profile gets a permanent, sequential number —
+    // #1 is whoever roasted that handle first, ever. Keyed on ai_response_id
+    // like card_reveals, because a re-roast mints a genuinely different card
+    // and therefore takes the next number rather than inheriting one.
+    //
+    // `claimed_by` is what the claim actually sells: an Instagram handle
+    // printed on the card face forever. NULL means the mint exists but nobody
+    // has paid to put their name on it, which is the state most rows stay in.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS card_mints (
+        id             SERIAL PRIMARY KEY,
+        profile_id     INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+        ai_response_id INTEGER NOT NULL UNIQUE REFERENCES ai_responses(id) ON DELETE CASCADE,
+        mint_no        INTEGER NOT NULL,
+        claimed_by     VARCHAR(60),
+        claimed_at     TIMESTAMP WITH TIME ZONE,
+        claim_session  UUID,
+        created_at     TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (profile_id, mint_no)
+      );
+    `);
+    // "Is this handle's #1 already claimed", and the claimed-mint registry, are
+    // both filtered reads over a profile's mints.
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_card_mints_profile ON card_mints (profile_id, mint_no);
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_card_mints_claimed
+        ON card_mints (claimed_at DESC) WHERE claimed_by IS NOT NULL;
+    `);
+    // Backfill: roasts that pre-date this table still have to get honest mint
+    // numbers, and the only defensible order is the order they were actually
+    // minted in. Ordered by created_at (id as tie-break, since created_at has
+    // no uniqueness guarantee) so #1 really is the first roast of that handle.
+    //
+    // Idempotent two ways: the WHERE excludes rows that already have a mint,
+    // and the numbering restarts from each profile's current maximum, so a
+    // partially-backfilled profile continues rather than colliding. Doubles as
+    // the heal path for any insert whose mint write was lost.
+    await pool.query(`
+      INSERT INTO card_mints (profile_id, ai_response_id, mint_no)
+      SELECT a.profile_id,
+             a.id,
+             COALESCE(m.max_no, 0) + ROW_NUMBER() OVER (
+               PARTITION BY a.profile_id ORDER BY a.created_at, a.id
+             )
+      FROM ai_responses a
+      LEFT JOIN (
+        SELECT profile_id, MAX(mint_no) AS max_no FROM card_mints GROUP BY profile_id
+      ) m ON m.profile_id = a.profile_id
+      WHERE NOT EXISTS (SELECT 1 FROM card_mints cm WHERE cm.ai_response_id = a.id)
+      ON CONFLICT DO NOTHING;
+    `);
+
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_roast_ratings_profile ON roast_ratings (profile_id);
     `);
@@ -448,6 +502,33 @@ async function dbConnect() {
           razorpay_order_id = NULL,
           razorpay_payment_id = NULL
       WHERE gateway = 'paypal' AND paypal_order_id IS NULL AND razorpay_order_id IS NOT NULL;
+    `);
+    // An order now buys one of two different things. `purpose` says which, and
+    // the fulfilment statement branches on it — 'credits' tops up the session
+    // balance (every row that existed before this migration, hence the
+    // default), 'mint' writes a name onto one card_mints row instead.
+    //
+    // The claim target is pinned on the order at creation, not read back from
+    // the client at capture time: otherwise a paid order could be redirected to
+    // claim a different, more expensive mint than the one it was priced for.
+    await pool.query(`
+      ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS purpose VARCHAR(16) NOT NULL DEFAULT 'credits';
+      ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS mint_id INTEGER REFERENCES card_mints(id) ON DELETE SET NULL;
+      ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS claim_handle VARCHAR(60);
+    `);
+    // A mint is a single row that many people can be looking at — a shared
+    // roast link puts the same card in front of everyone — so two visitors
+    // racing to claim the same number is an ordinary case, not a rare one.
+    // Opening checkout takes a short reservation; a second visitor is turned
+    // away at order creation rather than after paying, which is the only point
+    // where refusing them is still free.
+    //
+    // The reservation expires so an abandoned checkout releases the mint
+    // instead of locking it forever. Nothing sweeps these — every read treats
+    // an elapsed timestamp as absent, so a stale row needs no cleanup.
+    await pool.query(`
+      ALTER TABLE card_mints ADD COLUMN IF NOT EXISTS claim_reserved_until TIMESTAMP WITH TIME ZONE;
+      ALTER TABLE card_mints ADD COLUMN IF NOT EXISTS claim_reserved_by UUID;
     `);
 
     // Records which roasts a session has already paid for, so re-opening or
@@ -618,6 +699,25 @@ async function addAIResponse(username, responseText, language, roasterGeo = {}) 
              RETURNING *;`,
       [profileId, responseText, language, country, region, city, rarity.id, serial]
     );
+
+    // Mint number is assigned here, at the moment the card comes into
+    // existence, so the sequence reflects who actually roasted this handle
+    // first rather than who happened to look at it first. Required lazily
+    // because mints.js imports the pool from this module.
+    //
+    // Deliberately not fatal: a roast that arrives without a mint row is still
+    // a perfectly good roast, and the read path assigns one on next look (see
+    // ensureMint in routes/engagement.js). Failing the whole roast over a
+    // collectible number would be the wrong trade.
+    try {
+      const { assignMint } = require("./mints");
+      await assignMint({ profileId, aiResponseId: insertResult.rows[0].id });
+    } catch (mintError) {
+      logger.error("Could not assign mint number", {
+        error: mintError.message,
+        aiResponseId: insertResult.rows[0].id,
+      });
+    }
 
     logger.info("AI response added successfully");
     return insertResult.rows[0]; // Return the inserted row

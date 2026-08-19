@@ -3,7 +3,7 @@ const paymentWebhookRouter = express.Router();
 const logger = require("../helpers/logger");
 const { verifyWebhookSignature } = require("../helpers/razorpay");
 const { verifyPaypalWebhook } = require("../helpers/paypal");
-const { markOrderPaidAndGrantCredits } = require("../database/monetization");
+const { markOrderPaidAndFulfil } = require("../database/monetization");
 
 // Mounted before the global JWT middleware: Razorpay's servers call this
 // directly and can't mint the app's short-lived integrity token, so the request
@@ -39,7 +39,7 @@ paymentWebhookRouter.post("/payment/webhook", async (req, res) => {
       return res.status(200).json({ received: true });
     }
 
-    const updated = await markOrderPaidAndGrantCredits({
+    const updated = await markOrderPaidAndFulfil({
       orderId: payment.order_id,
       paymentId: payment.id,
       gateway: "razorpay",
@@ -49,7 +49,7 @@ paymentWebhookRouter.post("/payment/webhook", async (req, res) => {
     // a 200 — it's a successful no-op, and a retry would change nothing.
     logger.info("Payment webhook processed", {
       orderId: payment.order_id,
-      alreadyCredited: !updated,
+      alreadyFulfilled: !updated,
     });
     return res.status(200).json({ received: true });
   } catch (error) {
@@ -100,14 +100,14 @@ paymentWebhookRouter.post("/payment/paypal/webhook", async (req, res) => {
       return res.status(200).json({ received: true });
     }
 
-    const updated = await markOrderPaidAndGrantCredits({
+    const updated = await markOrderPaidAndFulfil({
       orderId,
       paymentId: event.resource?.id || null,
       gateway: "paypal",
     });
 
     // null means the capture route already credited this order — successful no-op.
-    logger.info("PayPal webhook processed", { orderId, alreadyCredited: !updated });
+    logger.info("PayPal webhook processed", { orderId, alreadyFulfilled: !updated });
     return res.status(200).json({ received: true });
   } catch (error) {
     logger.error("Error processing PayPal webhook", { error: error.message });

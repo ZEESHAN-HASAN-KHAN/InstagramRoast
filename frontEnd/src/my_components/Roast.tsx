@@ -425,6 +425,8 @@ export function Roast() {
             rerollCostsCredit={rerollCostsCredit}
             onRevealChange={(tier, serial) => setCard({ tier, serial })}
             alreadyRevealed={!!archivedId}
+            archivedMint={archived?.mint ?? null}
+            responseId={archived?.responseId}
           />
         </div>
 

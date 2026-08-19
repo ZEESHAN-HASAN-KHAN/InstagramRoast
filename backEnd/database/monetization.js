@@ -232,6 +232,12 @@ function gatewayColumns(gateway) {
 }
 
 // `orderId` is the gateway's own order id (Razorpay order_… / PayPal token).
+//
+// `purpose` decides what fulfilment does with this row: 'credits' tops up the
+// session balance, 'mint' writes `claimHandle` onto the card_mints row named by
+// `mintId`. Both the mint and the handle are pinned here, at the priced moment
+// — fulfilment never takes them from the client, or a cheap order for mint #40
+// could be redirected onto the premium #1.
 async function createPaymentOrder({
   sessionId,
   orderId,
@@ -239,13 +245,17 @@ async function createPaymentOrder({
   currency,
   creditsGranted,
   gateway = "razorpay",
+  purpose = "credits",
+  mintId = null,
+  claimHandle = null,
 }) {
   const columns = gatewayColumns(gateway);
   const result = await pool.query(
-    `INSERT INTO payment_orders (session_id, ${columns.orderId}, amount, currency, credits_granted, status, gateway)
-     VALUES ($1, $2, $3, $4, $5, 'created', $6)
+    `INSERT INTO payment_orders
+       (session_id, ${columns.orderId}, amount, currency, credits_granted, status, gateway, purpose, mint_id, claim_handle)
+     VALUES ($1, $2, $3, $4, $5, 'created', $6, $7, $8, $9)
      RETURNING *;`,
-    [sessionId, orderId, amount, currency, creditsGranted, gateway]
+    [sessionId, orderId, amount, currency, creditsGranted, gateway, purpose, mintId, claimHandle]
   );
   return result.rows[0];
 }
@@ -259,26 +269,58 @@ async function getPaymentOrder(orderId, gateway = "razorpay") {
   return result.rows[0] || null;
 }
 
+// Marks an order paid and delivers whatever it bought.
+//
 // Idempotent by construction: the `status = 'created'` guard means a replayed
 // webhook (or the webhook racing the client-driven confirm call) matches zero
-// rows, the outer UPDATE then matches nothing, and the whole thing is a no-op
-// returning null. Both callers can fire this unconditionally. `paymentId` is
-// the Razorpay payment id or the PayPal capture id.
-async function markOrderPaidAndGrantCredits({ orderId, paymentId, gateway = "razorpay" }) {
+// rows, every downstream CTE then matches nothing, and the whole thing is a
+// no-op returning null. Both callers can fire this unconditionally. `paymentId`
+// is the Razorpay payment id or the PayPal capture id.
+//
+// Returns null for an already-fulfilled order, else
+// { purpose, session, mint, mintId, claimHandle } — `session` is the credited
+// session row for a credits order, `mint` the claimed row for a mint order.
+//
+// A 'mint' order that comes back with `mint: null` is the one case worth
+// alerting on: the money moved but the number was claimed by someone else in
+// between. The reservation taken at order creation is what makes that rare, and
+// `claimed_by IS NULL` here is what stops it from overwriting the winner.
+async function markOrderPaidAndFulfil({ orderId, paymentId, gateway = "razorpay" }) {
   const columns = gatewayColumns(gateway);
   const result = await pool.query(
     `WITH updated_order AS (
        UPDATE payment_orders
        SET status = 'paid', ${columns.paymentId} = $2, updated_at = now()
        WHERE ${columns.orderId} = $1 AND status = 'created'
-       RETURNING session_id, credits_granted
+       RETURNING session_id, credits_granted, purpose, mint_id, claim_handle
+     ),
+     credited AS (
+       UPDATE roast_sessions rs
+       SET paid_credits = rs.paid_credits + uo.credits_granted,
+           updated_at = now()
+       FROM updated_order uo
+       WHERE rs.id = uo.session_id AND uo.purpose = 'credits'
+       RETURNING rs.*
+     ),
+     minted AS (
+       UPDATE card_mints cm
+       SET claimed_by           = uo.claim_handle,
+           claimed_at           = now(),
+           claim_session        = uo.session_id,
+           claim_reserved_until = NULL,
+           claim_reserved_by    = NULL
+       FROM updated_order uo
+       WHERE cm.id = uo.mint_id
+         AND uo.purpose = 'mint'
+         AND cm.claimed_by IS NULL
+       RETURNING cm.*
      )
-     UPDATE roast_sessions rs
-     SET paid_credits = rs.paid_credits + uo.credits_granted,
-         updated_at = now()
-     FROM updated_order uo
-     WHERE rs.id = uo.session_id
-     RETURNING rs.*;`,
+     SELECT uo.purpose,
+            uo.mint_id,
+            uo.claim_handle,
+            (SELECT row_to_json(c) FROM credited c) AS session,
+            (SELECT row_to_json(m) FROM minted m)   AS mint
+     FROM updated_order uo;`,
     [orderId, paymentId]
   );
   return result.rows[0] || null;
@@ -304,5 +346,5 @@ module.exports = {
   expireAndRefundAbandonedJobs,
   createPaymentOrder,
   getPaymentOrder,
-  markOrderPaidAndGrantCredits,
+  markOrderPaidAndFulfil,
 };

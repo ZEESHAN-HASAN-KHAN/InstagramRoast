@@ -433,13 +433,19 @@ async function hasRevealedCard(aiResponseId) {
  */
 async function getRevealedCards(profileId) {
   const result = await pool.query(
+    // The mint joins in LEFT: a card whose mint row is missing (a lost write,
+    // healed on next view) still belongs in the strip. Carrying mint_no and
+    // claimed_by here is what lets the strip point at the low unclaimed
+    // numbers, which are the ones actually worth opening.
     `SELECT a.id, a.card_tier AS tier, a.card_serial AS serial, a.language,
+            m.mint_no, m.claimed_by,
             MIN(cr.revealed_at) AS pulled_at
      FROM ai_responses a
      JOIN card_reveals cr ON cr.ai_response_id = a.id
+     LEFT JOIN card_mints m ON m.ai_response_id = a.id
      WHERE a.profile_id = $1
        AND a.card_tier IS NOT NULL
-     GROUP BY a.id, a.card_tier, a.card_serial, a.language
+     GROUP BY a.id, a.card_tier, a.card_serial, a.language, m.mint_no, m.claimed_by
      ORDER BY MIN(cr.revealed_at) DESC
      LIMIT 50;`,
     [profileId]

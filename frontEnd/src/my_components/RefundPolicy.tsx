@@ -67,14 +67,24 @@ export function RefundPolicy() {
         </section>
 
         <section>
-          <h2 className="text-xl font-bold text-foreground mb-2">6. How to Reach Us</h2>
+          <h2 className="text-xl font-bold text-foreground mb-2">6. First Mint Claims</h2>
+          <p>
+            A First Mint claim is a one-time purchase, not a subscription, and it is not a roast credit — it buys the permanent right to have an Instagram handle printed on one specific card's mint number. It is delivered instantly and, because the claim is permanent and exclusive by design, it cannot be transferred, reassigned, or undone once confirmed.
+          </p>
+          <p className="mt-2">
+            Two cases are refundable in full. First, if payment succeeds but the mint was claimed by someone else in the seconds before yours confirmed, that claim cannot be delivered — we log every such case automatically; contact us with your payment ID and we will refund it. Second, if you claimed a handle that is not yours and the account's owner asks us to remove it, we will remove the claim and refund your payment.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-bold text-foreground mb-2">7. How to Reach Us</h2>
           <p>
             For any payment issue not resolved automatically, reach out via the GitHub repositories linked in the site footer with your Razorpay or PayPal payment ID and a short description of the issue. We aim to respond within a few business days.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-bold text-foreground mb-2">7. Related Policies</h2>
+          <h2 className="text-xl font-bold text-foreground mb-2">8. Related Policies</h2>
           <p>
             See our <Link to="/terms" className="underline">Terms of Service</Link> for details on pricing and how the Service works, and our <Link to="/privacy" className="underline">Privacy Policy</Link> for what payment-related data we store.
           </p>

@@ -113,6 +113,15 @@ export async function createPaymentOrder(): Promise<CreateOrderResponse> {
   return response.json();
 }
 
+// Both gateways confirm through the same pair of routes, and the order row
+// itself remembers what it was buying. `mint` is non-null only when the order
+// was a First Mint claim; `paidCredits` reports the session balance either way.
+export interface PaymentConfirmation {
+  success: boolean;
+  paidCredits: number;
+  mint: MintFulfilment | null;
+}
+
 export interface RazorpayCheckoutResult {
   razorpay_order_id: string;
   razorpay_payment_id: string;
@@ -125,7 +134,7 @@ export async function verifyPayment(payload: RazorpayCheckoutResult) {
     body: JSON.stringify(payload),
   });
   if (!response.ok) throw new Error("We couldn't confirm that payment");
-  return response.json() as Promise<{ success: boolean; paidCredits: number }>;
+  return response.json() as Promise<PaymentConfirmation>;
 }
 
 // --- PayPal (international visitors only — the backend refuses INR here) ---
@@ -153,7 +162,62 @@ export async function capturePaypalOrder(orderId: string) {
     body: JSON.stringify({ orderId }),
   });
   if (!response.ok) throw new Error("We couldn't confirm that payment");
-  return response.json() as Promise<{ success: boolean; paidCredits: number }>;
+  return response.json() as Promise<PaymentConfirmation>;
+}
+
+// --- First Mint claims -------------------------------------------------------
+
+// A claim confirmation. Present on a verify/capture response only when the
+// order was a mint claim; credit top-ups get null.
+export interface MintFulfilment {
+  mintNo: number;
+  claimedBy: string;
+  username: string;
+}
+
+export interface CreateMintOrderResponse {
+  orderId: string;
+  amount: number;
+  currency: string;
+  mintNo: number;
+  handle: string;
+  /** Razorpay only. */
+  keyId?: string;
+}
+
+// The backend refuses these with a 409 when the mint has just been claimed or
+// is held by another checkout, and a 400 when the handle isn't a real account.
+// Those messages are written to be shown to the buyer verbatim, so they're
+// carried through rather than flattened into a generic failure.
+// `responseId` pins the claim to one specific card. Omitting it means "whatever
+// is newest for this handle", which is only right on the live roast page — an
+// archived card must always name itself, or the claim would silently land on a
+// different, later card than the one being looked at.
+export interface MintClaimTarget {
+  username: string;
+  language: string;
+  handle: string;
+  responseId?: number;
+}
+
+async function mintOrder(path: string, target: MintClaimTarget) {
+  const response = await authedFetch(path, {
+    method: "POST",
+    body: JSON.stringify(target),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.message || "Could not start checkout");
+  }
+  return response.json() as Promise<CreateMintOrderResponse>;
+}
+
+export function createMintOrder(target: MintClaimTarget) {
+  return mintOrder("/api/v1/payment/mint/createOrder", target);
+}
+
+export function createMintPaypalOrder(target: MintClaimTarget) {
+  return mintOrder("/api/v1/payment/mint/paypal/createOrder", target);
 }
 
 // --- engagement: ratings, discovery feed, leaderboards -----------------------
@@ -261,10 +325,33 @@ export async function getCardCounts(): Promise<CardCounts> {
 // looking at. Server-side and keyed to the roast itself, so it survives a
 // reload, a different tab, and a cleared browser cache — and a re-roast, which
 // mints a different card, correctly comes back unrevealed.
+/**
+ * A card's permanent mint number within its profile, and whether the right to
+ * put a name on it is still for sale.
+ *
+ * `no` counts from 1 in the order the profile was actually roasted, so #1 is
+ * the first roast of that handle that ever existed. `claimedBy` non-null means
+ * someone has paid to print their handle on this card and nobody else can.
+ */
+export interface MintState {
+  no: number;
+  total: number;
+  claimedBy: string | null;
+  claimedAt: string | null;
+  /** Someone else has checkout open on this mint right now. */
+  heldByOther: boolean;
+  claimable: boolean;
+  /** Display copy of the price. The order route prices it again server-side. */
+  price: { amount: number; currency: string } | null;
+}
+
 export interface CardState {
   revealed: boolean;
   tier: string | null;
   serial: string | null;
+  /** Which roast this card belongs to — a claim is pinned to it, not to "newest". */
+  responseId: number;
+  mint: MintState | null;
 }
 
 export async function getCardState(username: string, language: string): Promise<CardState> {
@@ -284,6 +371,13 @@ export interface RevealedCard {
   tier: string;
   serial: string | null;
   language: string | null;
+  /**
+   * This card's permanent position in the profile's history, and who owns it.
+   * Null mint_no only for a card whose mint row went missing; it heals on the
+   * next view of that card.
+   */
+  mint_no: number | null;
+  claimed_by: string | null;
   pulled_at: string;
 }
 
@@ -319,6 +413,14 @@ export interface ArchivedRoast {
   /** False when a re-roll has since replaced it as the live roast. */
   isLatest: boolean;
   card: { tier: string | null; serial: string | null };
+  /** This roast's own id — what a claim on this specific card is pinned to. */
+  responseId: number;
+  /**
+   * Resolved against THIS roast rather than the profile's newest. Archived
+   * cards are where the low mint numbers live: the moment a handle is roasted
+   * twice, its #1 is only reachable here.
+   */
+  mint: MintState | null;
   createdAt: string;
 }
 

@@ -19,6 +19,8 @@ const {
   SCOPES,
   RANGES,
 } = require("../database/engagement");
+const { getMintSummary, assignMint } = require("../database/mints");
+const { getMintPrice } = require("../helpers/mintPricing");
 
 // Views and card reveals count per browser session where one exists.
 const viewerFor = (req) =>
@@ -109,13 +111,63 @@ async function currentCard(username, language) {
   };
 }
 
+// Resolves the mint for a card, healing a missing row on the way.
+//
+// Boot-time backfill covers everything that pre-dates card_mints, and the
+// insert path mints new roasts, so a gap here means one of those dropped. It
+// costs one write to close, and leaving it open would make the card
+// permanently unclaimable.
+async function ensureMint(card) {
+  const existing = await getMintSummary(card.responseId);
+  if (existing) return existing;
+  const assigned = await assignMint({
+    profileId: card.profileId,
+    aiResponseId: card.responseId,
+  });
+  return assigned ? await getMintSummary(card.responseId) : null;
+}
+
+// The mint block both card-bearing routes return: the live card and the
+// archived one. Shared so an archived #1 is offered on exactly the same terms
+// as a fresh pull — which is the point of selling it there at all.
+//
+// The quoted price is display copy only; the order route prices the mint again
+// server-side and that is what gets charged. Omitted where monetization is off,
+// since there is nothing to sell in that region — the number still shows.
+function describeMint(mint, req) {
+  if (!mint) return null;
+  const claimable = !mint.claimed_by;
+  return {
+    no: mint.mint_no,
+    total: mint.total,
+    claimedBy: mint.claimed_by,
+    claimedAt: mint.claimed_at,
+    // A live reservation held by someone else means checkout would be refused,
+    // so the button says so rather than failing on tap.
+    heldByOther: mint.reserved && mint.claim_reserved_by !== (req.roastSession?.id ?? null),
+    claimable,
+    price:
+      claimable && req.monetizationEnabled
+        ? getMintPrice(req.visitorCountry ?? req.roastSession?.country_code, mint.mint_no)
+        : null,
+  };
+}
+
 engagementRouter.get("/profiles/:username/card", async (req, res) => {
   try {
     const card = await currentCard(req.params.username, parseLanguage(req.query.language));
     if (!card) return res.status(404).json({ message: "No roast for this profile" });
 
     const revealed = await hasRevealedCard(card.responseId);
-    return res.status(200).json({ revealed, tier: card.tier, serial: card.serial });
+    const mint = await ensureMint(card);
+
+    return res.status(200).json({
+      revealed,
+      tier: card.tier,
+      serial: card.serial,
+      responseId: card.responseId,
+      mint: describeMint(mint, req),
+    });
   } catch (error) {
     logger.error("Error reading card reveal state", { error: error.message });
     return res.status(500).json({ message: "Internal Server Error" });
@@ -168,12 +220,20 @@ engagementRouter.get("/profiles/:username/roasts/:id", async (req, res) => {
       ip: req.clientIp,
     });
 
+    // Resolved against THIS roast, not the profile's newest one. The whole
+    // reason the archive is worth opening a checkout on is that it holds the
+    // low numbers — every handle's mint #1 lives here the moment that handle
+    // has been roasted twice.
+    const mint = await ensureMint({ responseId, profileId: profile.id });
+
     return res.status(200).json({
       insta_data: { ...profile, profile_pic_url: bucketUrl(profile.profile_pic_url) },
       data: roast.response_text,
       language: roast.language,
       isLatest: roast.is_latest === true,
       card: { tier: roast.card_tier, serial: roast.card_serial },
+      responseId,
+      mint: describeMint(mint, req),
       createdAt: roast.created_at,
     });
   } catch (error) {

@@ -186,7 +186,12 @@ async function spendDeepCredit(req, target) {
     roastKey,
     payload: buildPaywallPayload(req, session || req.roastSession, {
       deep: true,
-      message: "The full reading needs a paid credit — grab a pack to see how this ends.",
+      message: "The full reading needs a paid credit. Grab a pack to see how this ends.",
+      // Handles so the paywall can name the pairing instead of falling through
+      // to its generic copy. No profile object: the deep reading is bought from
+      // a match that is already on screen behind this, so there is nothing left
+      // to preview.
+      preview: { username: target.username, username2: target.username2, profile: null },
     }),
   };
 }

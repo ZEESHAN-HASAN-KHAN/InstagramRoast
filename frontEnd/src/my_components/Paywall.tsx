@@ -75,7 +75,7 @@ export function Paywall({ info, onUnlocked, surface = "roast" }: PaywallProps) {
   useEffect(() => {
     track("paywall_shown", {
       surface,
-      variant: info.reroll ? "reroll" : "out_of_credits",
+      variant: info.deep ? "deep" : info.reroll ? "reroll" : "out_of_credits",
       has_preview: !!info.preview?.profile,
       gateway,
       currency,
@@ -188,7 +188,7 @@ export function Paywall({ info, onUnlocked, surface = "roast" }: PaywallProps) {
         currency: order.currency,
         order_id: order.orderId,
         name: "InstaRoasts",
-        description: `${order.credits} more roasts`,
+        description: info.deep ? "Cosmic Match full reading" : `${order.credits} more roasts`,
         theme: { color: "#f43f5e" },
         handler: async (response: RazorpayCheckoutResult) => {
           try {
@@ -244,7 +244,16 @@ export function Paywall({ info, onUnlocked, surface = "roast" }: PaywallProps) {
   const perRoast = credits > 1 ? formatPrice(Math.round(amount / credits), currency) : null;
   const { freeUsed, freeLimit } = info.credits;
 
-  const headline = !targetHandle ? (
+  const headline = info.deep ? (
+    targetHandle && preview?.username2 ? (
+      <>
+        the full reading on <span className="text-primary">@{targetHandle}</span> ×{" "}
+        <span className="text-primary">@{preview.username2}</span> 🔮
+      </>
+    ) : (
+      <>the full reading is one credit away 🔮</>
+    )
+  ) : !targetHandle ? (
     <>you're out of free roasts</>
   ) : info.reroll ? (
     <>another round for <span className="text-primary">@{targetHandle}</span>? 🔁</>
@@ -306,7 +315,11 @@ export function Paywall({ info, onUnlocked, surface = "roast" }: PaywallProps) {
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/50">
             <span className="text-4xl">🔒</span>
             <p className="font-serif italic font-bold text-lg">
-              {isPair ? "unlock the compatibility verdict" : `unlock @${targetHandle}'s roast`}
+              {info.deep
+                ? "unlock the full reading"
+                : isPair
+                  ? "unlock the compatibility verdict"
+                  : `unlock @${targetHandle}'s roast`}
             </p>
           </div>
         </div>
@@ -314,16 +327,28 @@ export function Paywall({ info, onUnlocked, surface = "roast" }: PaywallProps) {
 
       <div className="max-w-lg mx-auto bg-card border-2 border-foreground rounded-3xl p-8 shadow-brutal space-y-5">
         <div className="inline-block bg-foreground text-background px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest rotate-[-2deg]">
-          🍿 keep the roasts coming
+          {info.deep ? "🔮 unlock the full reading" : "🍿 keep the roasts coming"}
         </div>
 
         <div className="space-y-1">
           <div className="text-5xl font-black">{formatPrice(amount, currency)}</div>
           <div className="text-sm text-muted-foreground">
-            for {credits} more roast{credits === 1 ? "" : "s"}
-            {perRoast ? ` — that's ${perRoast} a roast` : ""} · no account needed
+            {info.deep ? (
+              <>
+                for {credits} credit{credits === 1 ? "" : "s"} · one unlocks this reading
+                {credits > 1 ? ", the rest are yours to spend" : ""} · no account needed
+              </>
+            ) : (
+              <>
+                for {credits} more roast{credits === 1 ? "" : "s"}
+                {perRoast ? ` — that's ${perRoast} a roast` : ""} · no account needed
+              </>
+            )}
           </div>
-          {freeLimit > 0 && (
+          {/* Free-roast tally is meaningless on the deep reading: it is paid
+              credits only, so how many free roasts are left has no bearing on
+              whether this unlocks. */}
+          {freeLimit > 0 && !info.deep && (
             <div className="text-xs text-muted-foreground">
               you burned through {Math.min(freeUsed, freeLimit)}/{freeLimit} free roasts 🔥
             </div>
@@ -346,7 +371,11 @@ export function Paywall({ info, onUnlocked, surface = "roast" }: PaywallProps) {
             disabled={busy}
             className="w-full bg-primary text-primary-foreground border-2 border-foreground rounded-full px-6 py-3 font-bold hover:-translate-y-0.5 transition-all shadow-[3px_3px_0_0_hsl(var(--brutal))] disabled:opacity-60 disabled:hover:translate-y-0 disabled:cursor-not-allowed"
           >
-            {busy ? "opening checkout…" : `unlock ${credits} more roasts`}
+            {busy
+              ? "opening checkout…"
+              : info.deep
+                ? "unlock the full reading"
+                : `unlock ${credits} more roasts`}
           </button>
         )}
 

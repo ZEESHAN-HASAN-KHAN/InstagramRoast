@@ -1,6 +1,23 @@
-const { Pool } = require("pg");
+const { Pool, types } = require("pg");
 const logger = require("../helpers/logger");
 const { mintCard } = require("../helpers/cardIdentity");
+
+// Hand back DATE columns as the plain "YYYY-MM-DD" string Postgres stores,
+// instead of node-postgres's default of a JS Date at *local* midnight.
+//
+// The default is a trap for a date with no time in it. A birthday of
+// 2001-09-11 arrives as a Date whose UTC instant is 2001-09-10T18:30:00Z on a
+// UTC+5:30 machine, so anything that formats it with getUTCDate() reads the
+// day before. That is not hypothetical: it shipped, and it silently rewrote
+// every Cosmic Match birthday one day backwards, which both shifted signs
+// across a cusp and made the paid deep reading unable to find the free match
+// it was bought from.
+//
+// Fixing it at the driver means no call site has to remember which of the two
+// date-shifting mistakes it is avoiding. 1082 is the DATE oid; TIMESTAMPTZ
+// (1184) is untouched, and every other date-ish column in this schema is
+// TIMESTAMPTZ, where a real instant is exactly what is wanted.
+types.setTypeParser(1082, (value) => value);
 
 const pool = new Pool({
   connectionString: process.env.DB,
@@ -185,11 +202,49 @@ async function dbConnect() {
       ALTER TABLE roast_jobs ADD COLUMN IF NOT EXISTS roaster_region  VARCHAR(80);
       ALTER TABLE roast_jobs ADD COLUMN IF NOT EXISTS roaster_city    VARCHAR(80);
     `);
+    // Cosmic Match: the astrology-framed pairing read. Birth dates are stored
+    // because they are part of the cache key, not for their own sake — the same
+    // two handles produce a different reading once a birth date is supplied, so
+    // a lookup that ignored them would serve the sign-less version forever.
+    //
+    // Stored as DATE, not the raw string: a birthday is personal data and the
+    // less shape it keeps the better. No time, no place, so it can never be
+    // resolved into a full natal chart, and nothing here identifies a person
+    // who is not already a public Instagram handle.
+    await pool.query(`
+      ALTER TABLE compatibility_responses ADD COLUMN IF NOT EXISTS birth_date_1 DATE;
+      ALTER TABLE compatibility_responses ADD COLUMN IF NOT EXISTS birth_date_2 DATE;
+      ALTER TABLE compatibility_responses ADD COLUMN IF NOT EXISTS sign_1 VARCHAR(16);
+      ALTER TABLE compatibility_responses ADD COLUMN IF NOT EXISTS sign_2 VARCHAR(16);
+      ALTER TABLE compatibility_responses ADD COLUMN IF NOT EXISTS green_flag TEXT;
+      ALTER TABLE compatibility_responses ADD COLUMN IF NOT EXISTS red_flag   TEXT;
+      ALTER TABLE compatibility_responses ADD COLUMN IF NOT EXISTS verdict    TEXT;
+    `);
+    // The paid deep reading, stored on the same row as the free match it was
+    // bought from. JSONB rather than six columns because the section list is
+    // the prompt's shape, not the schema's — adding a seventh section should
+    // not be a migration.
+    await pool.query(`
+      ALTER TABLE compatibility_responses ADD COLUMN IF NOT EXISTS deep_reading JSONB;
+    `);
+    // The cache lookup filters on the pair plus language plus both dates; the
+    // pair columns alone are not selective enough once a popular handle has
+    // been matched against dozens of others.
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_compat_pair_lang
+        ON compatibility_responses (profile_id_1, profile_id_2, language);
+    `);
     // A re-roast deliberately ignores the cached roast for this profile and
     // generates a fresh one; without this flag the worker would just hand back
     // the roast that already exists.
     await pool.query(`
       ALTER TABLE roast_jobs ADD COLUMN IF NOT EXISTS force_regenerate BOOLEAN NOT NULL DEFAULT false;
+    `);
+    // Cosmic Match birth dates ride on the job so the worker can build the
+    // astrology; the request that created the job is long gone by then.
+    await pool.query(`
+      ALTER TABLE roast_jobs ADD COLUMN IF NOT EXISTS birth_date_1 DATE;
+      ALTER TABLE roast_jobs ADD COLUMN IF NOT EXISTS birth_date_2 DATE;
     `);
     // The collectible card minted from this roast. Both values are derived
     // deterministically from (username, response_text) by helpers/cardIdentity,
@@ -579,27 +634,53 @@ async function getAIResponse(username, language) {
   }
 }
 
-const checkCompatibilityResponse = async (profileId1, profileId2, language) => {
+// Birth dates are part of the cache key. The pairing @a/@b with no dates and
+// the pairing @a/@b as a Leo and a Scorpio are different readings, and matching
+// on the handles alone would pin whichever ran first for everyone after.
+//
+// The dates are matched in the same order as the profile ids they arrive with,
+// including in the reversed branch — otherwise opening a shared link with the
+// handles swapped compares person A's birthday against person B's row.
+const checkCompatibilityResponse = async (
+  profileId1,
+  profileId2,
+  language,
+  birthDate1 = null,
+  birthDate2 = null
+) => {
   try {
     // Query the database to find the compatibility response
     const result = await pool.query(
       `
-      SELECT cm.compatibility_text
+      SELECT cm.compatibility_text, cm.compatibility_score,
+             cm.sign_1, cm.sign_2, cm.green_flag, cm.red_flag, cm.verdict
       FROM compatibility_responses cm
       WHERE
-       ( (cm.profile_id_1 = $1 AND cm.profile_id_2 = $2) OR (cm.profile_id_1 = $2 AND cm.profile_id_2 = $1))
+       (   (cm.profile_id_1 = $1 AND cm.profile_id_2 = $2
+             AND cm.birth_date_1 IS NOT DISTINCT FROM $4::date
+             AND cm.birth_date_2 IS NOT DISTINCT FROM $5::date)
+        OR (cm.profile_id_1 = $2 AND cm.profile_id_2 = $1
+             AND cm.birth_date_1 IS NOT DISTINCT FROM $5::date
+             AND cm.birth_date_2 IS NOT DISTINCT FROM $4::date) )
         AND cm.language = $3
       ORDER BY cm.created_at DESC
       LIMIT 1
       `,
-      [profileId1, profileId2, language]
+      [profileId1, profileId2, language, birthDate1, birthDate2]
     );
 
     // Return the result if found
     if (result.rows.length > 0) {
+      const row = result.rows[0];
       return {
         success: true,
-        compatibilityText: result.rows[0].compatibility_text,
+        compatibilityText: row.compatibility_text,
+        score: row.compatibility_score,
+        greenFlag: row.green_flag,
+        redFlag: row.red_flag,
+        verdict: row.verdict,
+        sign1: row.sign_1,
+        sign2: row.sign_2,
       };
     } else {
       return {
@@ -727,11 +808,15 @@ async function addAIResponse(username, responseText, language, roasterGeo = {}) 
   }
 }
 // Adding Compatibility Response
+// `extras` carries the Cosmic Match fields. Optional so the plain compatibility
+// roast (no birth dates) keeps calling this with four arguments and storing
+// nulls, rather than needing a second insert path for the same table.
 async function addCompatiblityResponse(
   username1,
   username2,
   compatiblityText,
-  language
+  language,
+  extras = {}
 ) {
   try {
     // Step 1: Get the profile ID for the given username
@@ -751,11 +836,38 @@ async function addCompatiblityResponse(
     const profileId2 = profileResult2.rows[0].id;
 
     // Step 2: Insert AI response into the ai_responses table
+    const {
+      score = null,
+      greenFlag = null,
+      redFlag = null,
+      verdict = null,
+      birthDate1 = null,
+      birthDate2 = null,
+      sign1 = null,
+      sign2 = null,
+    } = extras || {};
+
     const insertResult = await pool.query(
-      `INSERT INTO compatibility_responses (profile_id_1,profile_id_2, compatibility_text,language)
-             VALUES ($1, $2, $3,$4)
+      `INSERT INTO compatibility_responses
+              (profile_id_1, profile_id_2, compatibility_text, language,
+               compatibility_score, green_flag, red_flag, verdict,
+               birth_date_1, birth_date_2, sign_1, sign_2)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::date, $10::date, $11, $12)
              RETURNING *;`,
-      [profileId1, profileId2, compatiblityText, language]
+      [
+        profileId1,
+        profileId2,
+        compatiblityText,
+        language,
+        score,
+        greenFlag,
+        redFlag,
+        verdict,
+        birthDate1,
+        birthDate2,
+        sign1,
+        sign2,
+      ]
     );
 
     logger.info("AI response added successfully");
@@ -780,6 +892,63 @@ async function profilesRoasted() {
   }
 }
 
+// The paid deep reading is looked up and written by the same (pair, language,
+// dates) key as the free match, because it always belongs to one. Returns null
+// rather than throwing when there is no row yet — an unpaid pairing is the
+// normal case, not an error.
+async function getDeepReading(profileId1, profileId2, language, birthDate1 = null, birthDate2 = null) {
+  try {
+    const result = await pool.query(
+      `SELECT deep_reading FROM compatibility_responses cm
+        WHERE (   (cm.profile_id_1 = $1 AND cm.profile_id_2 = $2
+                    AND cm.birth_date_1 IS NOT DISTINCT FROM $4::date
+                    AND cm.birth_date_2 IS NOT DISTINCT FROM $5::date)
+               OR (cm.profile_id_1 = $2 AND cm.profile_id_2 = $1
+                    AND cm.birth_date_1 IS NOT DISTINCT FROM $5::date
+                    AND cm.birth_date_2 IS NOT DISTINCT FROM $4::date) )
+          AND cm.language = $3
+          AND cm.deep_reading IS NOT NULL
+        ORDER BY cm.created_at DESC
+        LIMIT 1;`,
+      [profileId1, profileId2, language, birthDate1, birthDate2]
+    );
+    return result.rows[0]?.deep_reading ?? null;
+  } catch (error) {
+    logger.error("Error fetching deep reading", { error: error.message });
+    return null;
+  }
+}
+
+// Attaches the reading to the newest matching row. Returns false when there is
+// no row to attach it to, which the caller treats as a hard failure worth
+// refunding — a reading nobody can look up again is one the buyer paid for and
+// loses on refresh.
+async function saveDeepReading(profileId1, profileId2, language, reading, birthDate1 = null, birthDate2 = null) {
+  try {
+    const result = await pool.query(
+      `UPDATE compatibility_responses SET deep_reading = $6::jsonb, updated_at = now()
+        WHERE id = (
+          SELECT id FROM compatibility_responses cm
+           WHERE (   (cm.profile_id_1 = $1 AND cm.profile_id_2 = $2
+                       AND cm.birth_date_1 IS NOT DISTINCT FROM $4::date
+                       AND cm.birth_date_2 IS NOT DISTINCT FROM $5::date)
+                  OR (cm.profile_id_1 = $2 AND cm.profile_id_2 = $1
+                       AND cm.birth_date_1 IS NOT DISTINCT FROM $5::date
+                       AND cm.birth_date_2 IS NOT DISTINCT FROM $4::date) )
+             AND cm.language = $3
+           ORDER BY cm.created_at DESC
+           LIMIT 1
+        )
+        RETURNING id;`,
+      [profileId1, profileId2, language, birthDate1, birthDate2, JSON.stringify(reading)]
+    );
+    return result.rowCount > 0;
+  } catch (error) {
+    logger.error("Error saving deep reading", { error: error.message });
+    return false;
+  }
+}
+
 module.exports = {
   pool,
   dbConnect,
@@ -791,5 +960,7 @@ module.exports = {
   profilesRoasted,
   addCompatiblityResponse,
   checkCompatibilityResponse,
+  getDeepReading,
+  saveDeepReading,
   getCardTierCounts,
 };

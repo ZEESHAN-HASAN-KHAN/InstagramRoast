@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getLeaderboard, type LeaderboardEntry } from "@/lib/api";
 import { cleanHandle } from "@/lib/utils";
 import { track } from "@/lib/analytics";
+import { signForDate, maxBirthDate } from "@/lib/zodiac";
 
 type CompatUpsellProps = {
   username: string;
@@ -19,6 +20,14 @@ export function CompatUpsell({ username, language }: CompatUpsellProps) {
   const [partner, setPartner] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [chips, setChips] = useState<LeaderboardEntry[]>([]);
+  // Birthdays are opt-in rather than two more required fields. This card is the
+  // only surface in the app with a measured conversion rate, and bolting two
+  // date pickers onto the front of it would trade a known 9.3% click-through
+  // for an unknown one. Collapsed by default, and the sign chip appears the
+  // instant a date lands so the extra step pays for itself immediately.
+  const [showCosmic, setShowCosmic] = useState(false);
+  const [dob1, setDob1] = useState("");
+  const [dob2, setDob2] = useState("");
 
   // Denominator for the upsell CTR. Fires once per delivered roast — the roast
   // page only mounts this component after the result lands.
@@ -55,12 +64,18 @@ export function CompatUpsell({ username, language }: CompatUpsellProps) {
       setError("you can't date yourself 💀 pick someone else");
       return;
     }
-    track("compat_upsell_clicked", { source, language });
-    navigate(
-      `/compatibilityRoast?uname1=${encodeURIComponent(username)}&uname2=${encodeURIComponent(
-        cleaned
-      )}&language=${language}`
-    );
+
+    const cosmic = Boolean(dob1 || dob2);
+    // `variant` is the whole reason this card was touched: until now every
+    // click here landed on the plain pairing, which has nothing to sell. Split
+    // the metric so the astrology route can be compared against it rather than
+    // hidden inside the same number.
+    track("compat_upsell_clicked", { source, language, variant: cosmic ? "cosmic" : "plain" });
+
+    const params = new URLSearchParams({ uname1: username, uname2: cleaned, language });
+    if (dob1) params.set("dob1", dob1);
+    if (dob2) params.set("dob2", dob2);
+    navigate(`/compatibilityRoast?${params.toString()}`);
   }
 
   return (
@@ -117,6 +132,64 @@ export function CompatUpsell({ username, language }: CompatUpsellProps) {
             cook 'em 🔥
           </button>
         </form>
+
+        {/* The cosmic upgrade. Presented as a reward for one more tap rather
+            than as an extra required field, and it names what it unlocks. */}
+        <div className="rounded-2xl border-2 border-dashed border-foreground/40 bg-background/60 p-3">
+          {!showCosmic ? (
+            <button
+              type="button"
+              onClick={() => {
+                setShowCosmic(true);
+                track("cosmic_upsell_opened", { surface: "compat_upsell" });
+              }}
+              className="w-full flex items-center justify-center gap-2 text-sm font-bold hover:-translate-y-0.5 transition-transform cursor-pointer"
+            >
+              <span className="text-base leading-none">🔮</span>
+              <span>add birthdays for the full cosmic reading</span>
+              <span className="text-muted-foreground">+</span>
+            </button>
+          ) : (
+            <div className="space-y-2 animate-reveal">
+              <p className="text-center text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+                🔮 cosmic mode
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                {[
+                  { value: dob1, set: setDob1, who: `@${username}` },
+                  { value: dob2, set: setDob2, who: partner ? `@${cleanHandle(partner)}` : "them" },
+                ].map((field, i) => {
+                  const sign = signForDate(field.value);
+                  return (
+                    <label key={i} className="flex-1 min-w-0">
+                      <span className="block mb-1 text-[10px] font-mono text-muted-foreground truncate">
+                        {field.who} born
+                      </span>
+                      <div className="relative">
+                        <input
+                          type="date"
+                          value={field.value}
+                          max={maxBirthDate()}
+                          min="1900-01-01"
+                          onChange={(e) => field.set(e.target.value)}
+                          className="w-full px-3 py-2 bg-background border-2 border-foreground rounded-xl font-mono text-sm outline-none focus:shadow-[3px_3px_0_0_hsl(var(--primary))] transition-all text-foreground"
+                        />
+                        {sign && (
+                          <span className="absolute -top-2 right-2 bg-pink-200 dark:bg-pink-900/60 border-2 border-foreground rounded-full px-2 text-[10px] font-black uppercase animate-reveal">
+                            {sign.emoji} {sign.name}
+                          </span>
+                        )}
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="text-center text-[11px] text-muted-foreground italic">
+                one birthday is enough. two is meaner.
+              </p>
+            </div>
+          )}
+        </div>
 
         {error && <p className="text-center text-xs font-bold text-primary">{error}</p>}
 

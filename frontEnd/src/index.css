@@ -380,3 +380,134 @@ html {
   background: hsl(var(--primary));
   border-radius: 3px;
 }
+
+/* ── Cosmic Match ──────────────────────────────────────────────────────────
+   Same neo-brutalist language as the rest of the site: flat fills, 2px borders,
+   hard offset shadows, no glow. Only motion the utility classes cannot express
+   lives here. All of it is decoration; the layout holds up with every animation
+   disabled, which is what the reduced-motion block at the end does. */
+
+/* The score ring draws itself once on reveal. The end value is supplied per
+   render as --ring-offset, so one keyframe pair serves every score. */
+@keyframes ring-draw {
+  from { stroke-dashoffset: var(--ring-circumference); }
+  to   { stroke-dashoffset: var(--ring-offset); }
+}
+.score-ring {
+  animation: ring-draw 1.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Counter-rotating rings of zodiac glyphs around the score plate. Slow enough
+   to read as orbit rather than spin. */
+@keyframes zodiac-orbit {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.zodiac-orbit { animation: zodiac-orbit 52s linear infinite; }
+.zodiac-orbit-reverse { animation: zodiac-orbit 68s linear infinite reverse; }
+
+/* Each glyph spins back against its orbit so the symbols stay upright instead
+   of tumbling. Same duration as the ring it sits on, opposite direction. */
+.zodiac-glyph { animation: zodiac-orbit 52s linear infinite reverse; }
+.zodiac-glyph-reverse { animation: zodiac-orbit 68s linear infinite; }
+
+/* Slow breathe on the halo behind the score. Opacity only: the halo carries a
+   64px blur, and animating its scale would force the browser to re-rasterise
+   that blur every frame, which is exactly the kind of thing that tanks frame
+   rate on a mid-range phone. */
+@keyframes halo-breathe {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+.halo-breathe { animation: halo-breathe 5s ease-in-out infinite; }
+
+/* Sweep across the locked sections. The cue that there is real content under
+   the blur rather than an empty placeholder. */
+@keyframes locked-sheen {
+  from { transform: translateX(-120%); }
+  to   { transform: translateX(220%); }
+}
+.locked-sheen { animation: locked-sheen 3.2s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .score-ring,
+  .halo-breathe,
+  .zodiac-orbit,
+  .zodiac-orbit-reverse,
+  .zodiac-glyph,
+  .zodiac-glyph-reverse,
+  .locked-sheen {
+    animation: none;
+  }
+  /* Without the draw animation the ring sits at a dash offset of zero and
+     renders as a full circle at every score, so it is pinned to the real one. */
+  .score-ring { stroke-dashoffset: var(--ring-offset); }
+}
+
+/* Planet watermark behind each deep-reading section. Slow enough to be felt
+   rather than watched; six of these are on screen at once, so anything faster
+   turns the page into a fairground. Staggered per card via an inline delay so
+   they are never all at the same angle. */
+@keyframes planet-drift {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.planet-drift { animation: planet-drift 90s linear infinite; }
+
+/* The omen badge pulses once as its card arrives, then stops. A permanent
+   pulse on six badges would be noise; one beat reads as the verdict landing. */
+@keyframes omen-in {
+  0%   { transform: scale(0.7) rotate(-8deg); opacity: 0; }
+  60%  { transform: scale(1.12) rotate(2deg); opacity: 1; }
+  100% { transform: scale(1) rotate(-2deg); opacity: 1; }
+}
+.omen-in { animation: omen-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .planet-drift,
+  .omen-in {
+    animation: none;
+  }
+  .omen-in { opacity: 1; transform: rotate(-2deg); }
+}
+
+/* Dashed orbit ring behind each section's planet watermark. Counter-rotates
+   against the glyph so the two never look welded together, which is what sells
+   it as an orbit rather than a spinning sticker. */
+@keyframes orbit-ring-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+.orbit-ring { animation: orbit-ring-spin 120s linear infinite; }
+
+/* The finale card's slab shadow lifts on hover. Transform only, so it stays on
+   the compositor. */
+.finale-lift { transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
+.finale-lift:hover { transform: translate(-2px, -2px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .orbit-ring { animation: none; }
+  .finale-lift { transition: none; }
+  .finale-lift:hover { transform: none; }
+}
+
+/* Zodiac glyph strip on the Cosmic Match landing page. The track holds two
+   identical halves and slides exactly -50%, so the loop point lands on an exact
+   copy and never visibly jumps. */
+@keyframes zodiac-band {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.zodiac-band { animation: zodiac-band 40s linear infinite; }
+
+/* Cards arrive as they scroll into view. Applied by adding the class, so the
+   element is styled hidden until the observer says otherwise; the observer sets
+   it immediately when IntersectionObserver is unavailable. */
+.reveal-hidden { opacity: 0; transform: translateY(20px); }
+.reveal-in { animation: reveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .zodiac-band { animation: none; }
+  .reveal-hidden { opacity: 1; transform: none; }
+  .reveal-in { animation: none; }
+}

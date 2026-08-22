@@ -1,12 +1,30 @@
 import { useState } from "react";
 import { ModeToggle } from "@/components/ui/ModeToggle";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   const scrollToSection = (id: string) => {
     setIsMenuOpen(false);
+
+    // Every anchor target lives on the home page. From a roast or a match page
+    // getElementById finds nothing and the link silently does nothing, so go
+    // home first and scroll once the target exists. LazySection renders
+    // stand-ins for its anchorIds, so the id is present before the real section
+    // mounts; the rAF is only to let the new route paint.
+    if (pathname !== "/") {
+      navigate("/");
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() =>
+          document.getElementById(id)?.scrollIntoView({ behavior: "smooth" })
+        )
+      );
+      return;
+    }
+
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   };
 
@@ -29,6 +47,9 @@ export function Navbar() {
 
         {/* Desktop nav links */}
         <div className="hidden md:flex items-center gap-6 text-sm font-bold">
+          <Link to="/cosmic-match" className="hover:text-primary transition-colors whitespace-nowrap">
+            🔮 cosmic match
+          </Link>
           <a
             onClick={() => scrollToSection("features")}
             className="hover:text-primary transition-colors cursor-pointer"
@@ -81,6 +102,13 @@ export function Navbar() {
           {/* min-h-11 rather than padding alone: these are the only nav on a
               phone and a 20px-tall text link is not a target. */}
           <div className="flex flex-col px-6 py-2 font-bold text-sm">
+            <Link
+              to="/cosmic-match"
+              onClick={() => setIsMenuOpen(false)}
+              className="hover:text-primary flex items-center min-h-11"
+            >
+              🔮 cosmic match
+            </Link>
             <a
               onClick={() => scrollToSection("features")}
               className="cursor-pointer hover:text-primary flex items-center min-h-11"

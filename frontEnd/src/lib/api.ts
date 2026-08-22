@@ -18,6 +18,8 @@ export interface PaywallInfo {
   message: string;
   // Set on the re-roast variant, which can only be paid with paid credits.
   reroll?: boolean;
+  // Set on the Cosmic Match deep reading, which is also paid-credits-only.
+  deep?: boolean;
   preview?: {
     username: string;
     // Present for compatibility roasts — the second handle of the pair.
@@ -487,4 +489,58 @@ export function formatPrice(amount: number, currency: string) {
     currency,
     minimumFractionDigits: amount % 100 === 0 ? 0 : 2,
   }).format(amount / 100);
+}
+
+// ── Cosmic Match: the paid deep reading ───────────────────────────────────
+//
+// Plain request/response rather than the job-and-stream dance the roasts use.
+// Both profiles are already scraped by the time this button exists, so there is
+// nothing to scrape and only one model call to wait for — a queue hop and an
+// SSE connection would be machinery around a spinner.
+
+export interface DeepSection {
+  key: string;
+  title: string;
+  icon: string;
+  body: string;
+  // Both optional: readings bought before these fields existed are cached in
+  // the database and replay without them, so the UI has to render fine either
+  // way rather than assuming every section carries decoration.
+  planet?: string;
+  tone?: "blessed" | "tense" | "cursed";
+}
+
+export interface DeepReading {
+  sections: DeepSection[];
+}
+
+export type DeepReadingResult =
+  | { reading: DeepReading; cached: boolean }
+  | PaywallInfo;
+
+export async function fetchDeepReading(body: {
+  uname1: string;
+  uname2: string;
+  language: string;
+  dob1: string | null;
+  dob2: string | null;
+}): Promise<DeepReadingResult> {
+  const response = await authedFetch("/api/v1/cosmicMatch/deep", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+  if (response.status === 402) {
+    return (await response.json()) as PaywallInfo;
+  }
+  if (!response.ok) {
+    // The server sends a human-readable `message` for the cases worth
+    // explaining (unreadable model output, match not run yet); anything else
+    // falls back to something that is not a status code.
+    const detail = await response.json().catch(() => null);
+    throw new Error(detail?.message ?? "The stars are busy. Try again in a moment.");
+  }
+
+  const data = (await response.json()) as { reading: DeepReading; cached?: boolean };
+  return { reading: data.reading, cached: Boolean(data.cached) };
 }

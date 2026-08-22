@@ -17,17 +17,23 @@ async function createRoastJob({
   roastKey = null,
   roasterGeo = {},
   forceRegenerate = false,
+  // Cosmic Match only. Carried on the job rather than re-derived in the worker
+  // because the worker never sees the request — the job row is the only thing
+  // that survives the queue hop.
+  birthDate1 = null,
+  birthDate2 = null,
 }) {
   const id = uuidv4();
   const { country = null, region = null, city = null } = roasterGeo || {};
   const result = await pool.query(
     `INSERT INTO roast_jobs (
        id, job_type, username, username_2, language, status, session_id, credit_type, roast_key,
-       roaster_country, roaster_region, roaster_city, force_regenerate
+       roaster_country, roaster_region, roaster_city, force_regenerate,
+       birth_date_1, birth_date_2
      )
-     VALUES ($1, $2, $3, $4, $5, 'queued', $6, $7, $8, $9, $10, $11, $12)
+     VALUES ($1, $2, $3, $4, $5, 'queued', $6, $7, $8, $9, $10, $11, $12, $13::date, $14::date)
      RETURNING *;`,
-    [id, jobType, username, username2, language, sessionId, creditType, roastKey, country, region, city, forceRegenerate]
+    [id, jobType, username, username2, language, sessionId, creditType, roastKey, country, region, city, forceRegenerate, birthDate1, birthDate2]
   );
   return result.rows[0];
 }

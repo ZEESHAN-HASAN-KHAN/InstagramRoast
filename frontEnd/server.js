@@ -44,6 +44,7 @@ const template = fs.readFileSync(path.join(DIST, "index.html"), "utf8");
 // Everything the SPA routes to that is a page, not an Instagram handle. Kept in
 // sync with the <Route> table in src/App.tsx.
 const RESERVED = new Set([
+  "cosmic-match",
   "compatibilityRoast",
   "leaderboard",
   "terms",
@@ -114,11 +115,26 @@ const PAGE_META = {
     imageAlt: "InstaRoasts leaderboard — who got cooked hardest today",
     sitemap: { changefreq: "daily", priority: "0.9" },
   },
-  "/compatibilityRoast": {
-    title: "Couple Roast 💔 — InstaRoasts",
+  // The landing page, and the one asset aimed at a search term with real
+  // volume. "zodiac compatibility" is orders of magnitude bigger than "instagram
+  // roast", and 54% of this site's sessions already come from Google organic.
+  "/cosmic-match": {
+    title: "Cosmic Match 🔮 — AI Zodiac Compatibility for Two Instagram Profiles",
     description:
-      "Drop two Instagram handles and let the AI judge whether you two make sense. Brutally.",
-    sitemap: { changefreq: "weekly", priority: "0.8" },
+      "Two Instagram handles, two birthdays. The AI reads both feeds and both star signs, scores you out of 100, and tells you exactly how it ends. Free, no login.",
+    imageAlt: "Cosmic Match — AI zodiac compatibility for two Instagram profiles",
+    sitemap: { changefreq: "weekly", priority: "0.9" },
+  },
+  // The result page. Deliberately a lower priority than the landing page and
+  // left out of the index entirely: every URL here is a specific pairing of two
+  // people's handles and birth dates, which is thin, unbounded, and not
+  // something either of them agreed to have indexed.
+  "/compatibilityRoast": {
+    title: "Cosmic Match Result 🔮 — InstaRoasts",
+    description:
+      "Two Instagram profiles, two star signs, one verdict. See the compatibility score, the red flag, and how it ends.",
+    robots: "noindex, follow",
+    sitemap: null,
   },
   "/terms": {
     title: "Terms — InstaRoasts",
@@ -265,12 +281,19 @@ ${children
 app.get("/sitemap-static.xml", (req, res) => {
   const entries = [
     { loc: `${SITE}/`, lastmod: BUILD_DATE, changefreq: "weekly", priority: "1.0" },
-    ...Object.entries(PAGE_META).map(([route, page]) => ({
-      loc: `${SITE}${route}`,
-      lastmod: BUILD_DATE,
-      changefreq: page.sitemap?.changefreq ?? "monthly",
-      priority: page.sitemap?.priority ?? "0.5",
-    })),
+    // An explicit `sitemap: null` opts a page out. Absent is different from
+    // null: absent keeps the old defaults, null means the page is deliberately
+    // not for the index. Submitting a URL that also carries `noindex` is a
+    // contradiction Search Console reports as an error, so the two flags have
+    // to be set together and this filter is what enforces it.
+    ...Object.entries(PAGE_META)
+      .filter(([, page]) => page.sitemap !== null)
+      .map(([route, page]) => ({
+        loc: `${SITE}${route}`,
+        lastmod: BUILD_DATE,
+        changefreq: page.sitemap?.changefreq ?? "monthly",
+        priority: page.sitemap?.priority ?? "0.5",
+      })),
   ];
 
   res.set("Cache-Control", "public, max-age=3600");

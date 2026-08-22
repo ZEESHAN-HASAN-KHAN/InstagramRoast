@@ -7,6 +7,7 @@ import { ModeToggle } from "@/components/ui/ModeToggle";
 import React from "react";
 import { LazySection } from "./my_components/LazySection";
 import { SiteFooter } from "./my_components/SiteFooter";
+import { LaunchBanner } from "./my_components/LaunchBanner";
 import { trackPageView } from "./lib/analytics";
 
 // Only the navbar, the hero and the footer are in the first bundle. Everything
@@ -31,6 +32,9 @@ const LeaderboardPage = React.lazy(() =>
 );
 const Compatibility = React.lazy(() =>
   import("./my_components/Compatibility").then((m) => ({ default: m.Compatibility }))
+);
+const CosmicMatchPage = React.lazy(() =>
+  import("./my_components/CosmicMatchPage").then((m) => ({ default: m.CosmicMatchPage }))
 );
 const CompatiblityRoast = React.lazy(() =>
   import("./my_components/CompatibilityRoast").then((m) => ({ default: m.CompatiblityRoast }))
@@ -141,11 +145,15 @@ function Home() {
       <LazySection minHeight={520} anchorIds={["recent-roasts"]}>
         <NearbyRoasts />
       </LazySection>
+      {/* Cosmic Match sits above the leaderboard, not below it. Behind a
+          640px-tall board it was roughly 2,500px down the page, and the
+          analytics said what that costs: 7,256 sessions land on "/" and 26 on
+          /compatibilityRoast. Given an anchor so the nav can jump to it. */}
+      <LazySection minHeight={420} anchorIds={["cosmic-match"]}>
+        <Compatibility />
+      </LazySection>
       <LazySection minHeight={640} anchorIds={["leaderboard"]}>
         <Leaderboard />
-      </LazySection>
-      <LazySection minHeight={420}>
-        <Compatibility />
       </LazySection>
     </>
   );
@@ -161,12 +169,16 @@ function AppLayout() {
       <RouteTracker />
       <ScrollToTop />
       <RedirectToUsername />
+      {/* Above the navbar in document order, so it scrolls away instead of
+          competing with the sticky nav for the top edge. */}
+      <LaunchBanner />
       <Navbar />
 
       <main className="flex-1">
         <React.Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/cosmic-match" element={<CosmicMatchPage />} />
             <Route path="/compatibilityRoast" element={<CompatiblityRoast />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/terms" element={<Terms />} />

@@ -13,7 +13,37 @@
 //   channel, method, source, gateway, variant, stage, tier, format,
 //   board, scope, range, surface, result
 // Metrics (numbers you'll want averaged rather than bucketed):
-//   rating, rank, judges, cards, tiers
+//   rating, rank, judges, cards, tiers, score
+//
+// ── Cosmic Match funnel ───────────────────────────────────────────────────
+// Every step has an impression event as well as an action event, because a
+// click count with no denominator cannot be turned into a rate. Read top to
+// bottom; each line divides by the one above it.
+//
+//   compatibility_submitted   variant=cosmic|plain   form intent
+//   cosmic_match_delivered    variant, result, score a reading actually landed
+//   cosmic_prompt_shown       surface=compat_result  landed with no chart to sell
+//   cosmic_prompt_submitted   variant=one|both       recovered into a cosmic run
+//   deep_reading_shown        surface=cosmic         saw the locked reading
+//   deep_reading_clicked      surface, variant       asked to unlock
+//   paywall_shown             surface=cosmic_deep    needed to pay
+//   deep_reading_delivered    result=cached|fresh    got it
+//   deep_reading_failed       surface=cosmic         model output unusable
+//
+// Discovery surfaces feeding the top of that funnel:
+//   cosmic_nudge_shown / _clicked / _dismissed   surface=roast
+//   cosmic_upsell_opened                         surface=compat_upsell
+//   compat_upsell_shown / _clicked               variant=cosmic|plain
+//
+// ── surface on the ecommerce events ───────────────────────────────────────
+// view_item, checkout_opened, begin_checkout, purchase, purchase_failed,
+// checkout_dismissed and paywall_abandoned all carry `surface`
+// (roast | compat | cosmic_deep). Without it a purchase is just a purchase and
+// revenue cannot be attributed to a product, which is the whole question.
+// `surface` is already a registered dimension, so these need no new setup.
+//
+// NEW custom definitions this funnel needs registering before it reports:
+//   score  — metric. Everything else reuses existing dimensions.
 //
 // Keep the vocabulary small on purpose: a new param name is a new dimension
 // someone has to remember to register, so prefer reusing `source`/`surface`

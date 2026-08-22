@@ -107,10 +107,26 @@ async function consumePaidCredit(sessionId) {
 
 // Identifies a specific roast so a session is only ever charged once for it.
 // Compatibility pairs are sorted, so (a,b) and (b,a) are the same unlock.
-function buildRoastKey({ jobType, username, username2 = null, language }) {
+function buildRoastKey({ jobType, username, username2 = null, language, birthDate1 = null, birthDate2 = null }) {
   if (jobType === "compatibility") {
     const pair = [username, username2].map((u) => String(u).toLowerCase()).sort().join("|");
     return `compat:${pair}:${language}`;
+  }
+  // The deep reading is a separate purchase from the free match, so it needs a
+  // key of its own or unlocking one would silently unlock the other.
+  //
+  // Birth dates are in the key because they are in the reading: change a date
+  // and it is a different chart, a different set of sections, and another LLM
+  // run to pay for. Sorted alongside the handle each one belongs to, so that
+  // opening the same link with the pair swapped resolves to the same purchase.
+  if (jobType === "deepmatch") {
+    const pair = [
+      `${String(username).toLowerCase()}@${birthDate1 || "-"}`,
+      `${String(username2).toLowerCase()}@${birthDate2 || "-"}`,
+    ]
+      .sort()
+      .join("|");
+    return `deep:${pair}:${language}`;
   }
   return `single:${String(username).toLowerCase()}:${language}`;
 }

@@ -14,6 +14,7 @@ import { CardCollection } from "./CardCollection";
 import { CardOdds } from "./CardOdds";
 import { ShareBar } from "./ShareBar";
 import { CompatUpsell } from "./CompatUpsell";
+import { CosmicNudge } from "./CosmicNudge";
 import { RoastProgress } from "./RoastProgress";
 import { BurnRating } from "./BurnRating";
 import { CreditMeter, useCredits } from "./CreditMeter";
@@ -202,7 +203,7 @@ export function Roast() {
   }, [status]);
 
   if (status === "paywall" && paywallInfo) {
-    return <Paywall info={paywallInfo} onUnlocked={() => runRoast(wasReroll.current)} />;
+    return <Paywall info={paywallInfo} surface="roast" onUnlocked={() => runRoast(wasReroll.current)} />;
   }
 
   // A card id that doesn't resolve: deleted profile, a roast whose card was
@@ -455,11 +456,15 @@ export function Roast() {
         </div>
 
         {/* Compatibility upsell: last block on the page, so it catches everyone
-            who read to the end — turns a one-person share into a two-person run */}
-        <div className="animate-reveal [animation-delay:450ms]">
+            who read to the end — turns a one-person share into a two-person run.
+            Being last is also the problem, hence the sticky nudge below, which
+            scrolls here for the majority who never reach the bottom. */}
+        <div id="cosmic-match-upsell" className="scroll-mt-24 animate-reveal [animation-delay:450ms]">
           <CompatUpsell username={insta_data.username} language={ln} />
         </div>
       </div>
+
+      <CosmicNudge targetId="cosmic-match-upsell" />
 
       {/* pointer-events-none is load-bearing. This canvas is the size of the
           whole roast page and it is mounted for exactly the 5000ms below, so

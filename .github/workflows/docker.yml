@@ -19,9 +19,19 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
+      # The secret is passed as an environment variable rather than pasted
+      # into the script body. `echo "${{ secrets.X }}"` textually substitutes
+      # the secret into the shell command before bash parses it, so any value
+      # containing a double quote terminates the string early and the rest of
+      # the file is executed as commands. That is not theoretical: the quoted
+      # multi-line PROMPT_* templates broke every variable after them, secrets
+      # included. Going through `env:` means bash never re-parses the content,
+      # and printf avoids echo's backslash handling.
       - name: Build the Docker image
+        env:
+          APP_ENV: ${{ secrets.BACKEND_ENV }}
         run: |
-          echo "${{ secrets.BACKEND_ENV }}" > ./backEnd/.env
+          printf '%s' "$APP_ENV" > ./backEnd/.env
           docker build -t instagram-roast-backend:latest ./backEnd
 
       - name: Configure GCP Credentials
@@ -54,9 +64,19 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
+      # The secret is passed as an environment variable rather than pasted
+      # into the script body. `echo "${{ secrets.X }}"` textually substitutes
+      # the secret into the shell command before bash parses it, so any value
+      # containing a double quote terminates the string early and the rest of
+      # the file is executed as commands. That is not theoretical: the quoted
+      # multi-line PROMPT_* templates broke every variable after them, secrets
+      # included. Going through `env:` means bash never re-parses the content,
+      # and printf avoids echo's backslash handling.
       - name: Build the Docker image
+        env:
+          APP_ENV: ${{ secrets.FRONTEND_ENV }}
         run: |
-          echo "${{ secrets.FRONTEND_ENV }}" > ./frontEnd/.env
+          printf '%s' "$APP_ENV" > ./frontEnd/.env
           docker build -t instagram-roast-frontend:latest ./frontEnd
 
       - name: Configure GCP Credentials

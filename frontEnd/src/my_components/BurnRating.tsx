@@ -415,7 +415,15 @@ export function BurnRating({ username }: { username: string }) {
       {/* Floating ask, once the panel has scrolled by unanswered. Most people
           never come back up a page, so the ask has to follow them down. */}
       {showNudge && (
-        <div className="fixed inset-x-3 bottom-3 z-40 animate-reveal sm:inset-x-auto sm:right-4 sm:max-w-sm">
+        // data-bottom-dock claims the bottom-edge slot. CosmicNudge docks in the
+        // same place and checks for this before it will show, so the two bars
+        // can never stack on top of each other. The rating ask wins while it is
+        // up: it is about the roast the visitor just read, and it disappears as
+        // soon as they answer or dismiss it.
+        <div
+          data-bottom-dock
+          className="fixed inset-x-3 bottom-3 z-40 animate-reveal sm:inset-x-auto sm:right-4 sm:max-w-sm"
+        >
           <div className="flex items-center gap-2 rounded-2xl border-2 border-foreground bg-card px-3 py-2.5 shadow-brutal">
             <span className="min-w-0 flex-1 text-xs font-bold leading-tight">
               rate @{username}'s roast

@@ -10,7 +10,10 @@ type ShareBarProps = {
    * share_clicked total and there's no way to tell which format actually
    * spreads.
    */
-  source: "roast" | "compat";
+  // Feeds the `source` dimension on every share event. "cosmic" is split out
+  // from "compat" deliberately: the astrology reading exists to lift the share
+  // rate, and that is unmeasurable if both pairing types report as one value.
+  source: "roast" | "compat" | "cosmic";
 };
 
 export function ShareBar({ title, text, source }: ShareBarProps) {

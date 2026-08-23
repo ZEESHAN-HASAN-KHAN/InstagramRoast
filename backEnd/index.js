@@ -19,6 +19,7 @@ const paymentWebhookRouter = require("./routes/paymentWebhook");
 const ogRouter = require("./routes/og");
 const sitemapRouter = require("./routes/sitemap");
 const logger = require("./helpers/logger");
+const { assertPromptsConfigured } = require("./helpers/prompts");
 
 // Needed for req.ip to report the real client behind the platform's load
 // balancer instead of the proxy's own address — the per-IP free-roast cap and
@@ -67,6 +68,14 @@ app.use("/api/v1", roastRouter);
 // geo-scoped feeds off req.visitorGeo, all of which that middleware establishes.
 app.use("/api/v1", engagementRouter);
 app.use("/api/v1", paymentRouter);
+
+// Prompt templates ship in the environment, never in this repo, so a deploy
+// that lost them is a real possibility (the .env is baked into the image, and
+// CI has eaten it before). Checked before the port opens: a server that boots
+// without a voice would accept traffic it cannot serve, and the failure would
+// otherwise show up as one confusing 500 per roast instead of a startup error
+// naming every missing key.
+assertPromptsConfigured();
 
 app.listen(PORT, () => {
   dbConnect();

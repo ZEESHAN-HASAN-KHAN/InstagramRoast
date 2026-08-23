@@ -16,8 +16,20 @@ const logger = require("./logger");
 //                                        for prompts too long to live on one
 //                                        .env line comfortably
 //
-// A missing var is not an error: every caller passes a built-in fallback so a
-// fresh clone still runs. Only the tuned versions are secret.
+// A missing var IS an error. This used to keep a plain-English fallback next to
+// every call site so a fresh clone still ran, but a fallback good enough to ship
+// behind is a fallback worth stealing — the repo ended up carrying a working
+// copy of the exact thing the .env was hiding. There is now no prompt text in
+// this repo at all. `PROMPTS.md` documents the keys and their placeholders
+// without quoting a line of the voice — it is gitignored and kept with the
+// .env, so a clone will not have it. REQUIRED_PROMPTS below is the list that
+// does travel with the code.
+//
+// Consequences, both deliberate:
+//   - a clone with no .env cannot generate. It fails at boot with the list of
+//     missing keys (see assertPromptsConfigured) rather than silently roasting
+//     in some untuned default voice nobody reviewed.
+//   - a typo'd key name is loud instead of invisible.
 
 // file: templates are read from disk on every call, which would be a real cost
 // on the hot path. Cached by path+mtime so an edit is still picked up without a
@@ -29,7 +41,7 @@ function readTemplateFile(path) {
   try {
     stat = fs.statSync(path);
   } catch (error) {
-    logger.error("[prompts] template file unreadable, using fallback", { path, error: error.message });
+    logger.error("[prompts] template file unreadable", { path, error: error.message });
     return null;
   }
 
@@ -41,17 +53,30 @@ function readTemplateFile(path) {
     fileCache.set(path, { mtimeMs: stat.mtimeMs, text });
     return text;
   } catch (error) {
-    logger.error("[prompts] template file read failed, using fallback", { path, error: error.message });
+    logger.error("[prompts] template file read failed", { path, error: error.message });
     return null;
   }
 }
 
-function loadTemplate(envKey, fallback) {
+class MissingPromptError extends Error {
+  constructor(envKey, detail) {
+    super(`Prompt template ${envKey} is not configured${detail ? ` (${detail})` : ""}`);
+    this.name = "MissingPromptError";
+    this.envKey = envKey;
+  }
+}
+
+function loadTemplate(envKey) {
   const raw = process.env[envKey];
-  if (!raw || !raw.trim()) return fallback;
+  if (!raw || !raw.trim()) throw new MissingPromptError(envKey);
 
   if (raw.startsWith("file:")) {
-    return readTemplateFile(raw.slice(5).trim()) ?? fallback;
+    const path = raw.slice(5).trim();
+    const text = readTemplateFile(path);
+    // An unreadable file is a deployment fault, not a reason to improvise. The
+    // error above already logged why; this stops the request.
+    if (text === null) throw new MissingPromptError(envKey, `file: ${path} unreadable`);
+    return text;
   }
 
   // dotenv unescapes \n and \t inside a double-quoted value but leaves \" and
@@ -80,8 +105,47 @@ function render(template, vars) {
   );
 }
 
-function buildPrompt(envKey, fallback, vars) {
-  return render(loadTemplate(envKey, fallback), vars);
+function buildPrompt(envKey, vars) {
+  return render(loadTemplate(envKey), vars);
 }
 
-module.exports = { buildPrompt, loadTemplate, render };
+// Every prompt key the app needs to function. Checked once at boot so a
+// misconfigured deploy fails on startup with the full list, instead of one
+// missing key surfacing hours later as a single failed roast.
+const REQUIRED_PROMPTS = [
+  "PROMPT_ROAST",
+  "PROMPT_ROAST_ANGLES",
+  "PROMPT_ROAST_REROLL",
+  "PROMPT_COMPAT_ROAST",
+  "PROMPT_COSMIC_MATCH",
+  "PROMPT_COSMIC_DEEP",
+];
+
+function missingPrompts() {
+  return REQUIRED_PROMPTS.filter((key) => {
+    const raw = process.env[key];
+    return !raw || !raw.trim();
+  });
+}
+
+function assertPromptsConfigured() {
+  const missing = missingPrompts();
+  if (missing.length === 0) return;
+  // Thrown, not logged-and-continued: a server that boots without a voice
+  // accepts traffic it cannot serve. The message names the missing keys rather
+  // than pointing at PROMPTS.md, which is gitignored and may not be on the box.
+  throw new Error(
+    `Missing prompt templates: ${missing.join(", ")}. ` +
+      `Set them in .env or as environment variables.`
+  );
+}
+
+module.exports = {
+  buildPrompt,
+  loadTemplate,
+  render,
+  assertPromptsConfigured,
+  missingPrompts,
+  MissingPromptError,
+  REQUIRED_PROMPTS,
+};

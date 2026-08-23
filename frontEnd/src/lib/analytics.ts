@@ -40,10 +40,17 @@
 // checkout_dismissed and paywall_abandoned all carry `surface`
 // (roast | compat | cosmic_deep). Without it a purchase is just a purchase and
 // revenue cannot be attributed to a product, which is the whole question.
-// `surface` is already a registered dimension, so these need no new setup.
 //
 // NEW custom definitions this funnel needs registering before it reports:
-//   score  — metric. Everything else reuses existing dimensions.
+//   surface — dimension. NOT registered. Verified against the Admin API on
+//             2026-08-23: the property has 21 event-scoped dimensions and this
+//             is not among them, so the Data API rejects `customEvent:surface`
+//             outright and every `surface` value collected so far is lost.
+//             An earlier version of this comment asserted the opposite, which
+//             is why nobody checked. Do not trust this list — list the
+//             property's dimensions before assuming any name is live.
+//   range   — dimension. Also emitted, also unregistered.
+//   score   — metric.
 //
 // Keep the vocabulary small on purpose: a new param name is a new dimension
 // someone has to remember to register, so prefer reusing `source`/`surface`

@@ -50,35 +50,7 @@ const normaliseTone = (value) => {
   return TONES.includes(tone) ? tone : "tense";
 };
 
-// Deliberately plain — the tuned template lives in PROMPT_COSMIC_DEEP. See
-// helpers/prompts.js for why the good version is not in the repo.
-const COSMIC_DEEP_FALLBACK = `You are a brutally funny astrologer writing the full paid reading for two people who already saw the free summary.
 
-Person A - @{{username1}}, a {{sign1}} ({{element1}}):
-{{profile1}}
-
-Person B - @{{username2}}, a {{sign2}} ({{element2}}):
-{{profile2}}
-
-Already worked out - do not recalculate:
-- Elements: {{chemistry}}
-- Shared trait: {{modalityNote}}
-
-They already read this and paid for more, so do NOT repeat it:
-{{freeSummary}}
-
-Write six sections. Each is 2 to 3 sentences, specific to these two profiles, funny and mean but never cruel about appearance, health, race or money. Name the signs. Blame planets.
-Write strictly in {{language}}.
-
-Return ONLY a JSON object, no markdown fence, no commentary. The six section keys are strings. "tones" is an object with the same six keys, each set to blessed, tense, or cursed depending on how that section lands for them:
-{"loveLanguage":"","communication":"","theFight":"","chemistry":"","forecast":"","theFix":"","tones":{"loveLanguage":"","communication":"","theFight":"","chemistry":"","forecast":"","theFix":""}}
-
-loveLanguage: how each of them shows affection and why it misses the other.
-communication: who texts first, who leaves it on read, what their DMs look like.
-theFight: the specific argument they will have on repeat, and who wins.
-chemistry: the pull between them. Suggestive at most, never explicit.
-theFix: the one honest thing that would actually have to change. This is the only section allowed to be useful.
-forecast: month by month, how the next six months go. End it somewhere definite.`;
 
 // Models wrap JSON in fences, prepend "Here is", or emit smart quotes. Rather
 // than tightening the prompt forever, the response is salvaged: find the outer
@@ -130,7 +102,7 @@ const generateCosmicDeep = async (userData1, userData2, language, dob1, dob2, fr
   const sign1 = signForDate(dob1);
   const sign2 = signForDate(dob2);
 
-  const inputPrompt = buildPrompt("PROMPT_COSMIC_DEEP", COSMIC_DEEP_FALLBACK, {
+  const inputPrompt = buildPrompt("PROMPT_COSMIC_DEEP", {
     username1: userData1.username,
     username2: userData2.username,
     profile1: JSON.stringify(userData1),
@@ -143,8 +115,9 @@ const generateCosmicDeep = async (userData1, userData2, language, dob1, dob2, fr
     vibe2: sign2 ? sign2.vibe : "",
     ruler1: sign1 ? sign1.ruler : "",
     ruler2: sign2 ? sign2.ruler : "",
-    chemistry: chemistryFor(sign1, sign2) ?? "one of them would not say when they were born",
-    modalityNote: modalityNote(sign1, sign2) ?? "No shared modality.",
+    // Flat facts, not jokes — see the same stand-ins in cosmicMatch.js.
+    chemistry: chemistryFor(sign1, sign2) ?? "not available - only one birth date was given",
+    modalityNote: modalityNote(sign1, sign2) ?? "no shared modality",
     // The free text is handed over so the paid reading does not resell it back
     // to them — the single most common complaint about upsold AI content.
     freeSummary: String(freeSummary ?? "").slice(0, 1200),

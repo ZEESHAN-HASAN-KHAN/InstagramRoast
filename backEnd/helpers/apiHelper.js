@@ -1,6 +1,7 @@
 require("dotenv").config();
 const { callLLM } = require("./llmProvider");
 const logger = require("./logger");
+const { buildPrompt, loadTemplate } = require("./prompts");
 
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
@@ -121,42 +122,14 @@ const getInstagramProfile = async (username) => {
 };
 
 const generateAICompatiblityRoast = async (userData1, userData2, language) => {
-  const inputPrompt = `You are a professional comedian with a reputation for razor-sharp wit and dark humor. Your task is to write a humorous and personalized compability roast for two person that teases their quirks, contrasts, and similarities.
-If the profiles are of opposite genders, add a witty take on their potential compatibility (or lack thereof) with a relationship dynamic.
-User 1:
-${JSON.stringify(userData1)}
-User 2:
-${JSON.stringify(userData2)}
-  Instructions:
-- Be as sarcastic, blunt, and edgy as possible. Use clever wordplay and savage humor.
-- Use personalized taunts and playful jabs.
-- Be as sarcastic, blunt, and edgy as possible. Use clever wordplay and savage humor.
-- Keep the roast concise (under 100 words).
-- Add a compatibility score with humor out of 10.
-- Use emojis for emphasis in the body only — never on line 1.
-- Write strictly in ${JSON.stringify(language)} and output in **markdown format**.
-
-STRICT RULES — violating any of these will make the output unusable:
-- NO titles, headers, or labels (e.g. do NOT write "Compatibility Roast", "Roast", "#HotTake", etc.)
-- NO sign-offs, closings, or sign-ins (e.g. do NOT write "— your AI bestie", "Sincerely", etc.)
-- NO compliments, praise, motivation, or kind words of any kind.
-- NO meta-commentary like "Here is your roast:" or "Sure! Here's a roast:"
-- Start the roast IMMEDIATELY. The very first word must be part of the roast itself.
-- The response must contain ONLY the roast text in markdown. Nothing else.
-
-OUTPUT SHAPE — the last and most important rule. Get this wrong and the whole roast is discarded:
-- LINE 1 is ONE short sentence: the most quotable, screenshot-worthy line of the whole roast. It gets printed alone on a shareable card, so it has to land with no context around it.
-- Line 1 is 40 to 130 characters. Count them before you answer. Over 130 and it is thrown away.
-- Line 1 has ZERO emoji, no markdown, no surrounding quotation marks, no name prefix like "Dave:".
-- Line 1 is the opening of the roast, not a title and not a summary of what follows. Aim it at these two specifically — a line that would fit any couple is a failure.
-- Then a blank line.
-- Then the rest of the roast, which must NOT repeat line 1. The compatibility score goes in the body, never on line 1.
-
-The shape, illustrated — never reuse these words, only this layout:
-One of you peaked in a group photo and the other one cropped it.
-
-Two personalities, one shared brain cell, and it is off duty. Compatibility: 3/10. 💀
-`;
+  const inputPrompt = buildPrompt("PROMPT_COMPAT_ROAST", {
+    profile1: JSON.stringify(userData1),
+    profile2: JSON.stringify(userData2),
+    // Quoted, unlike every other prompt's language slot. That is what the
+    // inline template did before this moved to .env, and a refactor is the
+    // wrong moment to also change what the model reads.
+    language: JSON.stringify(language),
+  });
   logger.debug("LLM input prompt", { prompt: inputPrompt });
   return callLLM(inputPrompt);
 };
@@ -164,54 +137,32 @@ Two personalities, one shared brain cell, and it is off duty. Compatibility: 3/1
 // Angles a re-roast can be pushed down. Sampling one keeps a paid re-roast from
 // landing on the same jokes as the roast it replaced — temperature alone tends
 // to circle the same two or three observations about a profile.
-const REROAST_ANGLES = [
-  "their follower-to-following ratio and what it says about them",
-  "their bio and how hard it is trying",
-  "how they look in the profile picture",
-  "their post count versus how important they think they are",
-  "the gap between the life they're advertising and the one they have",
-  "their username itself",
-];
+//
+// The list itself is prompt text, so it lives in PROMPT_ROAST_ANGLES (one angle
+// per line) rather than here, and the sentence that wraps the chosen one is
+// PROMPT_ROAST_REROLL with an {{angle}} placeholder. Only the coin flip and the
+// line-splitting are code.
+const pickReroastAngle = () => {
+  const angles = loadTemplate("PROMPT_ROAST_ANGLES")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (angles.length === 0) throw new Error("PROMPT_ROAST_ANGLES is empty");
+  return angles[Math.floor(Math.random() * angles.length)];
+};
 
 const generateAIRoast = async (userData, profileUrl, language, { freshAngle = false } = {}) => {
+  // A normal roast substitutes an empty string here, so the template carries
+  // the re-roast wording and this file never states it.
   const angleInstruction = freshAngle
-    ? `\n  - This person has been roasted before and paid for another one. Do NOT repeat the obvious observations. Build this roast around ${REROAST_ANGLES[Math.floor(Math.random() * REROAST_ANGLES.length)]}, and land somewhere the last roast wouldn't have.`
+    ? buildPrompt("PROMPT_ROAST_REROLL", { angle: pickReroastAngle() })
     : "";
 
-  const inputPrompt = `
-  You are a thug roadside comedian abusive in nature. Your task is to roast an Instagram user based on their profile in a clever, ruthless, and darkly funny way.
-
-  Instructions:
-  - Base your roast on the following user data: ${JSON.stringify(
-    userData,
-  )} and the image attached.${angleInstruction}
-  - Be as sarcastic, blunt, and edgy as possible. Use clever wordplay and savage humor.
-  - Be as sarcastic, blunt, and edgy as possible. Use clever wordplay and savage humor.
-  - Keep the roast concise (under 100 words).
-  - Use emojis for emphasis in the body only — never on line 1.
-  - Write strictly in ${language} and output in **markdown format**.
-
-  STRICT RULES — violating any of these will make the output unusable:
-  - NO titles, headers, or labels (e.g. do NOT write "Roast", "Hot Take", "#Roast", etc.)
-  - NO sign-offs, closings, or sign-ins (e.g. do NOT write "— your AI bestie", "Sincerely", "Love,", etc.)
-  - NO compliments, praise, motivation, or kind words of any kind.
-  - NO meta-commentary like "Here is your roast:" or "Sure! Here's a roast:"
-  - Start the roast IMMEDIATELY. The very first word must be part of the roast itself.
-  - The response must contain ONLY the roast text in markdown. Nothing else.
-
-  OUTPUT SHAPE — the last and most important rule. Get this wrong and the whole roast is discarded:
-  - LINE 1 is ONE short sentence: the most quotable, screenshot-worthy line of the whole roast. It gets printed alone on a shareable card, so it has to land with no context around it.
-  - Line 1 is 40 to 130 characters. Count them before you answer. Over 130 and it is thrown away.
-  - Line 1 has ZERO emoji, no markdown, no surrounding quotation marks, no name prefix like "Dave:".
-  - Line 1 is the opening of the roast, not a title and not a summary of what follows. Aim it at this person — a line that would fit any profile is a failure.
-  - Then a blank line.
-  - Then the rest of the roast, which must NOT repeat line 1.
-
-  The shape, illustrated — never reuse these words, only this layout:
-  Your bio is a personality test you failed twice and still framed it.
-
-  Three hundred followers, four hundred following, and not one of them would help you move. 📉
-`;
+  const inputPrompt = buildPrompt("PROMPT_ROAST", {
+    profile: JSON.stringify(userData),
+    angleInstruction,
+    language,
+  });
 
   logger.debug("LLM input prompt", { prompt: inputPrompt });
   return callLLM(inputPrompt, profileUrl);

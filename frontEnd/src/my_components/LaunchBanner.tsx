@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { track } from "@/lib/analytics";
+import { useSeen } from "@/hooks/useSeen";
 
 // One-time launch announcement for Cosmic Match.
 //
@@ -42,8 +43,19 @@ export function LaunchBanner() {
     }
   });
 
-  if (dismissed || Date.now() > SHOW_UNTIL.getTime()) return null;
-  if (HIDE_ON.includes(pathname)) return null;
+  const hidden =
+    dismissed || Date.now() > SHOW_UNTIL.getTime() || HIDE_ON.includes(pathname);
+
+  // The denominator. `launch_banner_clicked` and `_dismissed` shipped without
+  // it, so the launch banner had a numerator and nothing to divide it by — one
+  // recorded click could have been out of five impressions or five hundred.
+  //
+  // Called before the early return because hooks cannot be conditional. On a
+  // hidden banner the ref is never attached to anything, so the observer never
+  // starts and no impression is recorded — which is the correct reading.
+  const seenRef = useSeen<HTMLDivElement>("launch_banner_shown", { surface: "cosmic_launch" });
+
+  if (hidden) return null;
 
   const dismiss = () => {
     track("launch_banner_dismissed", { surface: "cosmic_launch" });
@@ -56,7 +68,10 @@ export function LaunchBanner() {
   };
 
   return (
-    <div className="relative bg-primary text-primary-foreground border-b-2 border-foreground">
+    <div
+      ref={seenRef}
+      className="relative bg-primary text-primary-foreground border-b-2 border-foreground"
+    >
       <div className="max-w-6xl mx-auto px-3 sm:px-4 py-2 pr-11 sm:pr-12 flex items-center justify-center gap-2 text-center">
         <span aria-hidden className="text-base leading-none shrink-0">
           🔮

@@ -125,6 +125,30 @@ html {
   scroll-behavior: smooth;
 }
 
+/* ── Native controls ───────────────────────────────────────────────────────
+   Date inputs are painted by the OS, not by our tokens. Without `color-scheme`
+   the browser assumes a light page and draws the empty field's dd/mm/yyyy hint
+   and the picker icon in near-black — invisible on the dark card, which is why
+   the birthday fields on Android read as blank boxes. The property has to
+   track the theme class the provider puts on <html>. */
+:root {
+  color-scheme: light;
+}
+:root.dark {
+  color-scheme: dark;
+}
+
+/* Belt and braces for engines that still ignore color-scheme inside the shadow
+   DOM of a date input: pull every segment back to the input's own color. */
+input[type="date"]::-webkit-datetime-edit,
+input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+input[type="date"]::-webkit-datetime-edit-text,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-year-field {
+  color: inherit;
+}
+
 /* ── Roast card foils ──────────────────────────────────────────────────────
    Live-only decoration for the collectible card. The exported PNG freezes
    animation, so every skin still has to read correctly at a standstill —

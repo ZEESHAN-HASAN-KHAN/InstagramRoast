@@ -2,3 +2,8 @@ node_modules
 .env
 .env.*
 !.env.example
+
+# Prompt operations doc. Holds no prompt text, but it is the map to the .env
+# that does, so it ships with the secret rather than with the repo. Keep the
+# canonical copy wherever the .env itself is kept.
+PROMPTS.md

@@ -121,4 +121,47 @@ function modalityNote(signA, signB) {
   }[signA.modality] ?? null;
 }
 
-module.exports = { signForDate, parseBirthDate, chemistryFor, modalityNote, SIGN_META };
+// The window the compatibility score has to land in, worked out here rather
+// than left to the model.
+//
+// Two production problems this fixes, both from the same cause. Every reading
+// came back in the single digits (12, 2, 4, 12 across the first four), because
+// a prompt that spends 40 lines demanding cruelty and then asks for a number
+// gets the number treated as part of the roast. And the same pairing scored 12
+// on one run and 4 on the next, so re-rolling a reading looked like a bug.
+//
+// Deriving the band from the same element/modality facts the rest of the
+// reading is built on makes it stable across runs and spreads it over the
+// scale, while leaving the model a wide enough window to still be funny with
+// the exact number.
+//
+// The affinity tiers are the standard tropical ones: same element understands
+// itself, fire/air and earth/water are the classic complements, everything
+// else is friction.
+const COMPLEMENTARY = new Set(["air|fire", "earth|water"]);
+
+// Same-modality pairs want the same job out of the relationship (two cardinal
+// signs both leading, two fixed signs both refusing to move), so they cost a
+// band wherever they land — including the same-element case, where sharing a
+// modality means it is literally the same sign twice.
+const MODALITY_PENALTY = 12;
+
+function scoreBandFor(signA, signB) {
+  if (!signA || !signB) return null;
+
+  const key = [signA.element, signB.element].sort().join("|");
+  const base =
+    signA.element === signB.element ? [58, 82] : COMPLEMENTARY.has(key) ? [66, 90] : [24, 55];
+
+  const shift = signA.modality === signB.modality ? MODALITY_PENALTY : 0;
+  return { min: base[0] - shift, max: base[1] - shift };
+}
+
+module.exports = {
+  signForDate,
+  parseBirthDate,
+  chemistryFor,
+  modalityNote,
+  scoreBandFor,
+  SIGN_META,
+};

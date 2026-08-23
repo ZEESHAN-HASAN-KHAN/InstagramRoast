@@ -33,7 +33,14 @@ function PersonField({
         placeholder={label}
         className="w-full px-4 py-3 bg-background border-2 border-foreground rounded-2xl font-mono outline-none focus:shadow-[3px_3px_0_0_hsl(var(--primary))] transition-all text-foreground placeholder:text-muted-foreground"
       />
-      <div className="relative">
+      {/* Visible label, not just the aria one. An empty date input is a blank
+          box with a picker icon on a phone — nothing on screen says it wants a
+          birthday. The site's other two date fields (CosmicPrompt,
+          CompatUpsell) already label theirs. */}
+      <label className="block relative">
+        <span className="block mb-1 text-[11px] font-mono text-muted-foreground">
+          🎂 birthday (optional)
+        </span>
         <input
           type="date"
           value={dob}
@@ -47,11 +54,11 @@ function PersonField({
             this is what makes the extra field feel worth it rather than like
             one more thing standing between them and the result. */}
         {sign && (
-          <span className="absolute -top-2 right-3 bg-pink-200 dark:bg-pink-900/60 border-2 border-foreground rounded-full px-2 text-[11px] font-black uppercase tracking-wide animate-reveal">
+          <span className="absolute top-4 right-3 bg-pink-200 dark:bg-pink-900/60 border-2 border-foreground rounded-full px-2 text-[11px] font-black uppercase tracking-wide animate-reveal">
             {sign.emoji} {sign.name}
           </span>
         )}
-      </div>
+      </label>
     </div>
   );
 }

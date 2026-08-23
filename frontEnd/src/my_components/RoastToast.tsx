@@ -86,11 +86,16 @@ export function RoastToast() {
   };
 
   return (
+    // Bottom-anchored, not top. At the top of the page the sticky navbar sits
+    // below the launch banner, so its bottom edge is past the 80px this used to
+    // sit at and the toast rendered underneath it (nav is z-50). The bottom
+    // edge has no such stack; the mobile offset clears the floating theme
+    // toggle and the iPhone home indicator.
     <div
       role="status"
       aria-live="polite"
-      className={`fixed top-20 right-4 left-4 sm:left-auto z-40 transition-all duration-500 ${
-        visible ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0 pointer-events-none"
+      className={`fixed z-40 right-4 left-4 sm:left-auto bottom-[calc(4.75rem+env(safe-area-inset-bottom))] sm:bottom-6 transition-all duration-500 ${
+        visible ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0 pointer-events-none"
       }`}
     >
       <div className="flex items-center gap-2 bg-card border-2 border-foreground rounded-full pl-1.5 pr-1.5 py-1.5 shadow-brutal rotate-[-0.5deg] sm:max-w-sm ml-auto">

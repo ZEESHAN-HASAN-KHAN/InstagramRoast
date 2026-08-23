@@ -28,13 +28,13 @@ export function About() {
   return (
     <>
       {/* Features section */}
-      <section id="features" className="py-24 bg-background relative overflow-hidden">
-        <div className="max-w-6xl mx-auto px-6">
+      <section id="features" className="scroll-mt-20 py-14 sm:py-24 bg-background relative overflow-hidden">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-16">
             <span className="inline-block bg-foreground text-background px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider rotate-[-2deg] mb-4">
               ✨ why it slaps
             </span>
-            <h2 className="text-4xl md:text-5xl font-serif font-bold italic text-balance">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif font-bold italic text-balance">
               three reasons you'll cry 😭
             </h2>
           </div>
@@ -56,12 +56,12 @@ export function About() {
       </section>
 
       {/* Popular Roasts / Trending section */}
-      <section id="about" className="py-20 bg-background border-y-2 border-foreground overflow-hidden relative">
-        <div className="max-w-3xl mx-auto px-6 text-center mb-10">
+      <section id="about" className="scroll-mt-20 py-14 sm:py-20 bg-background border-y-2 border-foreground overflow-hidden relative">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center mb-10">
           <span className="inline-block bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider rotate-[-2deg] mb-4 border-2 border-foreground">
             🍿 hall of flame
           </span>
-          <h2 className="text-4xl md:text-5xl font-serif font-bold italic tracking-tight text-balance">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif font-bold italic tracking-tight text-balance">
             freshly cooked celebs <span aria-hidden className="not-italic">📈</span>
           </h2>
           <p className="mt-4 text-foreground/70">

@@ -41,20 +41,20 @@ export function Faq() {
   const [open, setOpen] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="py-24 bg-background relative overflow-hidden">
+    <section id="faq" className="scroll-mt-20 py-14 sm:py-24 bg-background relative overflow-hidden">
       <Helmet>
         <script type="application/ld+json">{JSON.stringify(faqSchema)}</script>
       </Helmet>
       <div className="pointer-events-none absolute top-20 -left-20 size-72 rounded-full bg-accent/20 blur-3xl" />
       <div className="pointer-events-none absolute bottom-20 -right-20 size-72 rounded-full bg-primary/20 blur-3xl" />
 
-      <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-16 relative">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 grid md:grid-cols-2 gap-10 md:gap-16 relative">
         {/* About story */}
         <div>
           <span className="inline-block bg-foreground text-background px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider -rotate-2 mb-4">
             👋 wait, what?
           </span>
-          <h2 className="text-4xl md:text-5xl font-serif font-bold italic mb-6 text-balance">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif font-bold italic mb-6 text-balance">
             it started as a{" "}
             <span className="bg-yellow-200 dark:bg-yellow-900/40 px-2 inline-block -rotate-1 border-2 border-foreground rounded-xl">
               joke

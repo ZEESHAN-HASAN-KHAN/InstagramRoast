@@ -86,7 +86,7 @@ export function Compatibility() {
   const bothSigns = signForDate(dob1) && signForDate(dob2);
 
   return (
-    <section id="cosmic-match" className="scroll-mt-20 py-20 px-6 border-t-2 border-foreground bg-background relative overflow-hidden">
+    <section id="cosmic-match" className="scroll-mt-20 py-14 sm:py-20 px-4 sm:px-6 border-t-2 border-foreground bg-background relative overflow-hidden">
       <div className="pointer-events-none absolute top-10 -right-20 size-60 rounded-full bg-pink-300/10 blur-3xl" />
       <div className="pointer-events-none absolute bottom-10 -left-20 size-60 rounded-full bg-primary/10 blur-3xl" />
 
@@ -95,7 +95,7 @@ export function Compatibility() {
           <span className="inline-block bg-foreground text-background px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider rotate-[-2deg] mb-4">
             ✨ cosmic match
           </span>
-          <h2 className="text-4xl md:text-5xl font-serif font-bold italic text-balance">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif font-bold italic text-balance">
             are you two{" "}
             <span className="inline-block bg-pink-200 dark:bg-pink-900/40 px-2 -rotate-1 border-2 border-foreground rounded-xl">
               written in the stars

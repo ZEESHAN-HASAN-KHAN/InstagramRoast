@@ -198,7 +198,7 @@ export function CosmicMatchPage() {
         </div>
       </div>
 
-      <section className="relative overflow-hidden px-6 py-20 bg-background">
+      <section className="relative overflow-hidden px-4 sm:px-6 py-14 sm:py-20 bg-background">
         {/* Ambient blobs, the hero's device. Clipped by the section. */}
         <div
           aria-hidden

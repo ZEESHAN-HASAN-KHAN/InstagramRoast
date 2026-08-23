@@ -30,7 +30,7 @@ export function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b-2 border-foreground">
-      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Brand */}
         <Link
           to="/"
@@ -101,7 +101,7 @@ export function Navbar() {
         <div className="md:hidden border-t-2 border-foreground bg-background">
           {/* min-h-11 rather than padding alone: these are the only nav on a
               phone and a 20px-tall text link is not a target. */}
-          <div className="flex flex-col px-6 py-2 font-bold text-sm">
+          <div className="flex flex-col px-4 sm:px-6 py-2 font-bold text-sm">
             <Link
               to="/cosmic-match"
               onClick={() => setIsMenuOpen(false)}

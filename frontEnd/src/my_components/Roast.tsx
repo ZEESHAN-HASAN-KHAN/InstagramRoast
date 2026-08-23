@@ -211,7 +211,7 @@ export function Roast() {
   // dead end — that's the thing they were almost certainly after.
   if (archivedFailed) {
     return (
-      <div className="max-w-3xl mx-auto px-6 py-16 text-center space-y-6">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12 sm:py-16 text-center space-y-6">
         <div className="text-7xl">🃏</div>
         <h1 className="text-2xl md:text-3xl font-serif font-bold italic text-balance">
           that card's roast isn't around
@@ -235,7 +235,7 @@ export function Roast() {
     const detail = rest.join(": ");
 
     return (
-      <div className="max-w-3xl mx-auto px-6 py-16 text-center space-y-6">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12 sm:py-16 text-center space-y-6">
         <div className="text-7xl animate-bounce">{isNotFound ? "🕵️‍♂️" : "🥵"}</div>
         <h1 className="text-2xl md:text-3xl font-serif font-bold italic text-balance">
           {isNotFound ? <>couldn't find @{username} anywhere</> : "our roast chefs are overwhelmed"}
@@ -255,7 +255,7 @@ export function Roast() {
   if (!received) {
     const loadingUrl = `https://instaroasts.com/${username}`;
     return (
-      <div className="relative overflow-hidden px-6 py-12">
+      <div className="relative overflow-hidden px-4 sm:px-6 py-8 sm:py-12">
         <Helmet>
           <title>Roast of @{username} — InstaRoasts</title>
           <meta name="description" content={`AI-generated roast of @${username} on InstaRoasts — drop any Instagram handle and get roasted in seconds.`} />
@@ -321,7 +321,7 @@ export function Roast() {
   const pageUrl = `https://instaroasts.com/${insta_data.username}`;
 
   return (
-    <div className="relative overflow-hidden px-6 py-12">
+    <div className="relative overflow-hidden px-4 sm:px-6 py-8 sm:py-12">
       <Helmet>
         <title>Roast of @{insta_data.username} 🔥 — InstaRoasts</title>
         <meta name="description" content={`AI roast of @${insta_data.username}: ${roastSnippet}...`} />
@@ -386,7 +386,7 @@ export function Roast() {
           <div className="inline-block bg-foreground text-background px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest rotate-[-2deg]">
             {archivedId ? "🗃️ from the archive" : "🚨 roast incoming"}
           </div>
-          <h1 className="text-4xl md:text-6xl font-serif font-bold italic text-balance leading-[1.05]">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-serif font-bold italic text-balance leading-[1.05] break-words">
             we cooked{" "}
             <span className="text-primary underline decoration-wavy decoration-accent underline-offset-4">
               @{insta_data.username}

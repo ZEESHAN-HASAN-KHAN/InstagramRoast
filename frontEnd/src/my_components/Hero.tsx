@@ -40,7 +40,7 @@ export function Hero() {
   useEffect(() => { getRoastCount(); }, []);
 
   return (
-    <section className="relative pt-16 pb-24 px-6 overflow-hidden">
+    <section className="relative pt-10 sm:pt-16 pb-16 sm:pb-24 px-4 sm:px-6 overflow-hidden">
       <Helmet>
         <title>InstaRoasts — AI Roasts Your Instagram Profile</title>
         <link rel="canonical" href="https://instaroasts.com/" />
@@ -74,7 +74,7 @@ export function Hero() {
         </div>
 
         {/* Headline */}
-        <h1 className="animate-reveal [animation-delay:100ms] mt-8 text-5xl md:text-8xl font-serif italic font-bold tracking-tight text-balance leading-[0.95]">
+        <h1 className="animate-reveal [animation-delay:100ms] mt-6 sm:mt-8 text-4xl sm:text-6xl md:text-8xl font-serif italic font-bold tracking-tight text-balance leading-[1.02] sm:leading-[0.95]">
           the AI with{" "}
           <span className="inline-block bg-yellow-200 dark:bg-yellow-900/40 px-2 -rotate-2 border-2 border-foreground rounded-xl">
             zero
@@ -86,12 +86,12 @@ export function Hero() {
           </span>
         </h1>
 
-        <p className="animate-reveal [animation-delay:200ms] mt-8 text-lg md:text-xl text-foreground/80 max-w-xl mx-auto">
+        <p className="animate-reveal [animation-delay:200ms] mt-5 sm:mt-8 text-base sm:text-lg md:text-xl text-foreground/80 max-w-xl mx-auto">
           drop your @handle. our judgmentally-challenged AI will read you to filth in 10 seconds. it's mean, it's accurate, first ones are <em>on the house</em>. 💸
         </p>
 
         {/* Input form */}
-        <div className="animate-reveal [animation-delay:300ms] mt-12">
+        <div className="animate-reveal [animation-delay:300ms] mt-8 sm:mt-12">
           <form
             onSubmit={(e) => { e.preventDefault(); discover(); }}
             className="max-w-lg mx-auto"
@@ -127,7 +127,7 @@ export function Hero() {
         </div>
 
         {/* Social proof */}
-        <div className="mt-12 animate-reveal [animation-delay:400ms] flex flex-wrap items-center justify-center gap-3">
+        <div className="mt-8 sm:mt-12 animate-reveal [animation-delay:400ms] flex flex-wrap items-center justify-center gap-3">
           <span className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-3 py-1.5 text-xs font-bold rotate-[-2deg] shadow-[3px_3px_0_0_hsl(var(--brutal))] hover:-translate-y-1 hover:rotate-0 transition-all cursor-default">
             ⭐⭐⭐⭐⭐ <span className="text-muted-foreground">"hurt my feelings"</span>
           </span>
@@ -137,7 +137,7 @@ export function Hero() {
         </div>
 
         {/* Product Hunt badge */}
-        <div className="mt-8 animate-reveal [animation-delay:500ms]">
+        <div className="mt-6 sm:mt-8 animate-reveal [animation-delay:500ms]">
           <a
             href="https://www.producthunt.com/posts/instaroasts-2?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-instaroasts&#0045;2"
             target="_blank"

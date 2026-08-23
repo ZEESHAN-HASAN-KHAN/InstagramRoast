@@ -57,13 +57,16 @@ export function LaunchBanner() {
 
   return (
     <div className="relative bg-primary text-primary-foreground border-b-2 border-foreground">
-      <div className="max-w-6xl mx-auto px-4 py-2 pr-12 flex items-center justify-center gap-2 text-center">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 py-2 pr-11 sm:pr-12 flex items-center justify-center gap-2 text-center">
         <span aria-hidden className="text-base leading-none shrink-0">
           🔮
         </span>
         <p className="text-xs sm:text-sm font-bold leading-tight">
-          <span className="font-black uppercase tracking-wider">New:</span> Cosmic Match. Two
-          handles, two birthdays, one verdict.{" "}
+          <span className="font-black uppercase tracking-wider">New:</span> Cosmic Match.
+          {/* The tagline costs two extra lines at the top of a phone screen,
+              which is the scarcest space on the site. The headline plus the
+              link already say what it is. */}
+          <span className="hidden sm:inline"> Two handles, two birthdays, one verdict.</span>{" "}
           <Link
             to="/cosmic-match"
             onClick={() => track("launch_banner_clicked", { surface: "cosmic_launch" })}

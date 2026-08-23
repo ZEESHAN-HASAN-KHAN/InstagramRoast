@@ -8,6 +8,7 @@ import {
   verifyPayment,
   formatPrice,
   type PaywallInfo,
+  type PaywallPreviewProfile,
   type RazorpayCheckoutResult,
 } from "@/lib/api";
 import {
@@ -17,6 +18,7 @@ import {
   type PaypalButtonsInstance,
 } from "@/lib/checkout";
 import { ProfileCard } from "./ProfileCard";
+import { formatCount } from "@/lib/utils";
 import { track, trackPageView } from "@/lib/analytics";
 
 interface PaywallProps {
@@ -31,6 +33,66 @@ interface PaywallProps {
    * which is the one question the funnel exists to answer.
    */
   surface?: "roast" | "compat" | "cosmic_deep";
+}
+
+// Both faces of a pairing, side by side. A compatibility wall that renders the
+// single-profile ProfileCard shows one of the two people being compared, which
+// reads as the wrong screen — and the badge on that card ("target locked")
+// belongs to the single roast.
+function PairPreview({
+  handle1,
+  handle2,
+  profile1,
+  profile2,
+}: {
+  handle1: string;
+  handle2: string;
+  profile1: PaywallPreviewProfile | null;
+  profile2: PaywallPreviewProfile | null;
+}) {
+  const face = (profile: PaywallPreviewProfile | null, handle: string) => (
+    <div className="flex-1 min-w-0 flex flex-col items-center gap-2 text-center">
+      <div className="size-20 md:size-24 rounded-full p-1 bg-gradient-to-tr from-primary via-pink-400 to-accent shrink-0">
+        {profile ? (
+          <img
+            src={profile.profile_pic_url}
+            alt={`@${handle} avatar`}
+            className="size-full rounded-full object-cover bg-background"
+          />
+        ) : (
+          <div className="size-full rounded-full bg-background flex items-center justify-center text-2xl">
+            👤
+          </div>
+        )}
+      </div>
+      <div className="w-full min-w-0">
+        <p className="font-serif italic font-bold truncate">
+          {profile?.full_name || `@${handle}`}
+        </p>
+        <p className="text-xs text-muted-foreground truncate">@{handle}</p>
+      </div>
+      {profile && (
+        <p className="text-[11px] font-black uppercase tracking-wide text-muted-foreground">
+          👀 {formatCount(profile.follower)} followers
+        </p>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="relative bg-card border-2 border-foreground rounded-3xl p-6 md:p-8 shadow-brutal rotate-[0.5deg]">
+      <div className="absolute -top-3 -right-3 bg-accent text-accent-foreground text-xs font-black uppercase px-3 py-1.5 rounded-full rotate-[8deg] shadow-md z-10">
+        💘 pair locked
+      </div>
+      <div className="flex items-center gap-3 md:gap-6">
+        {face(profile1, handle1)}
+        <div className="shrink-0 size-11 md:size-12 bg-pink-200 dark:bg-pink-900/40 border-2 border-foreground rounded-full flex items-center justify-center font-black text-xs shadow-brutal">
+          VS
+        </div>
+        {face(profile2, handle2)}
+      </div>
+    </div>
+  );
 }
 
 export function Paywall({ info, onUnlocked, surface = "roast" }: PaywallProps) {
@@ -54,8 +116,13 @@ export function Paywall({ info, onUnlocked, surface = "roast" }: PaywallProps) {
   // report can break it down, so every ecommerce event below carries it.
   const items = [
     {
+      // item_id stays keyed on the pack so historical rows keep aggregating,
+      // but the name says which screen sold it — "roast credits" on a Cosmic
+      // Match wall is the wrong product in every report that shows names.
       item_id: `credits_${credits}`,
-      item_name: `${credits} roast credits`,
+      item_name: info.deep
+        ? `${credits} credits · cosmic match reading`
+        : `${credits} roast credits`,
       item_category: "credits",
       price: value,
       quantity: 1,
@@ -225,6 +292,7 @@ export function Paywall({ info, onUnlocked, surface = "roast" }: PaywallProps) {
 
       track("checkout_opened", { surface, gateway: "razorpay" });
       track("begin_checkout", {
+        surface,
         gateway: "razorpay",
         currency: order.currency,
         value: order.amount / 100,
@@ -268,6 +336,29 @@ export function Paywall({ info, onUnlocked, surface = "roast" }: PaywallProps) {
     </>
   );
 
+  // Placeholder prose behind the blur — never the real text, so nothing paid
+  // leaks. It has to match the product being sold: single-roast lines about a
+  // grid and a bio under a "@a × @b" headline read as the wrong screen.
+  const secondHandle = preview?.username2;
+  const teaserLines =
+    info.deep && secondHandle
+      ? [
+          `the charts for @${targetHandle} and @${secondHandle} do not disagree politely.`,
+          "one of you leads with fire, the other reads it as a personal attack. the placements explain the group chat, the timing explains everything else.",
+          "the full reading names who bends first, and how long the peace lasts.",
+        ]
+      : isPair && secondHandle
+        ? [
+            `@${targetHandle} and @${secondHandle}: the grids alone told us more than either of you would.`,
+            "one posts like the algorithm owes them rent, the other likes it within four seconds every single time. we have the receipts and we have the follower gap.",
+            "the verdict says whether this survives a shared apartment or a shared playlist.",
+          ]
+        : [
+            `okay @${targetHandle}, let's talk about that grid, because somebody has to.`,
+            "the bio alone reads like a group project where everyone left early. and the posting schedule? bold choice to treat followers like a landlord treats repairs.",
+            "we counted the selfie angles. all two of them. the algorithm is not your friend, it's your enabler.",
+          ];
+
   return (
     <div className="max-w-2xl mx-auto px-6 py-12 text-center space-y-6">
       <div className="inline-block bg-foreground text-background px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest rotate-[-2deg]">
@@ -278,39 +369,45 @@ export function Paywall({ info, onUnlocked, surface = "roast" }: PaywallProps) {
 
       <p className="text-sm text-muted-foreground max-w-md mx-auto">{info.message}</p>
 
-      {/* The goods, on display: real profile card when we have it cached. */}
-      {preview?.profile && (
-        <div className="text-left animate-reveal">
-          <ProfileCard
-            profile={{
-              handle: preview.profile.username,
-              displayName: preview.profile.full_name,
-              avatarUrl: preview.profile.profile_pic_url,
-              posts: preview.profile.post,
-              followers: preview.profile.follower,
-              following: preview.profile.following,
-              bio: preview.profile.biography,
-            }}
-          />
-        </div>
-      )}
+      {/* The goods, on display: real profile data when we have it cached.
+          A pairing shows both faces; a single roast shows the full card. */}
+      {isPair
+        ? (preview?.profile || preview?.profile2) && (
+            <div className="text-left animate-reveal">
+              <PairPreview
+                handle1={preview!.username}
+                handle2={preview!.username2!}
+                profile1={preview!.profile}
+                profile2={preview!.profile2 ?? null}
+              />
+            </div>
+          )
+        : preview?.profile && (
+            <div className="text-left animate-reveal">
+              <ProfileCard
+                profile={{
+                  handle: preview.profile.username,
+                  displayName: preview.profile.full_name,
+                  avatarUrl: preview.profile.profile_pic_url,
+                  posts: preview.profile.post,
+                  followers: preview.profile.follower,
+                  following: preview.profile.following,
+                  bio: preview.profile.biography,
+                }}
+              />
+            </div>
+          )}
 
       {/* Blurred roast teaser — unreadable placeholder lines, not the real text,
           so nothing paid leaks. The lock overlay carries the actual CTA copy. */}
       {targetHandle && (
         <div className="relative bg-card border-2 border-foreground rounded-3xl p-8 shadow-brutal overflow-hidden text-left">
           <div className="space-y-3 blur-[6px] select-none" aria-hidden="true">
-            <p className="font-serif italic text-lg">
-              okay @{targetHandle}, let's talk about that grid, because somebody has to.
-            </p>
-            <p>
-              the bio alone reads like a group project where everyone left early. and the
-              posting schedule? bold choice to treat followers like a landlord treats repairs.
-            </p>
-            <p>
-              we counted the selfie angles. all two of them. the algorithm is not your friend,
-              it's your enabler.
-            </p>
+            {teaserLines.map((line, i) => (
+              <p key={i} className={i === 0 ? "font-serif italic text-lg" : undefined}>
+                {line}
+              </p>
+            ))}
           </div>
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/50">
             <span className="text-4xl">🔒</span>
@@ -325,9 +422,13 @@ export function Paywall({ info, onUnlocked, surface = "roast" }: PaywallProps) {
         </div>
       )}
 
-      <div className="max-w-lg mx-auto bg-card border-2 border-foreground rounded-3xl p-8 shadow-brutal space-y-5">
+      <div className="bg-card border-2 border-foreground rounded-3xl p-8 shadow-brutal space-y-5">
         <div className="inline-block bg-foreground text-background px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest rotate-[-2deg]">
-          {info.deep ? "🔮 unlock the full reading" : "🍿 keep the roasts coming"}
+          {info.deep
+            ? "🔮 unlock the full reading"
+            : isPair
+              ? "💘 unlock the verdict"
+              : "🍿 keep the roasts coming"}
         </div>
 
         <div className="space-y-1">
@@ -335,8 +436,13 @@ export function Paywall({ info, onUnlocked, surface = "roast" }: PaywallProps) {
           <div className="text-sm text-muted-foreground">
             {info.deep ? (
               <>
-                for {credits} credit{credits === 1 ? "" : "s"} · one unlocks this reading
-                {credits > 1 ? ", the rest are yours to spend" : ""} · no account needed
+                {credits} credit{credits === 1 ? "" : "s"} · unlocks this reading · no account
+                needed
+              </>
+            ) : isPair ? (
+              <>
+                {credits} credit{credits === 1 ? "" : "s"} · one unlocks this verdict · no account
+                needed
               </>
             ) : (
               <>
@@ -360,10 +466,21 @@ export function Paywall({ info, onUnlocked, surface = "roast" }: PaywallProps) {
             {!paypalReady && !error && (
               <p className="text-sm text-muted-foreground">loading checkout…</p>
             )}
+            {/* PayPal renders its buttons and the "Powered by PayPal" tagline
+                assuming a light surface, so on the dark card they arrive as a
+                bare white slab bleeding to the card's edges. Give them a panel
+                that looks deliberate — brutal border, rounded corners, clipped
+                — and only once the buttons exist, so nothing flashes empty
+                while the SDK loads. */}
             <div
-              ref={paypalContainerRef}
-              className={busy ? "pointer-events-none opacity-60" : ""}
-            />
+              className={`${
+                paypalReady
+                  ? "bg-white rounded-2xl border-2 border-foreground p-3 shadow-[3px_3px_0_0_hsl(var(--brutal))] overflow-hidden"
+                  : ""
+              } ${busy ? "pointer-events-none opacity-60" : ""}`}
+            >
+              <div ref={paypalContainerRef} />
+            </div>
           </>
         ) : (
           <button
@@ -375,7 +492,9 @@ export function Paywall({ info, onUnlocked, surface = "roast" }: PaywallProps) {
               ? "opening checkout…"
               : info.deep
                 ? "unlock the full reading"
-                : `unlock ${credits} more roasts`}
+                : isPair
+                  ? "unlock the verdict"
+                  : `unlock ${credits} more roasts`}
           </button>
         )}
 

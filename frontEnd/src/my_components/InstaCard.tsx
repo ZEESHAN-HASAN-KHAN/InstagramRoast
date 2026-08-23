@@ -1,4 +1,5 @@
 import React from "react";
+import { formatCount } from "@/lib/utils";
 
 type InstaData = {
   profile_pic_url: string;
@@ -13,12 +14,6 @@ type InstaData = {
 type InstaCardProps = {
   insta_data: InstaData;
 };
-
-function formatCount(n: number) {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
-  if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
-  return String(n);
-}
 
 const InstaCard: React.FC<InstaCardProps> = ({ insta_data }) => {
   return (

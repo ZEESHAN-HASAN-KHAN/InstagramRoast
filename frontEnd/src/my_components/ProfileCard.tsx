@@ -1,4 +1,5 @@
 import { auraRing } from "@/lib/cardAura";
+import { formatCount } from "@/lib/utils";
 import { CardAura } from "./CardAura";
 import type { RarityId } from "@/lib/cardRarity";
 
@@ -11,12 +12,6 @@ export type ProfileData = {
   following: number;
   bio: string;
 };
-
-function formatCount(n: number) {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
-  if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
-  return String(n);
-}
 
 export function ProfileCard({
   profile,

@@ -435,6 +435,9 @@ roastRouter.post("/compatibilityRoast", async (req, res) => {
         preview: {
           ...buildProfilePreview(uname1, userData1, bucketName),
           username2: uname2,
+          // Both faces, when both are cached. A pairing paywall showing one
+          // profile reads like the single-roast wall on the wrong page.
+          profile2: buildProfilePreview(uname2, userData2, bucketName).profile,
         },
       });
     }

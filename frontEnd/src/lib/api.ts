@@ -25,6 +25,9 @@ export interface PaywallInfo {
     // Present for compatibility roasts — the second handle of the pair.
     username2?: string;
     profile: PaywallPreviewProfile | null;
+    // The second profile of a pairing, when it is already cached. A pair
+    // paywall that shows only one of the two faces reads as the wrong screen.
+    profile2?: PaywallPreviewProfile | null;
   };
   credits: {
     freeUsed: number;

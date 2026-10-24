@@ -38,7 +38,7 @@
 // ── Video promos (house ads for our YouTube videos) ───────────────────────
 //   video_promo_shown       surface, variant=<video id>, source=<peek trigger>
 //   video_promo_clicked     surface, variant, source
-//   video_promo_dismissed   surface=peek, variant, source
+//   video_promo_dismissed   surface=peek|popup, variant, source
 // surface: roast_loading | roast_result | roast_failed | compat_loading |
 //   compat_result | compat_failed | home | cosmic_page | leaderboard | nav |
 //   footer | peek | popup.

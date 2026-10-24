@@ -201,19 +201,24 @@ export function VideoNavLink({
   );
 }
 
-const PEEK_KEY = "video-peek-shown";
-const PEEK_DWELL_MS = 35_000;
+const PEEK_KEY = "video-peek-count";
+const PEEK_DWELL_MS = 12_000;
+// Scroll depth that counts as "finished the page".
+const PEEK_SCROLL_DEPTH = 0.5;
+// Once per page, capped per tab session: enough to be seen on every screen a
+// visitor actually reads, not so often it becomes wallpaper.
+const PEEK_MAX_PER_SESSION = 3;
 // Long enough to be read, short enough that it never becomes furniture.
 const PEEK_SHOW_MS = 14_000;
 const PEEK_HIDE_ON = ["/terms", "/privacy", "/refund-policy"];
 
 type PeekTrigger = "dwell" | "scroll";
 
-// The floating promo. One appearance per tab session, on whichever trigger
-// lands first — each one catches a different kind of visitor:
+// The floating promo. Once per page, up to three per tab session, on whichever
+// trigger lands first — each one catches a different kind of visitor:
 //
-//   dwell   still here after 35s: engaged, has a moment
-//   scroll  70% down a page: finished the thing they came for
+//   dwell   still on the page after 12s: engaged, has a moment
+//   scroll  half way down a page: into the thing they came for
 //
 // Exit intent and tab return belong to VideoPopup: those are the moments a
 // modal is worth its interruption, and two promos answering one trigger would
@@ -225,24 +230,25 @@ type PeekTrigger = "dwell" | "scroll";
 // already belongs to the roast toast, the rating ask and the cosmic nudge; on
 // desktop it sits bottom-left, away from the toast on the right, and waits for
 // any bottom-dock bar to clear first.
+function peekCount() {
+  try {
+    return Number(sessionStorage.getItem(PEEK_KEY) ?? 0);
+  } catch {
+    return 0;
+  }
+}
+
 export function VideoPeek() {
   const { pathname } = useLocation();
   const [video] = useState(() => pickVideo(SLOTS.peek));
   const [trigger, setTrigger] = useState<PeekTrigger | null>(null);
   const [visible, setVisible] = useState(false);
-  const [done, setDone] = useState(() => {
-    try {
-      return sessionStorage.getItem(PEEK_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
+  // The page it last appeared on; a new route re-arms it.
+  const [shownOn, setShownOn] = useState<string | null>(null);
   const blocked = PEEK_HIDE_ON.includes(pathname);
 
   useEffect(() => {
-    if (!video || done || blocked) return;
-
-    const timers: number[] = [];
+    if (!video || blocked || shownOn === pathname || peekCount() >= PEEK_MAX_PER_SESSION) return;
 
     const fire = (t: PeekTrigger) => {
       if (document.querySelector("[data-paywall], [data-video-popup]")) return;
@@ -251,14 +257,13 @@ export function VideoPeek() {
       cleanup();
       setTrigger(t);
       setVisible(true);
-      setDone(true);
+      setShownOn(pathname);
       try {
-        sessionStorage.setItem(PEEK_KEY, "1");
+        sessionStorage.setItem(PEEK_KEY, String(peekCount() + 1));
       } catch {
         /* shows again next page load at worst */
       }
       track("video_promo_shown", { surface: "peek", variant: video.id, source: t });
-      timers.push(window.setTimeout(() => setVisible(false), PEEK_SHOW_MS));
     };
 
     // Retried rather than one-shot: a dwell that lands while the paywall is up
@@ -273,7 +278,7 @@ export function VideoPeek() {
         ticking = false;
         const { scrollY, innerHeight } = window;
         const depth = (scrollY + innerHeight) / document.documentElement.scrollHeight;
-        if (scrollY > innerHeight && depth > 0.7) fire("scroll");
+        if (scrollY > innerHeight / 2 && depth > PEEK_SCROLL_DEPTH) fire("scroll");
       });
     };
 
@@ -284,11 +289,17 @@ export function VideoPeek() {
 
     window.addEventListener("scroll", onScroll, { passive: true });
 
-    return () => {
-      cleanup();
-      timers.forEach((t) => window.clearTimeout(t));
-    };
-  }, [video, done, blocked]);
+    return cleanup;
+  }, [video, blocked, pathname, shownOn]);
+
+  // Its own effect: firing flips `shownOn`, which tears down the trigger effect
+  // above, so a hide timer started in there was cancelled the instant it was
+  // set and the peek never left on its own.
+  useEffect(() => {
+    if (!visible) return;
+    const id = window.setTimeout(() => setVisible(false), PEEK_SHOW_MS);
+    return () => window.clearTimeout(id);
+  }, [visible]);
 
   if (!video || blocked) return null;
 

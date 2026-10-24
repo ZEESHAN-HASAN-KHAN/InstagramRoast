@@ -360,7 +360,8 @@ export function Paywall({ info, onUnlocked, surface = "roast" }: PaywallProps) {
           ];
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-12 text-center space-y-6">
+    // data-paywall keeps the floating video promo away while someone is paying.
+    <div data-paywall className="max-w-2xl mx-auto px-6 py-12 text-center space-y-6">
       <div className="inline-block bg-foreground text-background px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest rotate-[-2deg]">
         🔒 one step from the burn
       </div>

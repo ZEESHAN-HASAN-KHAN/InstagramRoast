@@ -18,6 +18,8 @@ import { CosmicNudge } from "./CosmicNudge";
 import { RoastProgress } from "./RoastProgress";
 import { BurnRating } from "./BurnRating";
 import { CreditMeter, useCredits } from "./CreditMeter";
+import { VideoCard } from "./VideoPromo";
+import { hasPromoVideos, requestVideoPopup } from "@/lib/promoVideos";
 import { track } from "@/lib/analytics";
 import type { RarityId } from "@/lib/cardRarity";
 
@@ -190,7 +192,13 @@ export function Roast() {
       track("roast_delivered", { cached: !!cached, reroll: wasReroll.current });
       setIsRunning(true);
       const timeout = setTimeout(() => setIsRunning(false), 5000);
-      return () => clearTimeout(timeout);
+      // Long enough to read the roast and flip the card first; the popup
+      // should land after the payoff, never on top of it.
+      const cancelPopup = requestVideoPopup("after_roast", 45_000);
+      return () => {
+        clearTimeout(timeout);
+        cancelPopup();
+      };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [received]);
@@ -248,6 +256,11 @@ export function Roast() {
         <Link to="/" className="inline-flex items-center gap-2 bg-card border-2 border-foreground rounded-full px-4 py-2 text-sm font-bold hover:-translate-y-0.5 transition-all shadow-[3px_3px_0_0_hsl(var(--brutal))]">
           ← try another username
         </Link>
+        {hasPromoVideos && (
+          <div className="pt-6">
+            <VideoCard surface="roast_failed" variant="strip" lead="not a total loss" />
+          </div>
+        )}
       </div>
     );
   }
@@ -269,6 +282,11 @@ export function Roast() {
               archived roast isn't being generated, so claiming to scrape
               Instagram for it would be a lie — it just gets skeletons. */}
           {!archivedId && <RoastProgress steps={loadingSteps} activeIndex={displayedStep} />}
+
+          {/* The one stretch where the visitor has nothing to do but wait, so
+              it is the best-read promo slot on the site. It opens a new tab;
+              the roast keeps cooking here and is ready when they come back. */}
+          <VideoCard surface="roast_loading" variant="strip" lead="while the AI cooks 🍳" />
 
           {/* Profile: real card once scraped AND the ladder caught up, skeleton until then */}
           {showLiveProfile && liveInstaData ? (
@@ -454,6 +472,14 @@ export function Roast() {
           <p className="font-serif italic text-lg">too good not to share 👇</p>
           <ShareBar title={shareTitle} text={roastData} source="roast" />
         </div>
+
+        {/* After the share, not before it: the share is worth more than the
+            view, and this is where the page's own asks are used up. */}
+        {hasPromoVideos && (
+          <div className="animate-reveal [animation-delay:430ms]">
+            <VideoCard surface="roast_result" lead="if you liked that 👀" />
+          </div>
+        )}
 
         {/* Compatibility upsell: last block on the page, so it catches everyone
             who read to the end — turns a one-person share into a two-person run.

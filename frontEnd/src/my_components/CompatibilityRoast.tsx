@@ -10,6 +10,8 @@ import { usePacedIndex } from "@/hooks/usePacedIndex";
 import InstaCard from "./InstaCard";
 import { RoastProgress } from "./RoastProgress";
 import { ShareBar } from "./ShareBar";
+import { VideoCard } from "./VideoPromo";
+import { hasPromoVideos, requestVideoPopup } from "@/lib/promoVideos";
 import { Paywall } from "./Paywall";
 import { CosmicVerdict } from "./CosmicVerdict";
 import { CosmicDeep } from "./CosmicDeep";
@@ -164,6 +166,8 @@ export function CompatiblityRoast() {
       // convert better than high ones, which needs an average, not 101 buckets.
       score: score ?? undefined,
     });
+    // After the verdict and the deep-reading offer have had their moment.
+    return requestVideoPopup("after_compat", 45_000);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deliveryKey]);
 
@@ -189,6 +193,11 @@ export function CompatiblityRoast() {
       <div className="max-w-3xl mx-auto px-6 py-12 text-center space-y-4">
         <p className="text-lg font-bold">😬 something went wrong comparing @{uname1} and @{uname2}</p>
         <p className="text-sm text-muted-foreground">{error}</p>
+        {hasPromoVideos && (
+          <div className="pt-6">
+            <VideoCard surface="compat_failed" variant="strip" lead="not a total loss" />
+          </div>
+        )}
       </div>
     );
   }
@@ -212,6 +221,8 @@ export function CompatiblityRoast() {
       <div className="max-w-3xl mx-auto px-6 py-12 space-y-10">
         {/* Loading ladder: paced through every stage for the build-up */}
         <RoastProgress steps={loadingSteps} activeIndex={displayedStep} />
+
+        <VideoCard surface="compat_loading" variant="strip" lead="while the stars align ✨" />
 
         <div className="flex flex-col lg:flex-row justify-center items-center gap-8">
           {/* Profile 1: real card once scraped AND the ladder caught up, skeleton until then */}
@@ -371,6 +382,13 @@ export function CompatiblityRoast() {
             }}
           />
         ))}
+
+      {/* Last, below the paid reading, so it never competes with it. */}
+      {hasPromoVideos && (
+        <div className="pt-4">
+          <VideoCard surface="compat_result" lead="one more for the road 🍿" />
+        </div>
+      )}
     </div>
   );
 }

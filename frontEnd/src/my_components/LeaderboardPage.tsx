@@ -2,6 +2,8 @@ import { Helmet } from "react-helmet";
 import { Leaderboard } from "./Leaderboard";
 import { NearbyRoasts } from "./NearbyRoasts";
 import { CardOdds } from "./CardOdds";
+import { VideoCard } from "./VideoPromo";
+import { hasPromoVideos } from "@/lib/promoVideos";
 
 // Dedicated, linkable, indexable home for the boards. The homepage embeds the
 // same sections as a teaser; this page is the shareable destination.
@@ -42,6 +44,12 @@ export function LeaderboardPage() {
           <CardOdds title="🎴 the deck behind the vault" />
         </div>
       </section>
+
+      {hasPromoVideos && (
+        <section className="px-4 sm:px-6 pb-20 bg-background">
+          <VideoCard surface="leaderboard" lead="behind the hall of shame 🎬" />
+        </section>
+      )}
 
       <NearbyRoasts />
     </>

@@ -9,6 +9,10 @@ import { LazySection } from "./my_components/LazySection";
 import { SiteFooter } from "./my_components/SiteFooter";
 import { LaunchBanner } from "./my_components/LaunchBanner";
 import { trackPageView } from "./lib/analytics";
+// Static, not lazy: the navbar and footer already pull this module into the
+// first bundle, so a lazy() here would buy nothing but a Suspense boundary.
+import { VideoCard, VideoPeek, VideoPopup } from "./my_components/VideoPromo";
+import { hasPromoVideos } from "./lib/promoVideos";
 
 // Only the navbar, the hero and the footer are in the first bundle. Everything
 // else is a separate chunk fetched either when its route is entered or when its
@@ -152,6 +156,14 @@ function Home() {
       <LazySection minHeight={420} anchorIds={["cosmic-match"]}>
         <Compatibility />
       </LazySection>
+      {/* Between the two boards rather than above Cosmic Match: the funnel
+          sections keep their spot, and a promo here breaks up two long
+          sections instead of pushing one further down. */}
+      {hasPromoVideos && (
+        <section className="px-4 sm:px-6 py-12 bg-background">
+          <VideoCard surface="home" lead="fresh off the channel 🎬" />
+        </section>
+      )}
       <LazySection minHeight={640} anchorIds={["leaderboard"]}>
         <Leaderboard />
       </LazySection>
@@ -203,6 +215,10 @@ function AppLayout() {
       </main>
 
       <SiteFooter />
+
+      {/* Fixed overlay; stays invisible until one of its triggers fires. */}
+      <VideoPeek />
+      <VideoPopup />
 
       {/* Mobile floating controls. The bottom offset clears the iPhone home
           indicator — index.html sets viewport-fit=cover, so the inset is real. */}

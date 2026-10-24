@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ModeToggle } from "@/components/ui/ModeToggle";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { VideoNavLink } from "./VideoPromo";
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -59,6 +60,9 @@ export function Navbar() {
           <Link to="/leaderboard" className="hover:text-primary transition-colors">
             🏆 leaderboard
           </Link>
+          <VideoNavLink surface="nav" className="hover:text-primary transition-colors whitespace-nowrap">
+            📺 watch
+          </VideoNavLink>
           <a
             onClick={() => scrollToSection("faq")}
             className="hover:text-primary transition-colors cursor-pointer"
@@ -122,6 +126,13 @@ export function Navbar() {
             >
               🏆 leaderboard
             </Link>
+            <VideoNavLink
+              surface="nav"
+              onNavigate={() => setIsMenuOpen(false)}
+              className="hover:text-primary flex items-center min-h-11"
+            >
+              📺 watch
+            </VideoNavLink>
             <a
               onClick={() => scrollToSection("faq")}
               className="cursor-pointer hover:text-primary flex items-center min-h-11"

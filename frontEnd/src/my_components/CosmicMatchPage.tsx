@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Compatibility } from "./Compatibility";
+import { VideoCard } from "./VideoPromo";
+import { hasPromoVideos } from "@/lib/promoVideos";
 
 // Standalone landing page for Cosmic Match.
 //
@@ -252,6 +254,12 @@ export function CosmicMatchPage() {
               </Reveal>
             ))}
           </div>
+
+          {hasPromoVideos && (
+            <Reveal>
+              <VideoCard surface="cosmic_page" lead="seen it in action? 🔮" />
+            </Reveal>
+          )}
 
           <div>
             <Reveal className="text-center">

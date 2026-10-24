@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { VideoNavLink } from "./VideoPromo";
 
 export function SiteFooter() {
   return (
@@ -13,6 +14,7 @@ export function SiteFooter() {
               waits on a re-crawl; one in the footer is on every page already
               in the index. */}
           <Link to="/cosmic-match" className="hover:text-white transition-colors">Cosmic Match</Link>
+          <VideoNavLink surface="footer" className="text-white/80 hover:text-white transition-colors">▶ Watch</VideoNavLink>
           <Link to="/terms" className="hover:text-white transition-colors">Terms</Link>
           <Link to="/privacy" className="hover:text-white transition-colors">Privacy</Link>
           <Link to="/refund-policy" className="hover:text-white transition-colors">Refunds</Link>

@@ -17,6 +17,8 @@ export interface PromoVideo {
 export const PROMO_VIDEOS: PromoVideo[] = [
   // Prompt and Pray | The Vibe-Coding Anthem (Lyric Video)
   { id: "_ZElM8BBd0Q", hook: "a song for everyone who ships code they don't understand" },
+  // Our Most Capable Model Yet - Opus 5.5 music video
+  { id: "tzg4_LJ24mA", hook: "a music video about the most capable AI model yet" },
 ];
 
 // For wrappers that carry their own spacing: an empty list must not leave a
